@@ -1,7 +1,6 @@
 module frontend.lexer;
 
 import std.string;
-import std.ascii;
 
 enum TokenType {
     Int,
@@ -11,6 +10,10 @@ enum TokenType {
 
     Equal,
     Plus, Minus, Star, Slash,
+
+	If, Else, While,
+	Greater, Less, EqualEqual, // for `==`
+	Assign,                    // single =
 
     LBrace, RBrace,
     LParen, RParen,
@@ -37,49 +40,61 @@ Token[] tokenize(string input) {
             continue;
         }
 
-        // Single character symbols
+        // Double-character operators (check before single '=')
+        if (c == '=' && peekNext(input, pos) == '=') {
+            tokens ~= Token(TokenType.EqualEqual, "==");
+            pos += 2;
+            continue;
+        }
+
+        // Single-character tokens
         if (c == '(') { tokens ~= Token(TokenType.LParen, "("); pos++; continue; }
         if (c == ')') { tokens ~= Token(TokenType.RParen, ")"); pos++; continue; }
         if (c == '{') { tokens ~= Token(TokenType.LBrace, "{"); pos++; continue; }
         if (c == '}') { tokens ~= Token(TokenType.RBrace, "}"); pos++; continue; }
         if (c == ';') { tokens ~= Token(TokenType.Semicolon, ";"); pos++; continue; }
-		if (c == '=') { tokens ~= Token(TokenType.Equal, "="); pos++; continue; }
-		if (c == '+') { tokens ~= Token(TokenType.Plus, "+"); pos++; continue; }
-		if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
-		if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
-		if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
+        if (c == '=') { tokens ~= Token(TokenType.Assign, "="); pos++; continue; }
+        if (c == '+') { tokens ~= Token(TokenType.Plus, "+"); pos++; continue; }
+        if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
+        if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
+        if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
+        if (c == '>') { tokens ~= Token(frontend.lexer.TokenType.Greater, ">"); pos++; continue; }
+        if (c == '<') { tokens ~= Token(frontend.lexer.TokenType.Less, "<"); pos++; continue; }
 
-		
-		
         // Numbers
-        if (c >= '0' && c <= '9') {
+        if (isDigit(c)) {
             size_t start = pos;
-            while (pos < input.length && input[pos] >= '0' && input[pos] <= '9')
+            while (pos < input.length && isDigit(input[pos]))
                 pos++;
             tokens ~= Token(TokenType.Number, input[start .. pos]);
             continue;
         }
 
-        // Identifiers or keywords
+        // Identifiers and keywords
         if (isAlpha(c)) {
             size_t start = pos;
             while (pos < input.length && (isAlpha(input[pos]) || isDigit(input[pos])))
                 pos++;
             string lexeme = input[start .. pos];
 
-            if (lexeme == "int") {
+            // Check if lexeme is a keyword
+            if (lexeme == "int")
                 tokens ~= Token(TokenType.Int, lexeme);
-            } else if (lexeme == "return") {
+            else if (lexeme == "return")
                 tokens ~= Token(TokenType.Return, lexeme);
-            } else {
+            else if (lexeme == "if")
+                tokens ~= Token(TokenType.If, lexeme);
+            else if (lexeme == "else")
+                tokens ~= Token(TokenType.Else, lexeme);
+            else if (lexeme == "while")
+                tokens ~= Token(TokenType.While, lexeme);
+            else
                 tokens ~= Token(TokenType.Identifier, lexeme);
-            }
-
             continue;
         }
 
-        // Unknown char
-        pos++; // Skip unknowns (future: error)
+        // Unknown character (skip or error)
+        pos++; // Could also log an error here
     }
 
     tokens ~= Token(TokenType.Eof, "");
@@ -87,9 +102,14 @@ Token[] tokenize(string input) {
 }
 
 bool isAlpha(char c) {
-    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_';
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 bool isDigit(char c) {
     return c >= '0' && c <= '9';
 }
+
+char peekNext(string input, size_t pos) {
+    return (pos + 1 < input.length) ? input[pos + 1] : '\0';
+}
+

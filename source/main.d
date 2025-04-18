@@ -7,12 +7,23 @@ import std.file;
 
 void main() {
     string code = readText("tests/hello.dl");
-
+	
     auto tokens = tokenize(code);
-	auto ast = parseProgram(tokens); // returns ASTNode[]
+	
+	foreach (t; tokens) {
+		writeln(t.type, " : ", t.lexeme);
+	}
+
+	auto ast = parseProgram(tokens);
+
+	foreach (stmt; ast) {
+		writeln("[AST] ", typeid(stmt).name);
+	}
+
 	string asmOutput = generateCode(ast);
 
 	write("output/generated.asm", asmOutput);
 	writeln("[✓] Generated output/generated.asm");
 }
 
+	

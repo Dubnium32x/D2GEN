@@ -1,6 +1,6 @@
 module ast.nodes;
 
-interface ASTNode {}
+abstract class ASTNode {}
 
 class ReturnStmt : ASTNode {
     ASTNode value;
@@ -37,4 +37,38 @@ class VarExpr : ASTNode {
 class IntLiteral : ASTNode {
     int value;
     this(int v) { value = v; }
+}
+
+class IfStmt : ASTNode {
+    ASTNode condition;
+    ASTNode[] thenBody;
+    ASTNode[] elseBody; // Added elseBody for else branch
+
+    this(ASTNode cond, ASTNode[] thenBody, ASTNode[] elseBody = []) {
+        this.condition = cond;
+        this.thenBody = thenBody;
+        this.elseBody = elseBody;
+    }
+}
+
+class WhileStmt : ASTNode {
+    ASTNode condition;
+    ASTNode[] loopBody;
+
+    this(ASTNode cond, ASTNode[] loopBody) {
+        this.condition = cond;
+        this.loopBody = loopBody;
+    }
+}
+
+
+
+class AssignStmt : ASTNode {
+    string name;
+    ASTNode value;
+
+    this(string n, ASTNode v) {
+        name = n;
+        value = v;
+    }
 }

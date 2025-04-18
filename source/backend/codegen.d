@@ -3,48 +3,90 @@ module backend.codegen;
 import ast.nodes;
 import std.conv : to;
 import std.array;
+import std.string;
+
+int labelCounter = 0;
 
 string generateCode(ASTNode[] nodes) {
-    string buf = "";
-    buf ~= "        ORG $1000\n";
-    buf ~= "main:\n";
+    string[] lines;
+    lines ~= "        ORG $1000";
+    lines ~= "main:";
 
-    int regIndex = 1; // Start with D1 for variables
-    string[string] varRegs; // Map variable name → register (e.g. x → D1)
+    int regIndex = 1;
+    string[string] varRegs;
 
     foreach (node; nodes) {
-        if (auto var = cast(VarDecl) node) {
-            auto name = var.name;
-            auto val = generateExpr(var.value, varRegs, regIndex);
-            string reg = "D" ~ to!string(regIndex);
-            varRegs[name] = reg;
-            buf ~= "        move.l " ~ val ~ ", " ~ reg ~ " ; int " ~ name ~ "\n";
-            regIndex++;
-        }
-        else if (auto ret = cast(ReturnStmt) node) {
-            auto val = generateExpr(ret.value, varRegs, regIndex);
-            buf ~= "        move.l " ~ val ~ ", D0 ; return\n";
-            buf ~= "        rts\n";
-        }
+        generateStmt(node, lines, regIndex, varRegs);
     }
 
-    buf ~= "        END\n";
-    return buf;
+    lines ~= "        END";
+    return lines.join("\n");
 }
 
-string generateExpr(ASTNode expr, string[string] varRegs, int regIndex) {
+void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varRegs) {
+    if (auto decl = cast(VarDecl) node) {
+        string reg = generateExpr(decl.value, lines, regIndex, varRegs);
+        varRegs[decl.name] = reg;
+    }
+    else if (auto assign = cast(AssignStmt) node) {
+        string reg = generateExpr(assign.value, lines, regIndex, varRegs);
+        varRegs[assign.name] = reg;
+        // Optional: store to memory or just track in reg
+    }
+    else if (auto ret = cast(ReturnStmt) node) {
+        string reg = generateExpr(ret.value, lines, regIndex, varRegs);
+        lines ~= "        move.l " ~ reg ~ ", D0 ; return";
+        lines ~= "        rts";
+    }
+    else if (auto ifstmt = cast(IfStmt) node) {
+        string labelEnd = genLabel("endif");
+
+        // Compare condition
+        string condReg = generateExpr(ifstmt.condition, lines, regIndex, varRegs);
+        lines ~= "        cmp.l #0, " ~ condReg;
+        lines ~= "        beq " ~ labelEnd;
+
+        // Emit body
+        foreach (s; ifstmt.thenBody) {
+            generateStmt(s, lines, regIndex, varRegs);
+        }
+
+        lines ~= labelEnd ~ ":";
+    }
+    else if (auto whilestmt = cast(WhileStmt) node) {
+        string labelStart = genLabel("while");
+        string labelEnd = genLabel("endwhile");
+
+        lines ~= labelStart ~ ":";
+
+        string condReg = generateExpr(whilestmt.condition, lines, regIndex, varRegs);
+        lines ~= "        cmp.l #0, " ~ condReg;
+        lines ~= "        beq " ~ labelEnd;
+
+        foreach (s; whilestmt.loopBody) {
+            generateStmt(s, lines, regIndex, varRegs);
+        }
+
+        lines ~= "        bra " ~ labelStart;
+        lines ~= labelEnd ~ ":";
+    }
+}
+
+
+string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[string] varRegs) {
     if (auto lit = cast(IntLiteral) expr) {
-        return "#" ~ to!string(lit.value);
+        string reg = "D" ~ to!string(regIndex++);
+        lines ~= "        move.l #" ~ to!string(lit.value) ~ ", " ~ reg;
+        return reg;
     }
     if (auto var = cast(VarExpr) expr) {
-        return varRegs.get(var.name, "D1"); // fallback if not found
+        return varRegs.get(var.name, "D1"); // fallback
     }
     if (auto bin = cast(BinaryExpr) expr) {
-        // Simple: put left in D1, apply op with right
-        string left = generateExpr(bin.left, varRegs, regIndex);
-        string right = generateExpr(bin.right, varRegs, regIndex);
+        string left = generateExpr(bin.left, lines, regIndex, varRegs);
+        string right = generateExpr(bin.right, lines, regIndex, varRegs);
 
-        string result = "D" ~ to!string(regIndex);
+        string dest = "D" ~ to!string(regIndex++);
         string op;
 
         switch (bin.op) {
@@ -52,15 +94,18 @@ string generateExpr(ASTNode expr, string[string] varRegs, int regIndex) {
             case "-": op = "sub.l"; break;
             case "*": op = "muls";  break;
             case "/": op = "divs";  break;
-            default: op = "add.l"; break; // fallback
+            default: op = "add.l"; break;
         }
 
-        string buf = "";
-        buf ~= "        move.l " ~ left ~ ", " ~ result ~ "\n";
-        buf ~= "        " ~ op ~ " " ~ right ~ ", " ~ result ~ "\n";
-
-        return result; // caller will use this register
+        lines ~= "        move.l " ~ left ~ ", " ~ dest;
+        lines ~= "        " ~ op ~ " " ~ right ~ ", " ~ dest;
+        return dest;
     }
 
-    return "#0"; // fallback
+    return "#0";
 }
+
+string genLabel(string base) {
+    return "." ~ base ~ "_" ~ to!string(labelCounter++);
+}
+

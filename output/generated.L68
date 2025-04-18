@@ -1,14 +1,25 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/17/2025 8:40:06 PM
+Created On: 4/18/2025 12:25:42 AM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7202                       3          move.l #2, D1 ; int x
-00001002  2002                       4          move.l D2, D0 ; return
-00001004  4E75                       5          rts
-Line 6 WARNING: Address expected
-00001006                             6          END
+00001000  7200                       3          move.l #0, D1
+00001002                             4  .while_0:
+00001002  7403                       5          move.l #3, D2
+00001004  2601                       6          move.l D1, D3
+00001006  D682                       7          add.l D2, D3
+00001008  B6BC 00000000              8          cmp.l #0, D3
+0000100E  6700 000A                  9          beq .endwhile_1
+00001012  7801                      10          move.l #1, D4
+00001014  2A01                      11          move.l D1, D5
+00001016  DA84                      12          add.l D4, D5
+00001018  60E8                      13          bra .while_0
+0000101A                            14  .endwhile_1:
+0000101A  2005                      15          move.l D5, D0 ; return
+0000101C  4E75                      16          rts
+Line 17 WARNING: Address expected
+0000101E                            17          END
 
 No errors detected
 1 warning generated
@@ -18,3 +29,5 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
+MAIN:ENDWHILE_1     101A
+MAIN:WHILE_0        1002
