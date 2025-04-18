@@ -1,0 +1,20 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 4/17/2025 8:40:06 PM
+
+00001000                             1          ORG $1000
+00001000                             2  main:
+00001000  7202                       3          move.l #2, D1 ; int x
+00001002  2002                       4          move.l D2, D0 ; return
+00001004  4E75                       5          rts
+Line 6 WARNING: Address expected
+00001006                             6          END
+
+No errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+MAIN                1000
