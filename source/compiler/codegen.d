@@ -2,15 +2,8 @@
 module compiler.codegen;
 
 import compiler.ast;
-import compiler.instructions;
 import std.file;
 import std.string;
-
-private struct Instructions {
-	string arithmetic = "Arithmetic operation";
-}
-
-private Instructions instructions;
 
 class CodeGenerator {
     string generate(ASTNode node) {
@@ -231,30 +224,6 @@ class CodeGenerator {
 				break;
 		}
 		return asmCode;
-	}
-	
-	string generateAdd(string dst, string src) {
-    return format("    ADD_L  %s,%s  ; %s\n", 
-                 dst, src, instructions.arithmetic);
-	}
-
-	// In codegen.d
-	string generateBinaryOp(BinaryOp op) {
-		import compiler.instructions;
-		
-		final switch(op.op) {
-			case "+":
-				return genAdd(generateExpression(op.left), generateExpression(op.right));
-			case "*":
-				return "    " ~ instructions.arithmetic ~ "\n" ~ 
-					format("    MULS_W  %s,%s\n", op.left, op.right);
-			case "-":
-				return "    " ~ instructions.arithmetic ~ "\n" ~ 
-					format("    SUB.W  %s,%s\n", op.left, op.right);
-			case "/":
-				return "    " ~ instructions.arithmetic ~ "\n" ~ 
-					format("    DIVS.W  %s,%s\n", op.left, op.right);
-		}
 	}
 	
     void emitToFile(string filename, string content) {
