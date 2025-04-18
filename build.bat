@@ -29,7 +29,7 @@ if exist *.obj (
 echo.
 echo Compiling sources...
 %DMD% -m32 ^
-    source\main.d ^
+    source\app.d ^
     source\compiler\lexer.d ^
     source\compiler\parser.d ^
     source\compiler\ast.d ^

@@ -4,6 +4,7 @@ import compiler.lexer;
 import compiler.ast;
 
 import core.stdc.string;
+import std.conv;
 
 class Parser {
     private Token[] tokens;
@@ -21,6 +22,11 @@ class Parser {
     }
 	
     FunctionDecl parseFunction() {
+
+        if (peek().type != TokenType.Keyword || peek().lexeme != "int") {
+            throw new Exception("Expected 'int' at line " ~ peek().line.to!string);
+        }
+        advance(); // Consume 'int'
         auto tok = consume(TokenType.Keyword, "Expected 'int'");
         auto nameTok = consume(TokenType.Identifier, "Expected function name");
         consume(TokenType.OpenParen, "Expected '('");
