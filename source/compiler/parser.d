@@ -133,31 +133,19 @@ ASTNode parseStatement() {
         expect(TokenType.Semicolon);
         return new ReturnStmt(val);
     }
-	else if (check(TokenType.If)) {
-		advance(); // Consume 'if'
-		expect(TokenType.LParen);
-		ASTNode cond = parseExpression();
-		expect(TokenType.RParen);
-		expect(TokenType.LBrace);
-
-		ASTNode[] thenBody;
-		while (!check(TokenType.RBrace)) {
-			thenBody ~= parseStatement();
-		}
-		expect(TokenType.RBrace);
-
-		ASTNode[] elseBody;
-		if (check(TokenType.Else)) {
-			advance(); // Consume 'else'
-			expect(TokenType.LBrace);
-			while (!check(TokenType.RBrace)) {
-				elseBody ~= parseStatement();
-			}
-			expect(TokenType.RBrace);
-		}
-
-		return new IfStmt(cond, thenBody, elseBody);
-	}
+    else if (check(TokenType.If)) {
+        advance();
+        expect(TokenType.LParen);
+        ASTNode cond = parseExpression();
+        expect(TokenType.RParen);
+        expect(TokenType.LBrace);
+        ASTNode[] typeBody;
+        while (!check(TokenType.RBrace)) {
+            typeBody ~= parseStatement();
+        }
+        expect(TokenType.RBrace);
+        return new IfStmt(cond, typeBody);
+    }
     else if (check(TokenType.While)) {
         advance();
         expect(TokenType.LParen);
@@ -196,9 +184,9 @@ bool checkAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d
 int getPrecedence() {
     if (check(TokenType.Plus) || check(TokenType.Minus)) return 1;
     if (check(TokenType.Star) || check(TokenType.Slash)) return 2;
-	   if (check(TokenType.Less)) return 3; // Add precedence for '<'
-    if (check(TokenType.Greater)) return 4; // Add precedence for '>'
-    if (check(TokenType.EqualEqual)) return 5; // Add precedence for '=='
+    if (check(TokenType.Less)) return 3; // Add precedence for '<'
+    if (check(TokenType.Greater)) return 3; // Add precedence for '>'
+    if (check(TokenType.EqualEqual)) return 4; // Add precedence for '=='
     return 0;
 }
 
