@@ -12,12 +12,16 @@ class ReturnStmt : ASTNode {
 
 class VarDecl : ASTNode {
     string name;
+    string type;
     ASTNode value;
-    this(string n, ASTNode v) {
+
+    this(string t, string n, ASTNode v) {
+        type = t;
         name = n;
         value = v;
     }
 }
+
 
 class BinaryExpr : ASTNode {
     string op;
@@ -61,8 +65,6 @@ class WhileStmt : ASTNode {
     }
 }
 
-
-
 class AssignStmt : ASTNode {
     string name;
     ASTNode value;
@@ -72,3 +74,22 @@ class AssignStmt : ASTNode {
         value = v;
     }
 }
+
+class UnaryExpr : ASTNode {
+    string op;
+    ASTNode expr;
+
+    this(string op, ASTNode expr) {
+        this.op = op;
+        this.expr = expr;
+    }
+}
+
+class BoolLiteral : ASTNode {
+    bool value;
+    this(bool v) {
+        value = v;
+    }
+}
+
+

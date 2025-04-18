@@ -39,6 +39,14 @@ Token expect(TokenType kind) {
     return t;
 }
 
+Token expectAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d = TokenType.Eof) {
+    Token t = current();
+    if (!checkAny(a, b, c, d)) {
+        throw new Exception("Expected one of [" ~ a.stringof ~ ", " ~ b.stringof ~ ", " ~ c.stringof ~ ", " ~ d.stringof ~ "], got " ~ t.type.stringof ~ " at '" ~ t.lexeme ~ "'");
+    }
+    index++;
+    return t;
+}
 
 int toInt(string s) {
     int val = 0;
@@ -76,7 +84,7 @@ ASTNode[] parseProgram(Token[] inputTokens) {
 
 
 ASTNode parseExpression(int prec = 0) {
-    ASTNode left = parsePrimary();
+    ASTNode left = parseUnary(); // ? use parseUnary instead!
 
     while (true) {
         int nextPrec = getPrecedence();
@@ -91,8 +99,27 @@ ASTNode parseExpression(int prec = 0) {
     return left;
 }
 
+ASTNode parseUnary() {
+    if (check(TokenType.Bang)) {
+        Token op = advance(); // consume '!'
+        ASTNode right = parseUnary(); // support nested like !!x
+        return new UnaryExpr(op.lexeme, right);
+    }
+
+    return parsePrimary(); // fallback
+}
+
 
 ASTNode parsePrimary() {
+	if (check(TokenType.True)) {
+		advance();
+		return new IntLiteral(1); // Represent as literal for now
+	}
+	if (check(TokenType.False)) {
+		advance();
+		return new IntLiteral(0); // Represent as literal for now
+	}
+
     if (check(TokenType.Number)) {
         return new IntLiteral(toInt(advance().lexeme));
     }
@@ -108,18 +135,20 @@ ASTNode parsePrimary() {
         return expr;
     }
 
-    throw new Exception("Unexpected token in expression");
+    throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
 
 ASTNode parseStatement() {
-    if (check(TokenType.Int)) {
-        advance(); // skip 'int'
-        string name = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.Assign);
-        ASTNode val = parseExpression();
-        expect(TokenType.Semicolon);
-        return new VarDecl(name, val);
-    }
+	TokenType t = current().type;
+	if (t == TokenType.Int || t == TokenType.Bool) {
+		string typeStr = expectAny(TokenType.Int, TokenType.Bool).lexeme;
+		string name = expect(TokenType.Identifier).lexeme;
+		expect(TokenType.Assign);
+		ASTNode val = parseExpression();
+		expect(TokenType.Semicolon);
+		return new VarDecl(typeStr, name, val);
+	}
+
 	else if (check(TokenType.Identifier) && peek().type == TokenType.Assign) {
 		string name = expect(TokenType.Identifier).lexeme;
 		expect(TokenType.Assign);
@@ -133,19 +162,31 @@ ASTNode parseStatement() {
         expect(TokenType.Semicolon);
         return new ReturnStmt(val);
     }
-    else if (check(TokenType.If)) {
-        advance();
-        expect(TokenType.LParen);
-        ASTNode cond = parseExpression();
-        expect(TokenType.RParen);
-        expect(TokenType.LBrace);
-        ASTNode[] typeBody;
-        while (!check(TokenType.RBrace)) {
-            typeBody ~= parseStatement();
-        }
-        expect(TokenType.RBrace);
-        return new IfStmt(cond, typeBody);
-    }
+	else if (check(TokenType.If)) {
+		advance(); // Consume 'if'
+		expect(TokenType.LParen);
+		ASTNode cond = parseExpression();
+		expect(TokenType.RParen);
+		expect(TokenType.LBrace);
+
+		ASTNode[] thenBody;
+		while (!check(TokenType.RBrace)) {
+			thenBody ~= parseStatement();
+		}
+		expect(TokenType.RBrace);
+
+		ASTNode[] elseBody;
+		if (check(TokenType.Else)) {
+			advance(); // Consume 'else'
+			expect(TokenType.LBrace);
+			while (!check(TokenType.RBrace)) {
+				elseBody ~= parseStatement();
+			}
+			expect(TokenType.RBrace);
+		}
+		
+		return new IfStmt(cond, thenBody, elseBody);
+	}
     else if (check(TokenType.While)) {
         advance();
         expect(TokenType.LParen);
@@ -159,6 +200,27 @@ ASTNode parseStatement() {
         expect(TokenType.RBrace);
         return new WhileStmt(cond, typeBody);
     }
+	
+	if (check(TokenType.True)) {
+		advance();
+		return new BoolLiteral(true);
+	}
+	if (check(TokenType.False)) {
+		advance();
+		return new BoolLiteral(false);
+	}
+	
+	if (checkAny(TokenType.Int, TokenType.Bool)) {
+		Token typeToken = advance(); // grab the type (int or bool)
+		string name = expect(TokenType.Identifier).lexeme;
+		string typeStr = expectAny(TokenType.Int, TokenType.Bool).lexeme;
+		expect(TokenType.Assign);
+		ASTNode val = parseExpression();
+		expect(TokenType.Semicolon);
+		return new VarDecl(typeStr, name, val);
+	}
+
+
 
     throw new Exception("Unknown statement at token: " ~ tokens[index].lexeme);
 }
@@ -182,12 +244,14 @@ bool checkAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d
 }
 
 int getPrecedence() {
-    if (check(TokenType.Plus) || check(TokenType.Minus)) return 1;
-    if (check(TokenType.Star) || check(TokenType.Slash)) return 2;
-	   if (check(TokenType.Less)) return 3; // Add precedence for '<'
-    if (check(TokenType.Greater)) return 4; // Add precedence for '>'
-    if (check(TokenType.EqualEqual)) return 5; // Add precedence for '=='
-    return 0;
+    if (check(TokenType.OrOr)) return 1;  // Lower precedence than &&
+    if (check(TokenType.AndAnd)) return 2; // Higher precedence than ||
+    if (check(TokenType.EqualEqual) || check(TokenType.NotEqual)) return 3; // Comparison operators
+    if (check(TokenType.Less) || check(TokenType.LessEqual) || check(TokenType.Greater) || check(TokenType.GreaterEqual)) return 4;
+    if (check(TokenType.Plus) || check(TokenType.Minus)) return 5;
+    if (check(TokenType.Star) || check(TokenType.Slash)) return 6;
+    if (check(TokenType.Assign)) return 0; // Lowest precedence
+    return -1; // Default for unknown tokens
 }
 
 Token peek() {

@@ -1,25 +1,43 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/18/2025 12:25:42 AM
+Created On: 4/18/2025 3:46:36 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
 00001000  7200                       3          move.l #0, D1
-00001002                             4  .while_0:
-00001002  7403                       5          move.l #3, D2
-00001004  2601                       6          move.l D1, D3
-00001006  D682                       7          add.l D2, D3
-00001008  B6BC 00000000              8          cmp.l #0, D3
-0000100E  6700 000A                  9          beq .endwhile_1
-00001012  7801                      10          move.l #1, D4
-00001014  2A01                      11          move.l D1, D5
-00001016  DA84                      12          add.l D4, D5
-00001018  60E8                      13          bra .while_0
-0000101A                            14  .endwhile_1:
-0000101A  2005                      15          move.l D5, D0 ; return
-0000101C  4E75                      16          rts
-Line 17 WARNING: Address expected
-0000101E                            17          END
+00001002  23C1 00001066              4          move.l D1, .var_sumTrue
+00001008  7203                       5          move.l #3, D1
+0000100A  23C1 00001062              6          move.l D1, .var_x
+00001010  7204                       7          move.l #4, D1
+00001012  23C1 0000106A              8          move.l D1, .var_y
+00001018  2239 00001062              9          move.l .var_x, D1
+0000101E  2439 0000106A             10          move.l .var_y, D2
+00001024  2601                      11          move.l D1, D3
+00001026  D682                      12          add.l D2, D3
+00001028  23C3 0000106E             13          move.l D3, .var_z
+0000102E  2239 0000106E             14          move.l .var_z, D1
+00001034  7406                      15          move.l #6, D2
+00001036  B282                      16          cmp.l D2, D1
+00001038  57C3                      17          seq D3
+0000103A  B6BC 00000000             18          cmp.l #0, D3
+00001040  6700 000E                 19          beq .else_0
+00001044  7201                      20          move.l #1, D1
+00001046  23C1 00001066             21          move.l D1, .var_sumTrue
+0000104C  6000 000A                 22          bra .endif_1
+00001050                            23  .else_0:
+00001050  7200                      24          move.l #0, D1
+00001052  23C1 00001066             25          move.l D1, .var_sumTrue
+00001058                            26  .endif_1:
+00001058  2239 0000106E             27          move.l .var_z, D1
+0000105E  2001                      28          move.l D1, D0 ; return
+00001060  4E75                      29          rts
+00001062                            30  
+00001062                            31  .var_x:    ds.l 1
+00001066                            32  .var_sumTrue:    ds.l 1
+0000106A                            33  .var_y:    ds.l 1
+0000106E                            34  .var_z:    ds.l 1
+Line 35 WARNING: Address expected
+00001072                            35          END
 
 No errors detected
 1 warning generated
@@ -29,5 +47,9 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:ENDWHILE_1     101A
-MAIN:WHILE_0        1002
+MAIN:ELSE_0         1050
+MAIN:ENDIF_1        1058
+MAIN:VAR_SUMTRUE    1066
+MAIN:VAR_X          1062
+MAIN:VAR_Y          106A
+MAIN:VAR_Z          106E

@@ -1,7 +1,13 @@
 int main() {
-	int t = 0;
-	while (t < 3) {
-		t = t + 1;
+	bool sumTrue = false;
+	int x = 3;
+	int y = 4;
+	int z = x + y;
+	if (z == 6) {
+		sumTrue = true;
 	}
-	return t;
+	else {
+		sumTrue = false;
+	}
+	return z;
 }

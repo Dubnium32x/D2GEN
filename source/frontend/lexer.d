@@ -13,7 +13,17 @@ enum TokenType {
 
 	If, Else, While,
 	Greater, Less, EqualEqual, // for `==`
-	Assign,                    // single =
+	Assign,   
+	Bool,
+	NotEqual,
+	LessEqual,
+	GreaterEqual,
+	Bang, // for !
+	
+	True,
+	False,
+	AndAnd,
+	OrOr,
 
     LBrace, RBrace,
     LParen, RParen,
@@ -46,6 +56,60 @@ Token[] tokenize(string input) {
             pos += 2;
             continue;
         }
+		else if (c == '=') {
+			tokens ~= Token(TokenType.Assign, "=");
+			pos++;
+			continue;
+		}
+
+		// !=
+		else if  (c == '!' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.NotEqual, "!=");
+			pos += 2;
+			continue;
+		}
+		else if (c == '!') {
+			tokens ~= Token(TokenType.Bang, "!");
+			pos++;
+			continue;
+		}
+		
+		if (c == '<' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.LessEqual, "<=");
+			pos += 2;
+			continue;
+		}
+		else if (c == '<') {
+			tokens ~= Token(TokenType.Less, "<");
+			pos++;
+			continue;
+		}
+
+		if (c == '>' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.GreaterEqual, ">=");
+			pos += 2;
+			continue;
+		}
+		else if (c == '>') {
+			tokens ~= Token(TokenType.Greater, ">");
+			pos++;
+			continue;
+		}
+
+		// and/or
+		if (c == '&' && peekNext(input, pos) == '&') {
+			tokens ~= Token(TokenType.AndAnd, "&&");
+			pos += 2;
+			continue;
+		}
+
+		else if (c == '|' && peekNext(input, pos) == '|') {
+			tokens ~= Token(TokenType.OrOr, "||");
+			pos += 2;
+			continue;
+		}
+		
+
 
         // Single-character tokens
         if (c == '(') { tokens ~= Token(TokenType.LParen, "("); pos++; continue; }
@@ -58,8 +122,6 @@ Token[] tokenize(string input) {
         if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
         if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
         if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
-        if (c == '>') { tokens ~= Token(frontend.lexer.TokenType.Greater, ">"); pos++; continue; }
-        if (c == '<') { tokens ~= Token(frontend.lexer.TokenType.Less, "<"); pos++; continue; }
 
         // Numbers
         if (isDigit(c)) {
@@ -78,18 +140,25 @@ Token[] tokenize(string input) {
             string lexeme = input[start .. pos];
 
             // Check if lexeme is a keyword
-            if (lexeme == "int")
-                tokens ~= Token(TokenType.Int, lexeme);
-            else if (lexeme == "return")
-                tokens ~= Token(TokenType.Return, lexeme);
-            else if (lexeme == "if")
-                tokens ~= Token(TokenType.If, lexeme);
-            else if (lexeme == "else")
-                tokens ~= Token(TokenType.Else, lexeme);
-            else if (lexeme == "while")
-                tokens ~= Token(TokenType.While, lexeme);
-            else
-                tokens ~= Token(TokenType.Identifier, lexeme);
+			if (lexeme == "int")
+				tokens ~= Token(TokenType.Int, lexeme);
+			else if (lexeme == "return")
+				tokens ~= Token(TokenType.Return, lexeme);
+			else if (lexeme == "if")
+				tokens ~= Token(TokenType.If, lexeme);
+			else if (lexeme == "else")
+				tokens ~= Token(TokenType.Else, lexeme);
+			else if (lexeme == "while")
+				tokens ~= Token(TokenType.While, lexeme);
+			else if (lexeme == "true")
+				tokens ~= Token(TokenType.True, lexeme);
+			else if (lexeme == "false")
+				tokens ~= Token(TokenType.False, lexeme);
+			else if (lexeme == "bool")
+				tokens ~= Token(TokenType.Bool, lexeme);
+			else
+				tokens ~= Token(TokenType.Identifier, lexeme);
+
             continue;
         }
 
