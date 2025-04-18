@@ -93,6 +93,12 @@ ASTNode parseExpression(int prec = 0) {
 
 
 ASTNode parsePrimary() {
+    if (check(TokenType.Bang)) {
+        Token op = advance(); // consume '!'
+        ASTNode right = parsePrimary(); // parse the thing being negated
+        return new UnaryExpr(op.lexeme, right);
+    }
+
     if (check(TokenType.Number)) {
         return new IntLiteral(toInt(advance().lexeme));
     }
@@ -108,8 +114,9 @@ ASTNode parsePrimary() {
         return expr;
     }
 
-    throw new Exception("Unexpected token in expression");
+    throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
+
 
 ASTNode parseStatement() {
     if (check(TokenType.Int)) {
@@ -196,9 +203,13 @@ bool checkAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d
 int getPrecedence() {
     if (check(TokenType.Plus) || check(TokenType.Minus)) return 1;
     if (check(TokenType.Star) || check(TokenType.Slash)) return 2;
-	   if (check(TokenType.Less)) return 3; // Add precedence for '<'
+	if (check(TokenType.Less)) return 3; // Add precedence for '<'
     if (check(TokenType.Greater)) return 4; // Add precedence for '>'
     if (check(TokenType.EqualEqual)) return 5; // Add precedence for '=='
+	if (check(TokenType.NotEqual)) return 5;
+	if (check(TokenType.LessEqual)) return 3;
+	if (check(TokenType.GreaterEqual)) return 4;
+
     return 0;
 }
 

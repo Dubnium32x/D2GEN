@@ -38,21 +38,31 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         lines ~= "        move.l " ~ reg ~ ", D0 ; return";
         lines ~= "        rts";
     }
-    else if (auto ifstmt = cast(IfStmt) node) {
-        string labelEnd = genLabel("endif");
+	else if (auto ifstmt = cast(IfStmt) node) {
+		string labelElse = genLabel("else");
+		string labelEnd  = genLabel("endif");
 
-        // Compare condition
-        string condReg = generateExpr(ifstmt.condition, lines, regIndex, varRegs);
-        lines ~= "        cmp.l #0, " ~ condReg;
-        lines ~= "        beq " ~ labelEnd;
+		// Condition
+		string condReg = generateExpr(ifstmt.condition, lines, regIndex, varRegs);
+		lines ~= "        cmp.l #0, " ~ condReg;
+		lines ~= "        beq " ~ labelElse;
 
-        // Emit body
-        foreach (s; ifstmt.thenBody) {
-            generateStmt(s, lines, regIndex, varRegs);
-        }
+		// Then body
+		foreach (s; ifstmt.thenBody) {
+			generateStmt(s, lines, regIndex, varRegs);
+		}
 
-        lines ~= labelEnd ~ ":";
-    }
+		lines ~= "        bra " ~ labelEnd; // Jump past else
+
+		// Else body (if any)
+		lines ~= labelElse ~ ":";
+		foreach (s; ifstmt.elseBody) {
+			generateStmt(s, lines, regIndex, varRegs);
+		}
+
+		// End label
+		lines ~= labelEnd ~ ":";
+	}
     else if (auto whilestmt = cast(WhileStmt) node) {
         string labelStart = genLabel("while");
         string labelEnd = genLabel("endwhile");
@@ -82,6 +92,20 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     if (auto var = cast(VarExpr) expr) {
         return varRegs.get(var.name, "D1"); // fallback
     }
+	if (auto unary = cast(UnaryExpr) expr) {
+		string reg = generateExpr(unary.expr, lines, regIndex, varRegs);
+		string dest = "D" ~ to!string(regIndex++);
+
+		final switch (unary.op) {
+			case "!":
+				lines ~= "        tst.l " ~ reg; // test the value
+				lines ~= "        seq " ~ dest;  // set if equal to zero
+				lines ~= "        and.l #1, " ~ dest; // ensure it’s 0 or 1
+				break;
+		}
+		
+		return dest;
+	}
     if (auto bin = cast(BinaryExpr) expr) {
         string left = generateExpr(bin.left, lines, regIndex, varRegs);
         string right = generateExpr(bin.right, lines, regIndex, varRegs);
@@ -94,6 +118,24 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             case "-": op = "sub.l"; break;
             case "*": op = "muls";  break;
             case "/": op = "divs";  break;
+			case "!=":
+				lines ~= "        cmp.l " ~ right ~ ", " ~ left;
+				dest = "D" ~ to!string(regIndex++);
+				lines ~= "        sne " ~ dest;
+				return dest;
+
+			case "<=":
+				lines ~= "        cmp.l " ~ right ~ ", " ~ left;
+				dest = "D" ~ to!string(regIndex++);
+				lines ~= "        sle " ~ dest;
+				return dest;
+
+			case ">=":
+				lines ~= "        cmp.l " ~ right ~ ", " ~ left;
+				dest = "D" ~ to!string(regIndex++);
+				lines ~= "        sge " ~ dest;
+				return dest;
+
             default: op = "add.l"; break;
         }
 

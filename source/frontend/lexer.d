@@ -14,6 +14,10 @@ enum TokenType {
 	If, Else, While,
 	Greater, Less, EqualEqual, // for `==`
 	Assign,                    // single =
+	NotEqual,
+	LessEqual,
+	GreaterEqual,
+	Bang, // for !
 
     LBrace, RBrace,
     LParen, RParen,
@@ -46,6 +50,32 @@ Token[] tokenize(string input) {
             pos += 2;
             continue;
         }
+		// !=
+		else if  (c == '!' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.NotEqual, "!=");
+			pos += 2;
+			continue;
+		}
+		else if (c == '!') {
+			tokens ~= Token(TokenType.Bang, "!");
+			pos++;
+			continue;
+		}
+		
+		// <=
+		if (c == '<' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.LessEqual, "<=");
+			pos += 2;
+			continue;
+		}
+
+		// >=
+		if (c == '>' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.GreaterEqual, ">=");
+			pos += 2;
+			continue;
+		}
+
 
         // Single-character tokens
         if (c == '(') { tokens ~= Token(TokenType.LParen, "("); pos++; continue; }
@@ -60,7 +90,7 @@ Token[] tokenize(string input) {
         if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
         if (c == '>') { tokens ~= Token(frontend.lexer.TokenType.Greater, ">"); pos++; continue; }
         if (c == '<') { tokens ~= Token(frontend.lexer.TokenType.Less, "<"); pos++; continue; }
-
+		
         // Numbers
         if (isDigit(c)) {
             size_t start = pos;

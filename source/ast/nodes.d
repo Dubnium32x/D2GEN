@@ -72,3 +72,14 @@ class AssignStmt : ASTNode {
         value = v;
     }
 }
+
+class UnaryExpr : ASTNode {
+    string op;
+    ASTNode expr;
+
+    this(string op, ASTNode expr) {
+        this.op = op;
+        this.expr = expr;
+    }
+}
+
