@@ -38,8 +38,8 @@ main:
         rts
 
 .var_messageGood:    ds.l 1
-.var_score:    ds.l 1
 .var_messageOK:    ds.l 1
+.var_score:    ds.l 1
 
 .str_0:
         dc.b 'Keep trying.'

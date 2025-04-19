@@ -6,7 +6,7 @@ set -e
 mkdir -p bin
 
 # Compile D sources into a 32-bit executable named bin/d2gen.exe
-dmd -m32 -ofbin/d2gen.exe \
+dmd -ofbin/d2gen \
     source/main.d \
     source/frontend/lexer.d \
     source/frontend/parser.d \
