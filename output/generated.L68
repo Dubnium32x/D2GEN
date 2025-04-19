@@ -1,43 +1,55 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/18/2025 3:46:36 PM
+Created On: 4/18/2025 4:51:12 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7200                       3          move.l #0, D1
-00001002  23C1 00001066              4          move.l D1, .var_sumTrue
-00001008  7203                       5          move.l #3, D1
-0000100A  23C1 00001062              6          move.l D1, .var_x
-00001010  7204                       7          move.l #4, D1
-00001012  23C1 0000106A              8          move.l D1, .var_y
-00001018  2239 00001062              9          move.l .var_x, D1
-0000101E  2439 0000106A             10          move.l .var_y, D2
-00001024  2601                      11          move.l D1, D3
-00001026  D682                      12          add.l D2, D3
-00001028  23C3 0000106E             13          move.l D3, .var_z
-0000102E  2239 0000106E             14          move.l .var_z, D1
-00001034  7406                      15          move.l #6, D2
-00001036  B282                      16          cmp.l D2, D1
-00001038  57C3                      17          seq D3
-0000103A  B6BC 00000000             18          cmp.l #0, D3
-00001040  6700 000E                 19          beq .else_0
-00001044  7201                      20          move.l #1, D1
-00001046  23C1 00001066             21          move.l D1, .var_sumTrue
-0000104C  6000 000A                 22          bra .endif_1
-00001050                            23  .else_0:
-00001050  7200                      24          move.l #0, D1
-00001052  23C1 00001066             25          move.l D1, .var_sumTrue
-00001058                            26  .endif_1:
-00001058  2239 0000106E             27          move.l .var_z, D1
-0000105E  2001                      28          move.l D1, D0 ; return
-00001060  4E75                      29          rts
-00001062                            30  
-00001062                            31  .var_x:    ds.l 1
-00001066                            32  .var_sumTrue:    ds.l 1
-0000106A                            33  .var_y:    ds.l 1
-0000106E                            34  .var_z:    ds.l 1
-Line 35 WARNING: Address expected
-00001072                            35          END
+00001000  725A                       3          move.l #90, D1
+00001002  23C1 00001082              4          move.l D1, .var_score
+00001008  23FC 00000000 0000107E     5          move.l #0, .var_messageGood
+00001012  23FC 00000000 00001086     6          move.l #0, .var_messageOK
+0000101C  2239 00001082              7          move.l .var_score, D1
+00001022  7464                       8          move.l #100, D2
+00001024  B282                       9          cmp.l D2, D1
+00001026  57C3                      10          seq D3
+00001028  B6BC 00000000             11          cmp.l #0, D3
+0000102E  6700 0014                 12          beq .else_0
+00001032  2239 0000107E             13          move.l .var_messageGood, D1
+00001038  2201                      14          move.l D1, D1
+0000103A  103C 0001                 15          move.b #1, D0
+0000103E  4E4F                      16          trap #15
+00001040  6000 0036                 17          bra .endif_1
+00001044                            18  .else_0:
+00001044  2239 00001082             19          move.l .var_score, D1
+0000104A  745A                      20          move.l #90, D2
+0000104C  B282                      21          cmp.l D2, D1
+0000104E  5CC3                      22          sge D3
+00001050  B6BC 00000000             23          cmp.l #0, D3
+00001056  6700 0014                 24          beq .else_2
+0000105A  2239 00001086             25          move.l .var_messageOK, D1
+00001060  2201                      26          move.l D1, D1
+00001062  103C 0001                 27          move.b #1, D0
+00001066  4E4F                      28          trap #15
+00001068  6000 000E                 29          bra .endif_3
+0000106C                            30  .else_2:
+0000106C  43F9 0000108A             31          lea .str_0, A1
+00001072  103C 0009                 32          move.b #9, D0
+00001076  4E4F                      33          trap #15
+00001078                            34  .endif_3:
+00001078                            35  .endif_1:
+00001078  7200                      36          move.l #0, D1
+0000107A  2001                      37          move.l D1, D0 ; return
+0000107C  4E75                      38          rts
+0000107E                            39  
+0000107E                            40  .var_messageGood:    ds.l 1
+00001082                            41  .var_score:    ds.l 1
+00001086                            42  .var_messageOK:    ds.l 1
+0000108A                            43  
+0000108A                            44  .str_0:
+0000108A= 4B 65 65 70 20 74 ...     45          dc.b 'Keep trying.'
+00001096= 00                        46          dc.b 0
+Line 47 WARNING: Address expected
+00001097                            47          END
 
 No errors detected
 1 warning generated
@@ -47,9 +59,11 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:ELSE_0         1050
-MAIN:ENDIF_1        1058
-MAIN:VAR_SUMTRUE    1066
-MAIN:VAR_X          1062
-MAIN:VAR_Y          106A
-MAIN:VAR_Z          106E
+MAIN:ELSE_0         1044
+MAIN:ELSE_2         106C
+MAIN:ENDIF_1        1078
+MAIN:ENDIF_3        1078
+MAIN:STR_0          108A
+MAIN:VAR_MESSAGEGOOD  107E
+MAIN:VAR_MESSAGEOK  1086
+MAIN:VAR_SCORE      1082

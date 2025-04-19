@@ -1,5 +1,7 @@
 module ast.nodes;
 
+import std.string;
+
 abstract class ASTNode {}
 
 class ReturnStmt : ASTNode {
@@ -65,6 +67,13 @@ class WhileStmt : ASTNode {
     }
 }
 
+class PrintStmt : ASTNode {
+    ASTNode value;
+    this(ASTNode v) {
+        value = v;
+    }
+}
+
 class AssignStmt : ASTNode {
     string name;
     ASTNode value;
@@ -90,6 +99,11 @@ class BoolLiteral : ASTNode {
     this(bool v) {
         value = v;
     }
+}
+
+class StringLiteral : ASTNode {
+    string value;
+    this(string v) { value = v; }
 }
 
 

@@ -19,15 +19,25 @@ string generateCode(ASTNode[] nodes) {
         generateStmt(node, lines, regIndex, varAddrs);
     }
 
-    lines ~= "        rts";
-    lines ~= "";
+    lines ~= "        rts"; // Add `rts` only once
 
-    // Emit memory storage
+    // Emit .var_ memory section
+    lines ~= "";
     foreach (name, addr; varAddrs) {
         lines ~= addr ~ ":    ds.l 1";
     }
 
+    if (strLabels.length > 0) {
+        lines ~= "";
+        foreach (val, label; strLabels) {
+            lines ~= label ~ ":";
+            lines ~= "        dc.b \'" ~ val ~ "\'"; // Emit the string without escaping
+            lines ~= "        dc.b 0";              // Add the null terminator separately
+        }
+    }
+
     lines ~= "        END";
+
     return lines.join("\n");
 }
 
@@ -86,6 +96,20 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         lines ~= "        bra " ~ labelStart;
         lines ~= labelEnd ~ ":";
     }
+	else if (auto print = cast(PrintStmt) node) {
+		if (auto str = cast(StringLiteral) print.value) {
+			string label = getOrCreateStringLabel(str.value);
+			lines ~= "        lea " ~ label ~ ", A1";
+			lines ~= "        move.b #9, D0"; // TRAP #15: Print string in A1
+			lines ~= "        trap #15";
+		} else {
+			string reg = generateExpr(print.value, lines, regIndex, varAddrs);
+			lines ~= "        move.l " ~ reg ~ ", D1";
+			lines ~= "        move.b #1, D0"; // TRAP #15: Print number in D1
+			lines ~= "        trap #15";
+		}
+	}
+
 }
 
 string nextReg(ref int regIndex) {
@@ -214,4 +238,29 @@ string getOrCreateVarAddr(string name, ref string[string] varAddrs) {
         varAddrs[name] = ".var_" ~ name;
     }
     return varAddrs[name];
+}
+
+// String label tracking
+string[string] strLabels;
+int strLabelCounter = 0;
+
+string getOrCreateStringLabel(string val) {
+    if (!(val in strLabels)) {
+        strLabels[val] = ".str_" ~ to!string(strLabelCounter++);
+    }
+    return strLabels[val];
+}
+
+string escapeString(string input) {
+    string escaped = "";
+    foreach (c; input) {
+        if (c == '"') {
+            escaped ~= "\\\""; // Escape double quotes
+        } else if (c == '\\') {
+            escaped ~= "\\\\"; // Escape backslashes
+        } else {
+            escaped ~= c;
+        }
+    }
+    return escaped;
 }

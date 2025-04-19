@@ -1,13 +1,15 @@
 int main() {
-	bool sumTrue = false;
-	int x = 3;
-	int y = 4;
-	int z = x + y;
-	if (z == 6) {
-		sumTrue = true;
-	}
-	else {
-		sumTrue = false;
-	}
-	return z;
+    int score = 90;
+	string messageGood = "Great!";
+	string messageOK = "OK!";
+    if (score == 100) {
+		print(messageGood);
+    }
+    else if (score >= 90) {
+        print(messageOK);
+    }
+    else {
+        print("Keep trying.");
+    }
+    return 0;
 }

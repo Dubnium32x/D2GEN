@@ -15,10 +15,13 @@ enum TokenType {
 	Greater, Less, EqualEqual, // for `==`
 	Assign,   
 	Bool,
+	String,
 	NotEqual,
 	LessEqual,
 	GreaterEqual,
 	Bang, // for !
+	
+	StringLiteral,
 	
 	True,
 	False,
@@ -109,6 +112,17 @@ Token[] tokenize(string input) {
 			continue;
 		}
 		
+		// strings
+		if (c == '"') {
+			size_t start = ++pos; // skip the opening quote
+			while (pos < input.length && input[pos] != '"')
+				pos++;
+			string lexeme = input[start .. pos];
+			pos++; // skip closing quote
+			tokens ~= Token(TokenType.StringLiteral, lexeme);
+			continue;
+		}
+
 
 
         // Single-character tokens
@@ -156,6 +170,8 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.False, lexeme);
 			else if (lexeme == "bool")
 				tokens ~= Token(TokenType.Bool, lexeme);
+			else if (lexeme == "string")
+				tokens ~= Token(TokenType.String, lexeme);
 			else
 				tokens ~= Token(TokenType.Identifier, lexeme);
 
