@@ -106,4 +106,78 @@ class StringLiteral : ASTNode {
     this(string v) { value = v; }
 }
 
+class ForStmt : ASTNode {
+    string name;
+    ASTNode start, end, step;
+    ASTNode[] forBody;
 
+    this(string n, ASTNode s, ASTNode e, ASTNode st, ASTNode[] b) {
+        name = n;
+        start = s;
+        end = e;
+        step = st;
+        forBody = b;
+    }
+}
+
+class CallExpr : ASTNode {
+    string name;
+    ASTNode[] args;
+
+    this(string n, ASTNode[] a) {
+        name = n;
+        args = a;
+    }
+}
+
+class FunctionDecl : ASTNode {
+    string name;
+    string returnType;
+    string[] params;
+    ASTNode[] body;
+
+    this(string n, string rt, string[] p, ASTNode[] b) {
+        name = n;
+        returnType = rt;
+        params = p;
+        body = b;
+    }
+}
+
+class BreakStmt : ASTNode {
+    this() {} // Empty constructor
+}
+
+class ContinueStmt : ASTNode {
+    this() {} // Empty constructor
+}
+
+class ArrayDecl : ASTNode {
+    string name;
+    int size;
+
+    this(string n, int s) {
+        name = n;
+        size = s;
+    }
+}
+
+class SwitchStmt : ASTNode {
+    ASTNode condition;
+    ASTNode[] cases;
+
+    this(ASTNode cond, ASTNode[] cs) {
+        condition = cond;
+        cases = cs;
+    }
+}
+
+class CaseStmt : ASTNode {
+    ASTNode condition;
+    ASTNode[] caseBody;
+
+    this(ASTNode cond, ASTNode[] b) {
+        condition = cond;
+        caseBody = b;
+    }
+}
