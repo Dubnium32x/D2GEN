@@ -120,6 +120,20 @@ class ForStmt : ASTNode {
     }
 }
 
+class CStyleForStmt : ASTNode {
+    ASTNode init;
+    ASTNode condition;
+    ASTNode increment;
+    ASTNode[] forBody;
+
+    this(ASTNode init, ASTNode condition, ASTNode increment, ASTNode[] body) {
+        this.init = init;
+        this.condition = condition;
+        this.increment = increment;
+        this.forBody = body;
+    }
+}
+
 class CallExpr : ASTNode {
     string name;
     ASTNode[] args;

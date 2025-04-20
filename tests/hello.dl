@@ -1,15 +1,6 @@
 int main() {
-    int score = 90;
-	string messageGood = "Great!";
-	string messageOK = "OK!";
-    if (score == 100) {
-		print(messageGood);
-    }
-    else if (score >= 90) {
-        print(messageOK);
-    }
-    else {
-        print("Keep trying.");
+    for (int i = 0; i < 10; i++) {
+        print("Iteration: ", i);
     }
     return 0;
 }

@@ -41,6 +41,7 @@ enum TokenType {
     LBrace, RBrace,
     LParen, RParen,
     Semicolon,
+	Colon,
     Eof
 }
 
@@ -206,6 +207,8 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.To, lexeme);
 			else if (lexeme == "step")
 				tokens ~= Token(TokenType.Step, lexeme);
+			else 
+				tokens ~= Token(TokenType.Identifier, lexeme);
             continue;
         }
 

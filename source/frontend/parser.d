@@ -6,23 +6,8 @@ import ast.nodes;
 private Token[] tokens;
 private size_t index;
 
-ASTNode parse(Token[] inputTokens) {
-    tokens = inputTokens;
-    index = 0;
-
-    // Parse: int main() { return 42; }
-    expect(TokenType.Int);
-    string name = expect(TokenType.Identifier).lexeme;
-    expect(TokenType.LParen);
-    expect(TokenType.RParen);
-    expect(TokenType.LBrace);
-    expect(TokenType.Return);
-    int value = toInt(expect(TokenType.Number).lexeme);
-    expect(TokenType.Semicolon);
-    expect(TokenType.RBrace);
-    expect(TokenType.Eof);
-
-    return new ReturnStmt(new IntLiteral(value));
+ASTNode[] parse(Token[] inputTokens) {
+    return parseProgram(inputTokens);
 }
 
 // ---------------------------
@@ -206,6 +191,46 @@ ASTNode parseStatement() {
 		expect(TokenType.Semicolon);
 		return new PrintStmt(val);
 	}
+    else if (check(TokenType.For) && peek().type == TokenType.LParen) {
+        advance(); // consume 'for'
+
+        if (check(TokenType.LParen)) {
+            // C-style for loop
+            advance(); // consume '('
+
+            ASTNode init = parseStatement(); // or parseExpression if you're just doing expressions
+            expect(TokenType.Semicolon);
+
+            ASTNode cond = parseExpression();
+            expect(TokenType.Semicolon);
+
+            ASTNode inc = parseExpression();
+            expect(TokenType.RParen);
+
+            ASTNode[] body = parseBlock();
+            return new CStyleForStmt(init, cond, inc, body);
+        }
+        else if (check(TokenType.Identifier) && peek().type == TokenType.To) {
+            // Range-style for loop
+            string varName = expect(TokenType.Identifier).lexeme;
+            expect(TokenType.Assign);
+            ASTNode start = parseExpression();
+            expect(TokenType.To);
+            ASTNode end = parseExpression();
+
+            ASTNode step = new IntLiteral(1); // default step
+            if (check(TokenType.Step)) {
+                advance(); // consume 'step'
+                step = parseExpression();
+            }
+
+            ASTNode[] body = parseBlock();
+            return new ForStmt(varName, start, end, step, body);
+        }
+        else {
+            throw new Exception("Unexpected token after 'for': " ~ current().lexeme);
+        }
+    }
 
 	
 	if (check(TokenType.True)) {
