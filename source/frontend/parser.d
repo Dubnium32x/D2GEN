@@ -83,6 +83,18 @@ ASTNode parseExpression(int prec = 0) {
             throw new Exception("Left-hand side of assignment must be a variable");
         }
     }
+    if (check(TokenType.Number) && peek().type == TokenType.DotDot) {
+        int start = toInt(advance().lexeme);
+        expect(TokenType.DotDot);
+        int end = toInt(expect(TokenType.Number).lexeme);
+        return new RangeLiteral(start, end);
+    }
+    if (check(TokenType.DotDot)) {
+        Token op = advance(); // consume '..'
+        ASTNode right = parseExpression();
+        return new RangeExpr(left, right);
+    }
+    
 
     while (true) {
         int nextPrec = getPrecedence();
@@ -252,6 +264,21 @@ ASTNode parseStatement() {
 
         return new CStyleForStmt(init, condition, increment, forBody);
     }
+    else if (check(TokenType.Foreach)) {
+        advance(); // consume 'foreach'
+        expect(TokenType.LParen);
+        
+        string varName = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Semicolon);
+        
+        ASTNode iterable = parseExpression();
+        expect(TokenType.RParen);
+        
+        ASTNode[] forEachBody = parseBlock();
+        
+        return new ForeachStmt(varName, iterable, forEachBody);
+    }
+
 
 
     // Fallback for expression statements like 'i++' or any valid expression

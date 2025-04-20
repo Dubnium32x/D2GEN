@@ -14,6 +14,9 @@ enum TokenType {
 	// `+` and `+=`, `-` and `-=`, etc.
     Plus, Minus, Star, Slash,
 
+	Dot,
+	DotDot,
+
 	If, Else, While,
 	Greater, Less, EqualEqual, // for `==`
 	Assign,   
@@ -159,7 +162,13 @@ Token[] tokenize(string input) {
 			tokens ~= Token(TokenType.StringLiteral, lexeme);
 			continue;
 		}
-
+		
+		// dots
+		if (c == '.' && peekNext(input, pos) == '.') {
+			tokens ~= Token(TokenType.DotDot, "..");
+			pos += 2;
+			continue;
+		}
 
 
         // Single-character tokens
@@ -176,6 +185,7 @@ Token[] tokenize(string input) {
 		if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
 		if (c == '<') { tokens ~= Token(TokenType.Less, "<"); pos++; continue; }
 		if (c == '>') { tokens ~= Token(TokenType.Greater, ">"); pos++; continue; }
+		if (c == '.') { tokens ~= Token(TokenType.Dot, "."); pos++; continue; }
 
         // Numbers
         if (isDigit(c)) {

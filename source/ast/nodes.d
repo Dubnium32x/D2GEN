@@ -139,6 +139,19 @@ class RangeForStmt : ASTNode {
     }
 }
 
+class RangeLiteral : ASTNode {
+    int start, end;
+    this(int s, int e) { start = s; end = e; }
+}
+
+class RangeExpr : ASTNode {
+    ASTNode start;
+    ASTNode end;
+    this(ASTNode s, ASTNode e) {
+        start = s;
+        end = e;
+    }
+}
 
 class CStyleForStmt : ASTNode {
     ASTNode init;
@@ -159,6 +172,18 @@ class ExprStmt : ASTNode {
 
     this(ASTNode expr) {
         this.expr = expr;
+    }
+}
+
+class ForeachStmt : ASTNode {
+    string varName;
+    ASTNode iterable;
+    ASTNode[] forEachBody;
+
+    this(string name, ASTNode iterable, ASTNode[] forEachBody) {
+        this.varName = name;
+        this.iterable = iterable;
+        this.forEachBody = forEachBody;
     }
 }
 

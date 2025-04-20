@@ -1,18 +1,43 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/20/2025 12:21:28 PM
+Created On: 4/20/2025 3:58:47 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
 00001000  7200                       3          move.l #0, D1
-00001002  23C1 0000100E              4          move.l D1, .var_i
-00001008  7200                       5          move.l #0, D1
-0000100A  2001                       6          move.l D1, D0 ; return
-0000100C  4E75                       7          rts
-0000100E                             8  
-0000100E                             9  .var_i:    ds.l 1
-Line 10 WARNING: Address expected
-00001012                            10          END
+00001002  23C1 00001044              4          move.l D1, .var_i
+00001008                             5          ; Initialize foreach loop (i)
+00001008  7201                       6          move.l #1, D1          ; Start value
+0000100A  7405                       7          move.l #5, D2          ; End value
+0000100C  23C1 00001036              8          move.l D1, (.var_i_counter) ; Store initial value
+00001012                             9  .foreach_0:
+00001012                            10          ; Check loop condition
+00001012  B282                      11          cmp.l D2, D1
+00001014  6C00 0020                 12          bge .end_foreach_1
+00001018  23C1 00001044             13          move.l D1, (.var_i) ; Update i
+0000101E                            14          ; === Loop body begin ===
+0000101E  2239 00001044             15          move.l .var_i, D1
+00001024  2201                      16          move.l D1, D1
+00001026  103C 0001                 17          move.b #1, D0
+0000102A  4E4F                      18          trap #15
+0000102C                            19          ; === Loop body end ===
+0000102C                            20          ; Update loop counter
+0000102C  5281                      21          addq.l #1, D1          ; i++
+0000102E  23C1 00001036             22          move.l D1, (.var_i_counter) ; Store updated value
+00001034  60DC                      23          bra .foreach_0
+00001036                            24  .end_foreach_1:
+00001036                            25          ; Foreach loop complete
+00001036                            26          ; Clean up foreach loop variables
+00001036                            27  .var_i_counter:    ds.l 1 ; Clean up counter variable
+0000103A                            28  .var_char_buffer:    ds.l 1 ; Clean up char buffer
+0000103E                            29          ; Reset register counter if needed
+0000103E  7200                      30          move.l #0, D1
+00001040  2001                      31          move.l D1, D0 ; return
+00001042  4E75                      32          rts
+00001044                            33  
+00001044                            34  .var_i:    ds.l 1
+Line 35 WARNING: Address expected
+00001048                            35          END
 
 No errors detected
 1 warning generated
@@ -22,4 +47,8 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:VAR_I          100E
+MAIN:END_FOREACH_1  1036
+MAIN:FOREACH_0      1012
+MAIN:VAR_CHAR_BUFFER  103A
+MAIN:VAR_I          1044
+MAIN:VAR_I_COUNTER  1036
