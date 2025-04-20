@@ -44,6 +44,8 @@ enum TokenType {
 	AndAnd,
 	OrOr,
 
+	Byte,
+
     LBrace, RBrace,
     LParen, RParen,
     Semicolon,
@@ -208,6 +210,8 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.Int, lexeme);
 			else if (lexeme == "return")
 				tokens ~= Token(TokenType.Return, lexeme);
+			else if (lexeme == "byte")
+				tokens ~= Token(TokenType.Byte, lexeme);
 			else if (lexeme == "if")
 				tokens ~= Token(TokenType.If, lexeme);
 			else if (lexeme == "else")

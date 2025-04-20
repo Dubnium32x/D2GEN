@@ -1,7 +1,7 @@
 int main() {
-    int i = 0;
-    foreach (i; 1..5) {
-        print(i);
+    byte i = 6;
+    if (i == 6) {
+        print("Yippee!");
     }
     return 0;
 }

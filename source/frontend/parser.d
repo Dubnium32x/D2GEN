@@ -139,6 +139,10 @@ ASTNode parsePrimary() {
     if (check(TokenType.Number)) {
         return new IntLiteral(toInt(advance().lexeme));
     }
+    
+    if (check(TokenType.Byte)) {
+        return new ByteLiteral(parseByteValue(advance().lexeme));
+    }
 
     if (check(TokenType.Identifier)) {
         string name = advance().lexeme;
@@ -167,6 +171,17 @@ ASTNode parsePrimary() {
     throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
 
+byte parseByteValue(string lexeme) {
+    // Handle 0xAB, 'A', or decimal formats
+    import std.algorithm.searching : startsWith;
+
+    if (lexeme.startsWith("0x")) 
+        return to!byte(lexeme[2..$], 16);
+    if (lexeme.startsWith("'") && lexeme.length == 3) 
+        return lexeme[1].to!byte;
+    return to!byte(lexeme);
+}
+
 ASTNode parseStatement() {
 	if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
 		Token typeToken = expectAny(TokenType.Int, TokenType.Bool, TokenType.String);
@@ -176,6 +191,14 @@ ASTNode parseStatement() {
 		expect(TokenType.Semicolon);
 		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
 	}
+    else if (check(TokenType.Byte)) {
+        advance();
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Assign);
+        ASTNode val = parseExpression();
+        expect(TokenType.Semicolon);
+        return new VarDecl("byte", name, val); // Assuming you added `type` to VarDecl
+    }
     else if (check(TokenType.PlusPlus)) {
         advance(); // consume '++'
         string var = expect(TokenType.Identifier).lexeme;

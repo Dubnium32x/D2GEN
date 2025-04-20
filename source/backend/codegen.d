@@ -49,14 +49,20 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     regIndex = 1;
 
     if (auto decl = cast(VarDecl) node) {
-        string valReg = generateExpr(decl.value, lines, regIndex, varAddrs);
-        string addr = getOrCreateVarAddr(decl.name, varAddrs);
-        lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+        if (decl.type == "byte") {
+            string valReg = generateExpr(decl.value, lines, regIndex, varAddrs);
+            string addr = getOrCreateVarAddr(decl.name, varAddrs);
+            lines ~= format("        move.b %s, %s", valReg, addr);
+        } else if (decl.type == "int") {
+            string valReg = generateExpr(decl.value, lines, regIndex, varAddrs);
+            string addr = getOrCreateVarAddr(decl.name, varAddrs);
+            lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+        }
     }
     else if (auto assign = cast(AssignStmt) node) {
-        string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
-        string addr = getOrCreateVarAddr(assign.name, varAddrs);
-        lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
+            string addr = getOrCreateVarAddr(assign.name, varAddrs);
+            lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
     }
     else if (auto ret = cast(ReturnStmt) node) {
         string reg = generateExpr(ret.value, lines, regIndex, varAddrs);
@@ -277,6 +283,11 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         }
 
         return dest;
+    }
+    if (auto blit = cast(ByteLiteral) expr) {
+        string reg = nextReg(regIndex);
+        lines ~= "        move.b #" ~ to!string(blit.value) ~ ", " ~ reg;
+        return reg;
     }
 
     return "#0";

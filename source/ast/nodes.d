@@ -271,3 +271,8 @@ class IdentifierExpr : ASTNode {
     string name;
     this(string n) { name = n; }
 }
+
+class ByteLiteral : ASTNode {
+    byte value;
+    this(byte v) { value = v; }
+}
