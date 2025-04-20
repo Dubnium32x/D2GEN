@@ -9,6 +9,9 @@ enum TokenType {
     Number,
 
     Equal,
+	PlusPlus, MinusMinus,
+	// For the sake of simplicity, we can use the same token for both
+	// `+` and `+=`, `-` and `-=`, etc.
     Plus, Minus, Star, Slash,
 
 	If, Else, While,
@@ -72,6 +75,28 @@ Token[] tokenize(string input) {
         }
 		else if (c == '=') {
 			tokens ~= Token(TokenType.Assign, "=");
+			pos++;
+			continue;
+		}
+
+		if (c == '+' && peekNext(input, pos) == '+') {
+			tokens ~= Token(TokenType.PlusPlus, "++");
+			pos += 2;
+			continue;
+		}
+		else if (c == '+') {
+			tokens ~= Token(TokenType.Plus, "+");
+			pos++;
+			continue;
+		}
+
+		if (c == '-' && peekNext(input, pos) == '-') {
+			tokens ~= Token(TokenType.MinusMinus, "--");
+			pos += 2;
+			continue;
+		}
+		else if (c == '-') {
+			tokens ~= Token(TokenType.Minus, "-");
 			pos++;
 			continue;
 		}
@@ -143,8 +168,6 @@ Token[] tokenize(string input) {
         if (c == '}') { tokens ~= Token(TokenType.RBrace, "}"); pos++; continue; }
         if (c == ';') { tokens ~= Token(TokenType.Semicolon, ";"); pos++; continue; }
         if (c == '=') { tokens ~= Token(TokenType.Assign, "="); pos++; continue; }
-        if (c == '+') { tokens ~= Token(TokenType.Plus, "+"); pos++; continue; }
-        if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
         if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
         if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
 

@@ -134,13 +134,11 @@ class CStyleForStmt : ASTNode {
     }
 }
 
-class CallExpr : ASTNode {
-    string name;
-    ASTNode[] args;
+class ExprStmt : ASTNode {
+    ASTNode expr;
 
-    this(string n, ASTNode[] a) {
-        name = n;
-        args = a;
+    this(ASTNode expr) {
+        this.expr = expr;
     }
 }
 
@@ -193,5 +191,33 @@ class CaseStmt : ASTNode {
     this(ASTNode cond, ASTNode[] b) {
         condition = cond;
         caseBody = b;
+    }
+}
+
+class BlockStmt : ASTNode {
+    ASTNode[] blockBody;
+
+    this(ASTNode[] b) {
+        blockBody = b;
+    }
+}
+
+class PostfixUnaryStmt : ASTNode {
+    string name;
+    string op; // "++" or "--"
+
+    this(string name, string op) {
+        this.name = name;
+        this.op = op;
+    }
+}
+
+class PostfixExpr : ASTNode {
+    string op;
+    ASTNode target;
+
+    this(string op, ASTNode target) {
+        this.op = op;
+        this.target = target;
     }
 }
