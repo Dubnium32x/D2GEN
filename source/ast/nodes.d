@@ -1,6 +1,9 @@
 module ast.nodes;
 
 import std.string;
+import std.array;
+import std.algorithm : map;
+import std.conv : to;
 
 abstract class ASTNode {}
 
@@ -107,18 +110,35 @@ class StringLiteral : ASTNode {
 }
 
 class ForStmt : ASTNode {
-    string name;
-    ASTNode start, end, step;
+    ASTNode init;
+    ASTNode condition;
+    ASTNode increment;
     ASTNode[] forBody;
 
-    this(string n, ASTNode s, ASTNode e, ASTNode st, ASTNode[] b) {
-        name = n;
-        start = s;
-        end = e;
-        step = st;
-        forBody = b;
+    this(ASTNode init, ASTNode cond, ASTNode inc, ASTNode[] forBody) {
+        this.init = init;
+        this.condition = cond;
+        this.increment = inc;
+        this.forBody = forBody;
     }
 }
+
+class RangeForStmt : ASTNode {
+    string varName;
+    ASTNode start;
+    ASTNode end;
+    ASTNode step;
+    ASTNode[] forBody;
+
+    this(string varName, ASTNode start, ASTNode end, ASTNode step, ASTNode[] forBody) {
+        this.varName = varName;
+        this.start = start;
+        this.end = end;
+        this.step = step;
+        this.forBody = forBody;
+    }
+}
+
 
 class CStyleForStmt : ASTNode {
     ASTNode init;
@@ -126,11 +146,11 @@ class CStyleForStmt : ASTNode {
     ASTNode increment;
     ASTNode[] forBody;
 
-    this(ASTNode init, ASTNode condition, ASTNode increment, ASTNode[] body) {
+    this(ASTNode init, ASTNode condition, ASTNode increment, ASTNode[] forBody) {
         this.init = init;
         this.condition = condition;
         this.increment = increment;
-        this.forBody = body;
+        this.forBody = forBody;
     }
 }
 
@@ -146,13 +166,13 @@ class FunctionDecl : ASTNode {
     string name;
     string returnType;
     string[] params;
-    ASTNode[] body;
+    ASTNode[] funcBody;
 
     this(string n, string rt, string[] p, ASTNode[] b) {
         name = n;
         returnType = rt;
         params = p;
-        body = b;
+        funcBody = b;
     }
 }
 
@@ -220,4 +240,9 @@ class PostfixExpr : ASTNode {
         this.op = op;
         this.target = target;
     }
+}
+
+class IdentifierExpr : ASTNode {
+    string name;
+    this(string n) { name = n; }
 }

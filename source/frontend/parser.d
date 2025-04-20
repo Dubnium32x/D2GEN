@@ -71,7 +71,18 @@ ASTNode[] parseProgram(Token[] inputTokens) {
 
 
 ASTNode parseExpression(int prec = 0) {
-    ASTNode left = parseUnary(); // ? use parseUnary instead!
+    ASTNode left = parseUnary();
+
+    // Handle assignment if applicable
+    if (check(TokenType.Assign)) {
+        advance(); // consume '='
+        ASTNode right = parseExpression();
+        if (auto var = cast(VarExpr) left) {
+            return new AssignStmt(var.name, right);
+        } else {
+            throw new Exception("Left-hand side of assignment must be a variable");
+        }
+    }
 
     while (true) {
         int nextPrec = getPrecedence();
@@ -153,7 +164,11 @@ ASTNode parseStatement() {
 		expect(TokenType.Semicolon);
 		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
 	}
-
+    else if (check(TokenType.PlusPlus)) {
+        advance(); // consume '++'
+        string var = expect(TokenType.Identifier).lexeme;
+        auto increment = new UnaryExpr("++", new VarExpr(var));
+    }
 	else if (check(TokenType.Identifier) && peek().type == TokenType.Assign) {
 		string name = expect(TokenType.Identifier).lexeme;
 		expect(TokenType.Assign);
@@ -217,46 +232,30 @@ ASTNode parseStatement() {
 	}
     else if (check(TokenType.For)) {
         advance(); // consume 'for'
+        expect(TokenType.LParen);
 
-        if (check(TokenType.LParen)) {
-            // C-style for loop
-            advance(); // consume '('
-
-            ASTNode init = parseStatement(); // handles: int i = 0;
-            ASTNode cond = parseExpression(); // handles: i < 10
+        ASTNode init;
+        if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
+            init = parseStatement(); // handles int i = 0;
+        } else {
+            init = parseExpression();
             expect(TokenType.Semicolon);
-
-            ASTNode inc = parseExpression(); // handles: i = i + 1
-            expect(TokenType.RParen);
-
-            ASTNode[] blockBody = parseBlock();
-
-            // desugar to: { init; while (cond) { body; inc; } }
-            ASTNode[] whileBody = blockBody ~ inc;
-            ASTNode whileStmt = new WhileStmt(cond, whileBody);
-            return new BlockStmt([init, whileStmt]);
         }
 
-        // Range-style for loop
-        // Example: for (i = 0 to 5 step 1) { ... }
-        string varName = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.Assign);
-        ASTNode start = parseExpression();
-        expect(TokenType.To);
-        ASTNode end = parseExpression();
+        ASTNode condition = parseExpression();
+        expect(TokenType.Semicolon);
 
-        ASTNode step = new IntLiteral(1); // Default step = 1
-        if (check(TokenType.Step)) {
-            advance();
-            step = parseExpression();
-        }
+        ASTNode increment = parseExpression();
+        expect(TokenType.RParen);
 
-        ASTNode[] body = parseBlock();
-        return new ForStmt(varName, start, end, step, body);
+        ASTNode[] forBody = parseBlock();
+
+        return new CStyleForStmt(init, condition, increment, forBody);
     }
 
+
     // Fallback for expression statements like 'i++' or any valid expression
-    if (check(TokenType.Identifier) || check(TokenType.Number) || check(TokenType.LParen)) {
+    if (check(TokenType.Identifier) || check(TokenType.Number) || check(TokenType.LParen) || check(TokenType.Comma)) {
         ASTNode expr = parseExpression();
         expect(TokenType.Semicolon);
         return new ExprStmt(expr);
@@ -321,4 +320,10 @@ Token peek() {
     return (index + 1 < tokens.length) ? tokens[index + 1] : Token(TokenType.Eof, "");
 }
 
-
+bool match(TokenType kind) {
+    if (check(kind)) {
+        advance();
+        return true;
+    }
+    return false;
+}

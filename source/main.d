@@ -18,8 +18,8 @@ void main() {
 
 	foreach (stmt; ast) {
 		writeln("[AST] ", typeid(stmt).name);
+		// if you want: writefln("%s", stmt); if you implemented toString() on nodes
 	}
-
 	string asmOutput = generateCode(ast);
 
 	write("output/generated.asm", asmOutput);

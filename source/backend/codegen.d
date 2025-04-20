@@ -4,6 +4,9 @@ import ast.nodes;
 import std.conv : to;
 import std.array;
 import std.string;
+import std.algorithm : map;
+import std.format : format;
+
 
 int labelCounter = 0;
 
@@ -109,6 +112,106 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 			lines ~= "        trap #15";
 		}
 	}
+    // else if (auto forLoop = cast(ForStmt) node) {
+    //     string loopLabel = genLabel("for_start");
+    //     string endLabel = genLabel("for_end");
+
+    //     // Initialize loop variable
+    //     string initReg = generateExpr(forLoop.init, lines, regIndex, varAddrs);
+    //     string loopReg = nextReg(regIndex);
+    //     varAddrs[forLoop.varName] = loopReg;
+    //     lines ~= "        move.l " ~ initReg ~ ", " ~ loopReg;
+
+    //     lines ~= loopLabel ~ ":";
+
+    //     // Emit condition
+    //     string condReg = generateExpr(forLoop.condition, lines, regIndex, varAddrs);
+    //     lines ~= "        cmp.l #0, " ~ condReg;
+    //     lines ~= "        beq " ~ endLabel;
+
+    //     // Emit body
+    //     foreach (stmt; forLoop.forBody) {
+    //         generateStmt(stmt, lines, regIndex, varAddrs);
+    //     }
+
+    //     // Emit increment
+    //     generateStmt(forLoop.increment, lines, regIndex, varAddrs);
+
+    //     // Loop back
+    //     lines ~= "        bra " ~ loopLabel;
+    //     lines ~= endLabel ~ ":";
+    // }
+    else if (auto forLoop = cast(CStyleForStmt) node) {
+        // Emit init statement
+        generateStmt(forLoop.init, lines, regIndex, varAddrs);
+
+        string startLabel = genLabel("for_start");
+        string endLabel = genLabel("for_end");
+
+        lines ~= startLabel ~ ":";
+
+        // Emit condition
+        string condReg = generateExpr(forLoop.condition, lines, regIndex, varAddrs);
+        lines ~= "        cmp.l #0, " ~ condReg;
+        lines ~= "        beq " ~ endLabel;
+
+        // Emit body
+        foreach (stmt; forLoop.forBody) {
+            generateStmt(stmt, lines, regIndex, varAddrs);
+        }
+
+        // Emit increment
+        generateStmt(forLoop.increment, lines, regIndex, varAddrs);
+
+        // Loop back
+        lines ~= "        bra " ~ startLabel;
+        lines ~= endLabel ~ ":";
+    }   
+    else if (auto forLoop = cast(RangeForStmt) node) {
+        import std.format : format;
+
+        string loopLabel = genLabel("range_for_start");
+        string endLabel = genLabel("range_for_end");
+
+        // Initialize loop variable
+        string startReg = generateExpr(forLoop.start, lines, regIndex, varAddrs);
+        string loopReg = format("D%d", regIndex);
+        varAddrs[forLoop.varName] = loopReg;
+        lines ~= format("move.l %s, %s", startReg, loopReg);
+        regIndex++;
+
+        lines ~= loopLabel ~ ":";
+
+        // Compare loop variable to end
+        string endReg = generateExpr(forLoop.end, lines, regIndex, varAddrs);
+        lines ~= format("cmp.l %s, %s", endReg, loopReg);
+        lines ~= format("bge %s", endLabel);
+
+        // Body
+        foreach (stmt; forLoop.forBody) {
+            generateStmt(stmt, lines, regIndex, varAddrs);
+        }
+
+        // Increment
+        string stepReg = generateExpr(forLoop.step, lines, regIndex, varAddrs);
+        lines ~= format("add.l %s, %s", stepReg, loopReg);
+
+        lines ~= format("bra %s", loopLabel);
+        lines ~= endLabel ~ ":";
+    }
+    else if (auto unary = cast(UnaryExpr) node) {
+        if (unary.op == "++" || unary.op == "--") {
+            auto var = cast(VarExpr) unary.expr;
+            string addr = getOrCreateVarAddr(var.name, varAddrs);
+            string reg = nextReg(regIndex);
+
+            string opInstr = unary.op == "++" ? "addq.l" : "subq.l";
+
+            lines ~= format("        move.l %s, %s", addr, reg);
+            lines ~= format("        %s #1, %s", opInstr, reg);
+            lines ~= format("        move.l %s, %s", reg, addr);
+        }
+    }
 
 }
 
@@ -149,7 +252,7 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                 lines ~= "        and.l #1, " ~ dest;
                 break;
         }
-
+        
         return dest;
     }
 
@@ -169,10 +272,21 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                 lines ~= "        cmp.l " ~ right ~ ", " ~ left;
                 lines ~= "        sne " ~ dest;
                 return dest;
+            case "<":
+                lines ~= "        cmp.l " ~ right ~ ", " ~ left;
+                lines ~= "        slt " ~ dest;
+                return dest;
+
+            case ">":
+                lines ~= "        cmp.l " ~ right ~ ", " ~ left;
+                lines ~= "        sgt " ~ dest;
+                return dest;
+
             case "<=":
                 lines ~= "        cmp.l " ~ right ~ ", " ~ left;
                 lines ~= "        sle " ~ dest;
                 return dest;
+
             case ">=":
                 lines ~= "        cmp.l " ~ right ~ ", " ~ left;
                 lines ~= "        sge " ~ dest;

@@ -45,6 +45,7 @@ enum TokenType {
     LParen, RParen,
     Semicolon,
 	Colon,
+	Comma,
     Eof
 }
 
@@ -170,6 +171,11 @@ Token[] tokenize(string input) {
         if (c == '=') { tokens ~= Token(TokenType.Assign, "="); pos++; continue; }
         if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
         if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
+		if (c == ',') { tokens ~= Token(TokenType.Comma, ","); pos++; continue; }
+		if (c == ':') { tokens ~= Token(TokenType.Colon, ":"); pos++; continue; }
+		if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
+		if (c == '<') { tokens ~= Token(TokenType.Less, "<"); pos++; continue; }
+		if (c == '>') { tokens ~= Token(TokenType.Greater, ">"); pos++; continue; }
 
         // Numbers
         if (isDigit(c)) {
