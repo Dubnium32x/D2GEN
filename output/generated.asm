@@ -16,11 +16,6 @@ main:
         move.l D1, D3
         add.l D2, D3
         move.l D3, .var_i
-        move.l .var_i, D1
-        move.l #3, D2
-        move.l D1, D3
-        add.l D2, D3
-        move.l D3, .var_i
         bra .for_start_0
 .for_end_1:
         rts
