@@ -1,44 +1,28 @@
         ORG $1000
 main:
-        move.l #2, D1
-        move.l D1, .var_x
-        move.l .var_x, D1
-        move.l #1, D2
-        cmp.l D2, D1
-        beq .case_0_1
-        move.l #2, D3
-        cmp.l D3, D1
-        beq .case_1_2
-        bra .case_2_3
-.case_0_1:
-        lea .str_0, A1
-        move.b #9, D0
+        move.l #100, D1
+        move.l D1, .arr_nums_0
+        move.l #200, D2
+        move.l D2, .arr_nums_1
+        move.l #300, D3
+        move.l D3, .arr_nums_2
+.arr_nums_len:    dc.l 3
+        move.l #0, D1
+        move.b #1, D0
         trap #15
-        bra .switch_end_0
-.case_1_2:
-        lea .str_1, A1
-        move.b #9, D0
-        trap #15
-        bra .switch_end_0
-.case_2_3:
-        lea .str_2, A1
-        move.b #9, D0
-        trap #15
-        bra .switch_end_0
-.switch_end_0:
         move.l #0, D1
         move.l D1, D0 ; return
         rts
 
-.var_x:    ds.l 1
-
-.str_1:
-        dc.b 'two'
-        dc.b 0
-.str_2:
-        dc.b 'default'
-        dc.b 0
-.str_0:
-        dc.b 'one'
-        dc.b 0
+.arr_nums:    ds.l 1
+.arr_nums_0:    dc.l 0
+.arr_nums_1:    dc.l 0
+.arr_nums_2:    dc.l 0
+.arr_nums_3:    dc.l 0
+.arr_nums_4:    dc.l 0
+.arr_nums_5:    dc.l 0
+.arr_nums_6:    dc.l 0
+.arr_nums_7:    dc.l 0
+.arr_nums_8:    dc.l 0
+.arr_nums_9:    dc.l 0
         END
