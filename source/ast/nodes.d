@@ -279,7 +279,7 @@ class ArrayDecl : ASTNode {
     string type;
     string name;
     ASTNode[] elements;
-
+    
     this(string type, string name, ASTNode[] elements) {
         this.type = type;
         this.name = name;

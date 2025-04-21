@@ -1,34 +1,56 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/20/2025 7:57:32 PM
+Created On: 4/20/2025 8:10:24 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7205                       3          move.l #5, D1
-00001002  23C1 00001042              4          move.l D1, .var_i
-00001008                             5  .for_start_0:
-00001008  2439 00001042              6          move.l .var_i, D2
-0000100E  7600                       7          move.l #0, D3
-00001010  B682                       8          cmp.l D2, D3
-00001012  5FC4                       9          sle D4
-00001014  B8BC 00000000             10          cmp.l #0, D4
-0000101A  6700 0020                 11          beq .for_end_1
-0000101E  2239 00001042             12          move.l .var_i, D1
-00001024  2201                      13          move.l D1, D1
-00001026  103C 0001                 14          move.b #1, D0
-0000102A  4E4F                      15          trap #15
-0000102C  2239 00001042             16          move.l .var_i, D1
-00001032  5381                      17          subq.l #1, D1
-00001034  23C1 00001042             18          move.l D1, .var_i
-0000103A  60CC                      19          bra .for_start_0
-0000103C                            20  .for_end_1:
-0000103C  7200                      21          move.l #0, D1
-0000103E  2001                      22          move.l D1, D0 ; return
-00001040  4E75                      23          rts
-00001042                            24  
-00001042                            25  .var_i:    ds.l 1
-Line 26 WARNING: Address expected
-00001046                            26          END
+00001000  23FC 00000000 00001066     3          move.l #0, .arr_words_0
+0000100A  23FC 00000000 0000106A     4          move.l #0, .arr_words_1
+00001014  23FC 00000000 0000106E     5          move.l #0, .arr_words_2
+0000101E= 00000003                   6  .arr_words_len:    dc.l 3
+00001022                             7          ; Initialize foreach loop (w)
+00001022  7201                       8          move.l #1, D1          ; Start value
+00001024  7405                       9          move.l #5, D2          ; End value
+00001026  23C1 00001050             10          move.l D1, (.var_w_counter) ; Store initial value
+0000102C                            11  .foreach_0:
+0000102C                            12          ; Check loop condition
+0000102C  B282                      13          cmp.l D2, D1
+0000102E  6C00 0020                 14          bge .end_foreach_1
+00001032  23C1 00001062             15          move.l D1, (.var_w) ; Update w
+00001038                            16          ; === Loop body begin ===
+00001038  2239 00001062             17          move.l .var_w, D1
+0000103E  2201                      18          move.l D1, D1
+00001040  103C 0001                 19          move.b #1, D0
+00001044  4E4F                      20          trap #15
+00001046                            21          ; === Loop body end ===
+00001046                            22          ; Update loop counter
+00001046  5281                      23          addq.l #1, D1          ; w++
+00001048  23C1 00001050             24          move.l D1, (.var_w_counter) ; Store updated value
+0000104E  60DC                      25          bra .foreach_0
+00001050                            26  .end_foreach_1:
+00001050                            27          ; Foreach loop complete
+00001050                            28          ; Clean up foreach loop variables
+00001050                            29  .var_w_counter:    ds.l 1 ; Clean up counter variable
+00001054                            30  .var_char_buffer:    ds.l 1 ; Clean up char buffer
+00001058                            31          ; Reset register counter if needed
+00001058  7200                      32          move.l #0, D1
+0000105A  2001                      33          move.l D1, D0 ; return
+0000105C  4E75                      34          rts
+0000105E                            35  
+0000105E                            36  .arr_words:    ds.l 1
+00001062                            37  .var_w:    ds.l 1
+00001066= 00000000                  38  .arr_words_0:    dc.l 0
+0000106A= 00000000                  39  .arr_words_1:    dc.l 0
+0000106E= 00000000                  40  .arr_words_2:    dc.l 0
+00001072= 00000000                  41  .arr_words_3:    dc.l 0
+00001076= 00000000                  42  .arr_words_4:    dc.l 0
+0000107A= 00000000                  43  .arr_words_5:    dc.l 0
+0000107E= 00000000                  44  .arr_words_6:    dc.l 0
+00001082= 00000000                  45  .arr_words_7:    dc.l 0
+00001086= 00000000                  46  .arr_words_8:    dc.l 0
+0000108A= 00000000                  47  .arr_words_9:    dc.l 0
+Line 48 WARNING: Address expected
+0000108E                            48          END
 
 No errors detected
 1 warning generated
@@ -38,6 +60,20 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:FOR_END_1      103C
-MAIN:FOR_START_0    1008
-MAIN:VAR_I          1042
+MAIN:ARR_WORDS      105E
+MAIN:ARR_WORDS_0    1066
+MAIN:ARR_WORDS_1    106A
+MAIN:ARR_WORDS_2    106E
+MAIN:ARR_WORDS_3    1072
+MAIN:ARR_WORDS_4    1076
+MAIN:ARR_WORDS_5    107A
+MAIN:ARR_WORDS_6    107E
+MAIN:ARR_WORDS_7    1082
+MAIN:ARR_WORDS_8    1086
+MAIN:ARR_WORDS_9    108A
+MAIN:ARR_WORDS_LEN  101E
+MAIN:END_FOREACH_1  1050
+MAIN:FOREACH_0      102C
+MAIN:VAR_CHAR_BUFFER  1054
+MAIN:VAR_W          1062
+MAIN:VAR_W_COUNTER  1050

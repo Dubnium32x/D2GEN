@@ -294,7 +294,7 @@ ASTNode parseStatement() {
         expect(TokenType.RBrace);
         return new WhileStmt(cond, typeBody);
     }
-    else if ((check(TokenType.Int) || check(TokenType.Byte)) && peek().type == TokenType.LBracket) {
+    else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
         advance(); // 'int' or 'byte'
         expect(TokenType.LBracket);
         expect(TokenType.RBracket);
@@ -378,9 +378,6 @@ ASTNode parseStatement() {
         
         return new ForeachStmt(varName, iterable, forEachBody);
     }
-
-
-
     // Fallback for expression statements like 'i++' or any valid expression
     if (check(TokenType.Identifier) || check(TokenType.Number) || check(TokenType.LParen) || check(TokenType.Comma)) {
         ASTNode expr = parseExpression();

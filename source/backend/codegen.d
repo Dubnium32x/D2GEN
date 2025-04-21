@@ -247,6 +247,35 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                 break;
         }
     }
+    else if (auto arr = cast(ArrayDecl) node) {
+        string base = ".arr_" ~ arr.name;
+        int i = 0;
+
+        if (arr.type == "string") {
+            foreach (element; arr.elements) {
+                if (auto s = cast(StringLiteral) element) {
+                    string label = base ~ "_" ~ to!string(i++);
+                    string dataLabel = getOrCreateStringLabel(s.value);
+                    lines ~= format("        lea %s, A0", dataLabel);
+                    lines ~= format("        move.l A0, %s", label);
+                }
+            }
+
+            // Store array length
+            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+
+        } else if (arr.type == "int" || arr.type == "byte") {
+            foreach (element; arr.elements) {
+                string label = base ~ "_" ~ to!string(i++);
+                string valReg = generateExpr(element, lines, regIndex, varAddrs);
+                lines ~= "        move.l " ~ valReg ~ ", " ~ label;
+            }
+            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+        }
+
+        // Reserve a base label for access
+        lines ~= base ~ ":    ds.l 1";
+    }
 }
 
 void generateForeachStmt(ForeachStmt node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
