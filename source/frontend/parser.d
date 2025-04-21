@@ -180,15 +180,7 @@ byte parseByteValue(string lexeme) {
 }
 
 ASTNode parseStatement() {
-    if (check(TokenType.Byte)) {
-        advance();
-        string name = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.Assign);
-        ASTNode val = parseExpression();
-        expect(TokenType.Semicolon);
-        return new VarDecl("byte", name, val); // Assuming you added `type` to VarDecl
-    }
-    else if (check(TokenType.PlusPlus)) {
+    if (check(TokenType.PlusPlus)) {
         advance(); // consume '++'
         string var = expect(TokenType.Identifier).lexeme;
         auto increment = new UnaryExpr("++", new VarExpr(var));
@@ -297,8 +289,8 @@ ASTNode parseStatement() {
         expect(TokenType.RBrace);
         return new WhileStmt(cond, typeBody);
     }
-    else if (check(TokenType.Int) && peek().type == TokenType.LBracket) {
-        advance(); // 'int'
+    else if ((check(TokenType.Int) || check(TokenType.Byte)) && peek().type == TokenType.LBracket) {
+        advance(); // 'int' or 'byte'
         expect(TokenType.LBracket);
         expect(TokenType.RBracket);
         string name = expect(TokenType.Identifier).lexeme;
@@ -337,6 +329,14 @@ ASTNode parseStatement() {
 		expect(TokenType.Semicolon);
 		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
 	}
+    else if (check(TokenType.Byte)) {
+        advance();
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Assign);
+        ASTNode val = parseExpression();
+        expect(TokenType.Semicolon);
+        return new VarDecl("byte", name, val); // Assuming you added `type` to VarDecl
+    }
     else if (check(TokenType.For)) {
         advance(); // consume 'for'
         expect(TokenType.LParen);
