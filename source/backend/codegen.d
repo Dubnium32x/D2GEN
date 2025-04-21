@@ -135,12 +135,53 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
             lines ~= "        lea " ~ label ~ ", A1";
             lines ~= "        move.b #9, D0";
             lines ~= "        trap #15";
-        } else {
+
+        }
+        else {
             string reg = generateExpr(print.value, lines, regIndex, varAddrs);
             lines ~= "        move.l " ~ reg ~ ", D1";
             lines ~= "        move.b #1, D0";
             lines ~= "        trap #15";
         }
+    }
+    else if (auto sw = cast(SwitchStmt) node) {
+        string endLabel = genLabel("switch_end");
+        string condReg = generateExpr(sw.condition, lines, regIndex, varAddrs);
+        string[] caseLabels;
+        string defaultLabel = endLabel;
+
+        // Emit comparisons and branches
+        foreach (i, cNode; sw.cases) {
+            auto c = cast(CaseStmt) cNode;
+            string label = genLabel("case_" ~ to!string(i));
+            caseLabels ~= label;
+
+            if (c.condition !is null) {
+                string caseValReg = generateExpr(c.condition, lines, regIndex, varAddrs);
+                lines ~= "        cmp.l " ~ caseValReg ~ ", " ~ condReg;
+                lines ~= "        beq " ~ label;
+            } else {
+                // This is the default case
+                defaultLabel = label;
+            }
+        }
+
+
+        lines ~= "        bra " ~ defaultLabel;
+
+        // Emit case bodies
+        foreach (i, cNode; sw.cases) {
+            auto c = cast(CaseStmt) cNode;
+            string label = caseLabels[i];
+            lines ~= label ~ ":";
+
+            foreach (stmt; c.caseBody) {
+                generateStmt(stmt, lines, regIndex, varAddrs);
+            }
+            lines ~= "        bra " ~ endLabel;
+        }
+
+        lines ~= endLabel ~ ":";
     }
     else if (auto unary = cast(UnaryExpr) node) {
         auto var = cast(VarExpr) unary.expr;
@@ -289,6 +330,7 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         lines ~= "        move.b #" ~ to!string(blit.value) ~ ", " ~ reg;
         return reg;
     }
+    // Removed invalid block referencing undefined variables
 
     return "#0";
 }

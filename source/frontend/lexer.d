@@ -232,6 +232,8 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.Foreach, lexeme);
 			else if (lexeme == "break")
 				tokens ~= Token(TokenType.Break, lexeme);
+			else if (lexeme == "case")
+				tokens ~= Token(TokenType.Case, lexeme);
 			else if (lexeme == "continue")
 				tokens ~= Token(TokenType.Continue, lexeme);
 			else if (lexeme == "default")

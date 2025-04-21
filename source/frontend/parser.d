@@ -243,6 +243,58 @@ ASTNode parseStatement() {
         expect(TokenType.Semicolon);
         return new PostfixUnaryStmt(name, "++");
     }
+    else if (check(TokenType.Switch)) {
+        advance(); // consume 'switch'
+        expect(TokenType.LParen);
+        auto condition = parseExpression();
+        expect(TokenType.RParen);
+        expect(TokenType.LBrace);
+
+        ASTNode[] allCases;
+
+        while (!check(TokenType.RBrace) && !check(TokenType.Eof)) {
+            if (check(TokenType.Case)) {
+                advance();
+                auto caseExpr = parseExpression(); // this could be IntLiteral, etc.
+                expect(TokenType.Colon);
+
+                ASTNode[] caseBody;
+                while (!checkAny(TokenType.Case, TokenType.Default, TokenType.RBrace, TokenType.Eof)) {
+                    caseBody ~= parseStatement();
+                }
+
+                allCases ~= new CaseStmt(0, caseExpr, caseBody);
+            }
+            else if (check(TokenType.Default)) {
+                advance();
+                expect(TokenType.Colon);
+
+                ASTNode[] defaultBody;
+                while (!checkAny(TokenType.RBrace, TokenType.Eof)) {
+                    defaultBody ~= parseStatement();
+                }
+
+                allCases ~= new CaseStmt(0, null, defaultBody); // "default" as value
+            }
+            else {
+                throw new Exception("Unexpected token in switch: " ~ current().lexeme);
+            }
+        }
+
+        expect(TokenType.RBrace);
+        return new SwitchStmt(condition, allCases);
+    }
+    else if (check(TokenType.Default)) {
+        advance();
+        expect(TokenType.Colon);
+        ASTNode[] defaultBody;
+
+        while (!check(TokenType.RBrace)) {
+            defaultBody ~= parseStatement();
+        }
+
+        return new CaseStmt(0, null, defaultBody); // "default" as value
+    }
     else if (check(TokenType.While)) {
         advance();
         expect(TokenType.LParen);

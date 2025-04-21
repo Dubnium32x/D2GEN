@@ -222,7 +222,6 @@ class ArrayDecl : ASTNode {
 class SwitchStmt : ASTNode {
     ASTNode condition;
     ASTNode[] cases;
-
     this(ASTNode cond, ASTNode[] cs) {
         condition = cond;
         cases = cs;
@@ -230,20 +229,22 @@ class SwitchStmt : ASTNode {
 }
 
 class CaseStmt : ASTNode {
-    ASTNode condition;
+    int value; // Can be null for `default`
+    ASTNode condition; // Can be null for `default`
     ASTNode[] caseBody;
 
-    this(ASTNode cond, ASTNode[] b) {
-        condition = cond;
-        caseBody = b;
+    this(int value, ASTNode cond, ASTNode[] caseBody) {
+        this.value = value;
+        this.condition = cond;
+        this.caseBody = caseBody;
     }
 }
 
 class BlockStmt : ASTNode {
     ASTNode[] blockBody;
 
-    this(ASTNode[] b) {
-        blockBody = b;
+    this(ASTNode[] blockBody) {
+        this.blockBody = blockBody;
     }
 }
 

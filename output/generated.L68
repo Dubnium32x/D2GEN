@@ -1,34 +1,52 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/20/2025 4:14:46 PM
+Created On: 4/20/2025 5:20:56 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7206                       3          move.l #6, D1
-00001002  13C1 00001034              4          move.b D1, .var_i
-00001008  2239 00001034              5          move.l .var_i, D1
-0000100E  7406                       6          move.l #6, D2
+00001000  7202                       3          move.l #2, D1
+00001002  23C1 00001058              4          move.l D1, .var_x
+00001008  2239 00001058              5          move.l .var_x, D1
+0000100E  7401                       6          move.l #1, D2
 00001010  B282                       7          cmp.l D2, D1
-00001012  57C3                       8          seq D3
-00001014  B6BC 00000000              9          cmp.l #0, D3
-0000101A  6700 0012                 10          beq .else_0
-0000101E  43F9 00001038             11          lea .str_0, A1
-00001024  103C 0009                 12          move.b #9, D0
-00001028  4E4F                      13          trap #15
-0000102A  6000 0002                 14          bra .endif_1
-0000102E                            15  .else_0:
-0000102E                            16  .endif_1:
-0000102E  7200                      17          move.l #0, D1
-00001030  2001                      18          move.l D1, D0 ; return
-00001032  4E75                      19          rts
-00001034                            20  
-00001034                            21  .var_i:    ds.l 1
-00001038                            22  
-00001038                            23  .str_0:
-00001038= 59 69 70 70 65 65 21      24          dc.b 'Yippee!'
-0000103F= 00                        25          dc.b 0
-Line 26 WARNING: Address expected
-00001040                            26          END
+00001012  6700 000E                  8          beq .case_0_1
+00001016  7602                       9          move.l #2, D3
+00001018  B283                      10          cmp.l D3, D1
+0000101A  6700 0016                 11          beq .case_1_2
+0000101E  6000 0022                 12          bra .case_2_3
+00001022                            13  .case_0_1:
+00001022  43F9 00001068             14          lea .str_0, A1
+00001028  103C 0009                 15          move.b #9, D0
+0000102C  4E4F                      16          trap #15
+0000102E  6000 0022                 17          bra .switch_end_0
+00001032                            18  .case_1_2:
+00001032  43F9 0000105C             19          lea .str_1, A1
+00001038  103C 0009                 20          move.b #9, D0
+0000103C  4E4F                      21          trap #15
+0000103E  6000 0012                 22          bra .switch_end_0
+00001042                            23  .case_2_3:
+00001042  43F9 00001060             24          lea .str_2, A1
+00001048  103C 0009                 25          move.b #9, D0
+0000104C  4E4F                      26          trap #15
+0000104E  6000 0002                 27          bra .switch_end_0
+00001052                            28  .switch_end_0:
+00001052  7200                      29          move.l #0, D1
+00001054  2001                      30          move.l D1, D0 ; return
+00001056  4E75                      31          rts
+00001058                            32  
+00001058                            33  .var_x:    ds.l 1
+0000105C                            34  
+0000105C                            35  .str_1:
+0000105C= 74 77 6F                  36          dc.b 'two'
+0000105F= 00                        37          dc.b 0
+00001060                            38  .str_2:
+00001060= 64 65 66 61 75 6C 74      39          dc.b 'default'
+00001067= 00                        40          dc.b 0
+00001068                            41  .str_0:
+00001068= 6F 6E 65                  42          dc.b 'one'
+0000106B= 00                        43          dc.b 0
+Line 44 WARNING: Address expected
+0000106C                            44          END
 
 No errors detected
 1 warning generated
@@ -38,7 +56,11 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:ELSE_0         102E
-MAIN:ENDIF_1        102E
-MAIN:STR_0          1038
-MAIN:VAR_I          1034
+MAIN:CASE_0_1       1022
+MAIN:CASE_1_2       1032
+MAIN:CASE_2_3       1042
+MAIN:STR_0          1068
+MAIN:STR_1          105C
+MAIN:STR_2          1060
+MAIN:SWITCH_END_0   1052
+MAIN:VAR_X          1058
