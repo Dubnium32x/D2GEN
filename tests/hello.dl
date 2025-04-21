@@ -1,5 +1,6 @@
 int main() {
-    byte[] nums = {100, 200, 300};
-    print(nums[1]);
+    for (int i = 0; i < 5; i++) {
+        print(i);
+    }
     return 0;
 }

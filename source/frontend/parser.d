@@ -106,6 +106,11 @@ ASTNode parseExpression(int prec = 0) {
         left = new BinaryExpr(op.lexeme, left, right);
     }
 
+    if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) {
+        Token op = advance();
+        return new PostfixExpr(op.lexeme, left);
+    }
+
     return left;
 }
 

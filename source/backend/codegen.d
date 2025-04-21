@@ -100,6 +100,25 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
         lines ~= labelEnd ~ ":";
     }
+    else if (auto postfix = cast(PostfixExpr) node) {
+        // Handle postfix increment/decrement
+        auto target = cast(VarExpr) postfix.target;
+        string addr = getOrCreateVarAddr(target.name, varAddrs);
+        string reg = nextReg(regIndex);
+
+        final switch (postfix.op) {
+            case "++":
+                lines ~= "        move.l " ~ addr ~ ", " ~ reg;
+                lines ~= "        addq.l #1, " ~ reg;
+                lines ~= "        move.l " ~ reg ~ ", " ~ addr;
+                break;
+            case "--":
+                lines ~= "        move.l " ~ addr ~ ", " ~ reg;
+                lines ~= "        subq.l #1, " ~ reg;
+                lines ~= "        move.l " ~ reg ~ ", " ~ addr;
+                break;
+        }
+    }
     else if (auto whilestmt = cast(WhileStmt) node) {
         string labelStart = genLabel("while");
         string labelEnd = genLabel("endwhile");

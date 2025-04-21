@@ -1,36 +1,34 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/20/2025 6:09:31 PM
+Created On: 4/20/2025 7:04:26 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7264                       3          move.l #100, D1
-00001002  23C1 00001036              4          move.l D1, .arr_nums_0
-00001008  243C 000000C8              5          move.l #200, D2
-0000100E  23C2 0000103A              6          move.l D2, .arr_nums_1
-00001014  263C 0000012C              7          move.l #300, D3
-0000101A  23C3 0000103E              8          move.l D3, .arr_nums_2
-00001020= 00000003                   9  .arr_nums_len:    dc.l 3
-00001024  7200                      10          move.l #0, D1
-00001026  103C 0001                 11          move.b #1, D0
-0000102A  4E4F                      12          trap #15
-0000102C  7200                      13          move.l #0, D1
-0000102E  2001                      14          move.l D1, D0 ; return
-00001030  4E75                      15          rts
-00001032                            16  
-00001032                            17  .arr_nums:    ds.l 1
-00001036= 00000000                  18  .arr_nums_0:    dc.l 0
-0000103A= 00000000                  19  .arr_nums_1:    dc.l 0
-0000103E= 00000000                  20  .arr_nums_2:    dc.l 0
-00001042= 00000000                  21  .arr_nums_3:    dc.l 0
-00001046= 00000000                  22  .arr_nums_4:    dc.l 0
-0000104A= 00000000                  23  .arr_nums_5:    dc.l 0
-0000104E= 00000000                  24  .arr_nums_6:    dc.l 0
-00001052= 00000000                  25  .arr_nums_7:    dc.l 0
-00001056= 00000000                  26  .arr_nums_8:    dc.l 0
-0000105A= 00000000                  27  .arr_nums_9:    dc.l 0
-Line 28 WARNING: Address expected
-0000105E                            28          END
+00001000  7200                       3          move.l #0, D1
+00001002  23C1 00001042              4          move.l D1, .var_i
+00001008                             5  .for_start_0:
+00001008  2439 00001042              6          move.l .var_i, D2
+0000100E  7605                       7          move.l #5, D3
+00001010  B483                       8          cmp.l D3, D2
+00001012  5DC4                       9          slt D4
+00001014  B8BC 00000000             10          cmp.l #0, D4
+0000101A  6700 0020                 11          beq .for_end_1
+0000101E  2239 00001042             12          move.l .var_i, D1
+00001024  2201                      13          move.l D1, D1
+00001026  103C 0001                 14          move.b #1, D0
+0000102A  4E4F                      15          trap #15
+0000102C  2239 00001042             16          move.l .var_i, D1
+00001032  5281                      17          addq.l #1, D1
+00001034  23C1 00001042             18          move.l D1, .var_i
+0000103A  60CC                      19          bra .for_start_0
+0000103C                            20  .for_end_1:
+0000103C  7200                      21          move.l #0, D1
+0000103E  2001                      22          move.l D1, D0 ; return
+00001040  4E75                      23          rts
+00001042                            24  
+00001042                            25  .var_i:    ds.l 1
+Line 26 WARNING: Address expected
+00001046                            26          END
 
 No errors detected
 1 warning generated
@@ -40,15 +38,6 @@ SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
 MAIN                1000
-MAIN:ARR_NUMS       1032
-MAIN:ARR_NUMS_0     1036
-MAIN:ARR_NUMS_1     103A
-MAIN:ARR_NUMS_2     103E
-MAIN:ARR_NUMS_3     1042
-MAIN:ARR_NUMS_4     1046
-MAIN:ARR_NUMS_5     104A
-MAIN:ARR_NUMS_6     104E
-MAIN:ARR_NUMS_7     1052
-MAIN:ARR_NUMS_8     1056
-MAIN:ARR_NUMS_9     105A
-MAIN:ARR_NUMS_LEN   1020
+MAIN:FOR_END_1      103C
+MAIN:FOR_START_0    1008
+MAIN:VAR_I          1042
