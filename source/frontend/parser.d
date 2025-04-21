@@ -149,13 +149,14 @@ ASTNode parsePrimary() {
 
         if (check(TokenType.LBracket)) {
             advance(); // consume '['
-            ASTNode indexExpr = parseExpression(); // Parse the index expression
-            expect(TokenType.RBracket); // Ensure the closing bracket is present
+            auto indexExpr = parseExpression();
+            expect(TokenType.RBracket);
             return new ArrayAccessExpr(name, indexExpr);
         }
 
         return new VarExpr(name);
     }
+
 
     if (check(TokenType.LParen)) {
         advance(); // skip '('
@@ -180,7 +181,15 @@ byte parseByteValue(string lexeme) {
 }
 
 ASTNode parseStatement() {
-    if (check(TokenType.Byte)) {
+	if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
+		Token typeToken = expectAny(TokenType.Int, TokenType.Bool, TokenType.String);
+		string name = expect(TokenType.Identifier).lexeme;
+		expect(TokenType.Assign);
+		ASTNode val = parseExpression();
+		expect(TokenType.Semicolon);
+		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
+	}
+    else if (check(TokenType.Byte)) {
         advance();
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.Assign);
@@ -302,6 +311,7 @@ ASTNode parseStatement() {
         expect(TokenType.LBracket);
         expect(TokenType.RBracket);
         string name = expect(TokenType.Identifier).lexeme;
+
         expect(TokenType.Assign);
         expect(TokenType.LBrace);
 
@@ -328,14 +338,6 @@ ASTNode parseStatement() {
 		expect(TokenType.RParen);
 		expect(TokenType.Semicolon);
 		return new PrintStmt(val);
-	}
-    else if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
-		Token typeToken = expectAny(TokenType.Int, TokenType.Bool, TokenType.String);
-		string name = expect(TokenType.Identifier).lexeme;
-		expect(TokenType.Assign);
-		ASTNode val = parseExpression();
-		expect(TokenType.Semicolon);
-		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
 	}
     else if (check(TokenType.For)) {
         advance(); // consume 'for'
