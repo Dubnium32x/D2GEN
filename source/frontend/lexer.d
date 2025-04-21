@@ -36,6 +36,7 @@ enum TokenType {
 	Var,
 	Struct,
 	Function,
+	Void,
 
 	StringLiteral,
 	
@@ -255,6 +256,12 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.To, lexeme);
 			else if (lexeme == "step")
 				tokens ~= Token(TokenType.Step, lexeme);
+			else if (lexeme == "struct")
+				tokens ~= Token(TokenType.Struct, lexeme);
+			else if (lexeme == "void")
+				tokens ~= Token(TokenType.Void, lexeme);
+			else if (lexeme == "function")
+				tokens ~= Token(TokenType.Function, lexeme);
 			else 
 				tokens ~= Token(TokenType.Identifier, lexeme);
             continue;

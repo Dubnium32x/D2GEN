@@ -1,7 +1,9 @@
 int main() {
-    string[] words = { "hello", "world", "!" };
-    foreach (w; words) {
-        print(w);
-    }
+    sayHello();
     return 0;
 }
+
+void sayHello() {
+    writeln("Hello!");
+}
+

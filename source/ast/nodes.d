@@ -187,20 +187,6 @@ class ForeachStmt : ASTNode {
     }
 }
 
-class FunctionDecl : ASTNode {
-    string name;
-    string returnType;
-    string[] params;
-    ASTNode[] funcBody;
-
-    this(string n, string rt, string[] p, ASTNode[] b) {
-        name = n;
-        returnType = rt;
-        params = p;
-        funcBody = b;
-    }
-}
-
 class BreakStmt : ASTNode {
     this() {} // Empty constructor
 }
@@ -279,7 +265,7 @@ class ArrayDecl : ASTNode {
     string type;
     string name;
     ASTNode[] elements;
-    
+
     this(string type, string name, ASTNode[] elements) {
         this.type = type;
         this.name = name;
@@ -293,5 +279,39 @@ class ArrayAccessExpr : ASTNode {
     this(string name, ASTNode idx) {
         arrayName = name;
         index = idx;
+    }
+}
+
+class StructDecl : ASTNode {
+    string name;
+    string[] fields;
+
+    this(string name, string[] fields) {
+        this.name = name;
+        this.fields = fields;
+    }
+}
+
+class FunctionDecl : ASTNode {
+    string name;
+    string returnType;
+    string[] params;
+    ASTNode[] funcBody;
+
+    this(string name, string returnType, string[] params, ASTNode[] funcBody) {
+        this.name = name;
+        this.returnType = returnType;
+        this.params = params;
+        this.funcBody = funcBody;
+    }
+}
+
+class CallExpr : ASTNode {
+    string name;
+    ASTNode[] args;
+
+    this(string name, ASTNode[] args) {
+        this.name = name;
+        this.args = args;
     }
 }

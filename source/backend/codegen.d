@@ -405,7 +405,18 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             case "==": lines ~= format("        cmp.l %s, %s", right, left);
                        lines ~= "        seq " ~ dest; break;
         }
+    }
+    if (auto call = cast(CallExpr) expr) {
+        foreach_reverse (arg; call.args) {
+            string reg = generateExpr(arg, lines, regIndex, varAddrs);
+            lines ~= "        move.l " ~ reg ~ ", -(SP)";
+        }
 
+        lines ~= "        bsr " ~ call.name;
+        lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
+
+        string dest = nextReg(regIndex);
+        lines ~= "        move.l D0, " ~ dest;
         return dest;
     }
     if (auto blit = cast(ByteLiteral) expr) {
@@ -413,7 +424,15 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         lines ~= "        move.b #" ~ to!string(blit.value) ~ ", " ~ reg;
         return reg;
     }
-    // Removed invalid block referencing undefined variables
+    else if (auto func = cast(FunctionDecl) expr) {
+        lines ~= func.name ~ ":";
+
+        foreach (stmt; func.funcBody) {
+            generateStmt(stmt, lines, regIndex, varAddrs);
+        }
+
+        lines ~= "        rts";
+    }
 
     return "#0";
 }

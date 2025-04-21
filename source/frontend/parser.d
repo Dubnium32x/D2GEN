@@ -58,6 +58,32 @@ ASTNode[] parseProgram(Token[] inputTokens) {
     expect(TokenType.RParen);           // )
     expect(TokenType.LBrace);           // {
 
+    if (checkAny(TokenType.Void, TokenType.Int, TokenType.Bool, TokenType.String)) {
+    string returnType = advance().lexeme;
+    string name = expect(TokenType.Identifier).lexeme;
+
+    if (check(TokenType.LParen)) {
+        expect(TokenType.LParen);
+        string[] params;
+
+        if (!check(TokenType.RParen)) {
+            do {
+                expectAny(TokenType.Int, TokenType.String, TokenType.Bool); // param type
+                string paramName = expect(TokenType.Identifier).lexeme;
+                params ~= paramName;
+            } while (match(TokenType.Comma));
+        }
+
+        expect(TokenType.RParen);
+        ASTNode[] funcBody = parseBlock();
+
+        stmts ~= new FunctionDecl(name, returnType, params, funcBody); // Ensure FunctionDecl is defined elsewhere
+    }
+
+    // fallback to variable declaration, if needed
+}
+
+
     // Parse all statements in the function body
     while (!check(TokenType.RBrace)) {
         stmts ~= parseStatement();
@@ -157,6 +183,19 @@ ASTNode parsePrimary() {
             ASTNode indexExpr = parseExpression(); // Parse the index expression
             expect(TokenType.RBracket); // Ensure the closing bracket is present
             return new ArrayAccessExpr(name, indexExpr);
+        }
+        if (check(TokenType.LParen)) {
+            advance(); // consume '('
+            ASTNode[] args;
+
+            if (!check(TokenType.RParen)) {
+                do {
+                    args ~= parseExpression();
+                } while (match(TokenType.Comma));
+            }
+
+            expect(TokenType.RParen);
+            return new CallExpr(name, args);
         }
 
         return new VarExpr(name);
@@ -377,6 +416,25 @@ ASTNode parseStatement() {
         ASTNode[] forEachBody = parseBlock();
         
         return new ForeachStmt(varName, iterable, forEachBody);
+    }
+    else if (check(TokenType.Function)) {
+        advance(); // consume 'function'
+        string returnType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool).lexeme;
+        string name = expect(TokenType.Identifier).lexeme;
+
+        expect(TokenType.LParen);
+        string[] params;
+        if (!check(TokenType.RParen)) {
+            do {
+                string paramType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool).lexeme;
+                string paramName = expect(TokenType.Identifier).lexeme;
+                params ~= paramName;
+            } while (match(TokenType.Comma));
+        }
+        expect(TokenType.RParen);
+
+        ASTNode[] funcBody = parseBlock();
+        return new FunctionDecl(name, returnType, params, funcBody);
     }
     // Fallback for expression statements like 'i++' or any valid expression
     if (check(TokenType.Identifier) || check(TokenType.Number) || check(TokenType.LParen) || check(TokenType.Comma)) {
