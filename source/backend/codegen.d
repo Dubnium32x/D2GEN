@@ -41,6 +41,17 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
+    // === Emit array contents ===
+    foreach (name, label; varAddrs) {
+        if (label.startsWith(".arr_")) {
+            foreach (i; 0 .. 10) { // or use arrayDecl.elements.length
+                string elemLabel = label ~ "_" ~ to!string(i);
+                lines ~= elemLabel ~ ":    dc.l 0";
+            }
+        }
+    }
+
+
     lines ~= "        END";
     return lines.join("\n");
 }
@@ -128,6 +139,22 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto foreachStmt = cast(ForeachStmt) node) {
         generateForeachStmt(foreachStmt, lines, regIndex, varAddrs);
+    }
+    else if (auto arr = cast(ArrayDecl) node) {
+        string baseLabel = ".arr_" ~ arr.name;
+
+        varAddrs[arr.name] = baseLabel; // Register array base address
+
+        int i = 0;
+        foreach (elem; arr.elements) {
+            string reg = generateExpr(elem, lines, regIndex, varAddrs);
+            string label = baseLabel ~ "_" ~ to!string(i);
+            lines ~= format("        move.l %s, %s", reg, label);
+            i++;
+        }
+
+        // Store array length label if you want `length`
+        lines ~= format("%s_len:    dc.l %d", baseLabel, arr.elements.length);
     }
     else if (auto print = cast(PrintStmt) node) {
         if (auto str = cast(StringLiteral) print.value) {

@@ -127,35 +127,36 @@ ASTNode parseUnary() {
 
 
 ASTNode parsePrimary() {
-	if (check(TokenType.True)) {
-		advance();
-		return new IntLiteral(1); // Represent as literal for now
-	}
-	if (check(TokenType.False)) {
-		advance();
-		return new IntLiteral(0); // Represent as literal for now
-	}
+    if (check(TokenType.True)) {
+        advance();
+        return new BoolLiteral(true);
+    }
+    if (check(TokenType.False)) {
+        advance();
+        return new BoolLiteral(false);
+    }
 
     if (check(TokenType.Number)) {
         return new IntLiteral(toInt(advance().lexeme));
     }
-    
-    if (check(TokenType.Byte)) {
-        return new ByteLiteral(parseByteValue(advance().lexeme));
+
+    if (check(TokenType.StringLiteral)) {
+        return new StringLiteral(advance().lexeme);
     }
 
     if (check(TokenType.Identifier)) {
         string name = advance().lexeme;
-        auto expr = new VarExpr(name);
 
-        // Handle postfix ++
-        if (check(TokenType.PlusPlus)) {
-            advance();
-            return new PostfixExpr("++", expr);
+        if (check(TokenType.LBracket)) {
+            advance(); // consume '['
+            auto indexExpr = parseExpression();
+            expect(TokenType.RBracket);
+            return new ArrayAccessExpr(name, indexExpr);
         }
 
-        return expr;
+        return new VarExpr(name);
     }
+
 
     if (check(TokenType.LParen)) {
         advance(); // skip '('
@@ -163,13 +164,10 @@ ASTNode parsePrimary() {
         expect(TokenType.RParen);
         return expr;
     }
-	
-	if (check(TokenType.StringLiteral)) {
-		return new StringLiteral(advance().lexeme);
-	}
 
     throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
+
 
 byte parseByteValue(string lexeme) {
     // Handle 0xAB, 'A', or decimal formats
@@ -307,6 +305,30 @@ ASTNode parseStatement() {
         }
         expect(TokenType.RBrace);
         return new WhileStmt(cond, typeBody);
+    }
+    else if (check(TokenType.Int) && peek().type == TokenType.LBracket) {
+        advance(); // 'int'
+        expect(TokenType.LBracket);
+        expect(TokenType.RBracket);
+        string name = expect(TokenType.Identifier).lexeme;
+
+        expect(TokenType.Assign);
+        expect(TokenType.LBrace);
+
+        ASTNode[] elements;
+        while (!check(TokenType.RBrace)) {
+            elements ~= parseExpression();
+            if (check(TokenType.Comma)) {
+                advance();
+            } else {
+                break;
+            }
+        }
+
+        expect(TokenType.RBrace);
+        expect(TokenType.Semicolon);
+
+        return new ArrayDecl("int", name, elements);
     }
 	else if (check(TokenType.Identifier) && (current().lexeme == "print"
     || current().lexeme == "println" || current().lexeme == "printf" || current().lexeme == "writeln")) {

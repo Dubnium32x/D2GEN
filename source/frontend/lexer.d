@@ -46,6 +46,7 @@ enum TokenType {
 
 	Byte,
 
+	LBracket, RBracket,
     LBrace, RBrace,
     LParen, RParen,
     Semicolon,
@@ -174,6 +175,8 @@ Token[] tokenize(string input) {
 
 
         // Single-character tokens
+		if (c == '[') { tokens ~= Token(TokenType.LBracket, "["); pos++; continue; }
+		if (c == ']') { tokens ~= Token(TokenType.RBracket, "]"); pos++; continue; }
         if (c == '(') { tokens ~= Token(TokenType.LParen, "("); pos++; continue; }
         if (c == ')') { tokens ~= Token(TokenType.RParen, ")"); pos++; continue; }
         if (c == '{') { tokens ~= Token(TokenType.LBrace, "{"); pos++; continue; }

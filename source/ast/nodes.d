@@ -209,16 +209,6 @@ class ContinueStmt : ASTNode {
     this() {} // Empty constructor
 }
 
-class ArrayDecl : ASTNode {
-    string name;
-    int size;
-
-    this(string n, int s) {
-        name = n;
-        size = s;
-    }
-}
-
 class SwitchStmt : ASTNode {
     ASTNode condition;
     ASTNode[] cases;
@@ -276,4 +266,32 @@ class IdentifierExpr : ASTNode {
 class ByteLiteral : ASTNode {
     byte value;
     this(byte v) { value = v; }
+}
+
+class ArrayLiteral : ASTNode {
+    ASTNode[] elements;
+    this(ASTNode[] elems) {
+        elements = elems;
+    }
+}
+
+class ArrayDecl : ASTNode {
+    string type;
+    string name;
+    ASTNode[] elements;
+
+    this(string type, string name, ASTNode[] elements) {
+        this.type = type;
+        this.name = name;
+        this.elements = elements;
+    }
+}
+
+class ArrayAccessExpr : ASTNode {
+    string arrayName;
+    ASTNode index;
+    this(string name, ASTNode idx) {
+        arrayName = name;
+        index = idx;
+    }
 }
