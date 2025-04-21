@@ -365,6 +365,14 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                       lines ~= format("        divs %s, %s", right, dest); break;
             case "<": lines ~= format("        cmp.l %s, %s", right, left);
                       lines ~= "        slt " ~ dest; break;
+            case "<=": lines ~= format("        cmp.l %s, %s", right, left);
+                       lines ~= "        sle " ~ dest; break;
+            case ">": lines ~= format("        cmp.l %s, %s", left, right);
+                      lines ~= "        slt " ~ dest; break;
+            case ">=": lines ~= format("        cmp.l %s, %s", left, right);
+                       lines ~= "        sle " ~ dest; break;
+            case "!=": lines ~= format("        cmp.l %s, %s", right, left);
+                       lines ~= "        sne " ~ dest; break;
             case "==": lines ~= format("        cmp.l %s, %s", right, left);
                        lines ~= "        seq " ~ dest; break;
         }

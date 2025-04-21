@@ -1,16 +1,16 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/20/2025 7:04:26 PM
+Created On: 4/20/2025 7:57:32 PM
 
 00001000                             1          ORG $1000
 00001000                             2  main:
-00001000  7200                       3          move.l #0, D1
+00001000  7205                       3          move.l #5, D1
 00001002  23C1 00001042              4          move.l D1, .var_i
 00001008                             5  .for_start_0:
 00001008  2439 00001042              6          move.l .var_i, D2
-0000100E  7605                       7          move.l #5, D3
-00001010  B483                       8          cmp.l D3, D2
-00001012  5DC4                       9          slt D4
+0000100E  7600                       7          move.l #0, D3
+00001010  B682                       8          cmp.l D2, D3
+00001012  5FC4                       9          sle D4
 00001014  B8BC 00000000             10          cmp.l #0, D4
 0000101A  6700 0020                 11          beq .for_end_1
 0000101E  2239 00001042             12          move.l .var_i, D1
@@ -18,7 +18,7 @@ Created On: 4/20/2025 7:04:26 PM
 00001026  103C 0001                 14          move.b #1, D0
 0000102A  4E4F                      15          trap #15
 0000102C  2239 00001042             16          move.l .var_i, D1
-00001032  5281                      17          addq.l #1, D1
+00001032  5381                      17          subq.l #1, D1
 00001034  23C1 00001042             18          move.l D1, .var_i
 0000103A  60CC                      19          bra .for_start_0
 0000103C                            20  .for_end_1:
