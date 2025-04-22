@@ -58,13 +58,14 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
     lines ~= "        move.l SP, A6";
 
     // --- Handle function parameters ---
-    foreach_reverse (param; func.params) {
+    int offset = 8;
+    foreach (param; func.params) {
         string reg = nextReg(regIndex);
         string addr = getOrCreateVarAddr(param, localVarAddrs);
-        lines ~= format("        move.l (SP)+, %s", reg);
+        lines ~= format("        move.l %d(A6), %s", offset, reg);  // 8(A6), 12(A6), etc.
         lines ~= format("        move.l %s, %s", reg, addr);
+        offset += 4;
     }
-
     // --- Generate function body ---
     foreach (stmt; func.funcBody) {
         generateStmt(stmt, lines, regIndex, localVarAddrs);
