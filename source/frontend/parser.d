@@ -182,7 +182,7 @@ ASTNode parsePrimary() {
 
             if (!check(TokenType.RParen)) {
                 do {
-                    args ~= parseExpression();
+                    args ~= parseExpression();  // 👈 this handles each arg
                 } while (match(TokenType.Comma));
             }
 
@@ -194,11 +194,20 @@ ASTNode parsePrimary() {
     }
 
     if (check(TokenType.LParen)) {
-        advance(); // skip '('
-        ASTNode expr = parseExpression();
+        string name = advance().lexeme;
+        advance(); // consume '('
+        ASTNode[] args;
+
+        if (!check(TokenType.RParen)) {
+            do {
+                args ~= parseExpression();  // ⬅️ This already works fine
+            } while (match(TokenType.Comma)); // ⬅️ Add this to handle the commas
+        }
+
         expect(TokenType.RParen);
-        return expr;
+        return new CallExpr(name, args);
     }
+
 
     throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
@@ -326,17 +335,13 @@ ASTNode parseStatement() {
         return new WhileStmt(cond, typeBody);
     }
     else if (check(TokenType.Comment)) {
-        advance(); // consume comment
-        return new CommentStmt(current().lexeme);
+        string text  = advance().lexeme;
+        return new CommentStmt(text);
     }
     else if (check(TokenType.CommentBlockStart)) {
-        advance(); // consume comment block start
-        string comment = current().lexeme;
-        while (!check(TokenType.CommentBlockEnd)) {
-            comment ~= current().lexeme;
-            advance();
-        }
-        advance(); // consume comment block end
+        string comment = advance().lexeme;
+        expect(TokenType.CommentBlockEnd);
+        // Handle the content between /* and */
         return new CommentBlockStmt(comment);
     }
     else if (check(TokenType.Struct)) {
@@ -363,42 +368,74 @@ ASTNode parseStatement() {
         return new StructDecl(name, fieldNames);
     }
     else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
-        advance(); // 'int' or 'byte'
+        string type = advance().lexeme; // 'int', 'byte', or 'string'
         expect(TokenType.LBracket);
         expect(TokenType.RBracket);
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.Assign);
-        expect(TokenType.LBrace);
+
+        // Accept either [ or { for array literal
+        TokenType opening = current().type;
+        if (opening != TokenType.LBracket && opening != TokenType.LBrace)
+            throw new Exception("Expected '[' or '{' for array elements, got: " ~ current().lexeme);
+
+        advance(); // consume opening token
 
         ASTNode[] elements;
-        while (!check(TokenType.RBrace)) {
-            elements ~= parseExpression();
-            if (check(TokenType.Comma)) {
-                advance();
-            } else {
-                break;
+
+        // Only parse elements if the next token isn't the closing one immediately
+        if (!check(TokenType.RBracket) && !check(TokenType.RBrace)) {
+            while (true) {
+                elements ~= parseExpression();
+
+                if (check(TokenType.Comma)) {
+                    advance();
+                } else {
+                    break;
+                }
             }
         }
 
-        expect(TokenType.RBrace);
+        // Match the correct closing token
+        if (opening == TokenType.LBracket)
+            expect(TokenType.RBracket);
+        else
+            expect(TokenType.RBrace);
+
         expect(TokenType.Semicolon);
 
-        return new ArrayDecl("int", name, elements);
+        return new ArrayDecl(type, name, elements);
     }
-	else if (check(TokenType.Identifier) && (current().lexeme == "print"
-    || current().lexeme == "println" || current().lexeme == "printf" || current().lexeme == "writeln")) {
-		advance(); // skip 'print', 'println', 'printf', or 'writeln'
-		expect(TokenType.LParen);
-		ASTNode val = parseExpression();
-		expect(TokenType.RParen);
-		expect(TokenType.Semicolon);
-		return new PrintStmt(val);
-	}
+    else if (check(TokenType.Identifier) && 
+        (current().lexeme == "print" ||
+        current().lexeme == "println" ||
+        current().lexeme == "printf" ||
+        current().lexeme == "writeln")) {
+
+        string printType = advance().lexeme;
+        expect(TokenType.LParen);
+        
+        ASTNode[] args;
+        if (!check(TokenType.RParen)) {
+            do {
+                args ~= parseExpression();
+            } while (match(TokenType.Comma)); // ✅ Allow multiple expressions
+        }
+
+        expect(TokenType.RParen);
+        expect(TokenType.Semicolon);
+        return new PrintStmt(printType, args); // ✅ List of args, not a single node
+    }
+
     else if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
 		Token typeToken = expectAny(TokenType.Int, TokenType.Bool, TokenType.String);
-		string name = expect(TokenType.Identifier).lexeme;
-		expect(TokenType.Assign);
-		ASTNode val = parseExpression();
+        string name = expect(TokenType.Identifier).lexeme;
+        ASTNode val;
+        if (match(TokenType.Assign)) {
+            val = parseExpression();
+        } else {
+            val = null; // No assignment, default to null
+        }
 		expect(TokenType.Semicolon);
 		return new VarDecl(typeToken.lexeme, name, val); // Assuming you added `type` to VarDecl
 	}

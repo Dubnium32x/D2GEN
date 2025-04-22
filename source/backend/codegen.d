@@ -12,6 +12,9 @@ int labelCounter = 0;
 string[string] strLabels;
 int strLabelCounter = 0;
 int nextStringIndex = 0;
+string[string] globalArrays;
+string[string] declaredArrays;
+string[string] emittedVars;
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
@@ -43,6 +46,15 @@ string generateCode(ASTNode[] nodes) {
         lines ~= format("        dc.b \'%s\', 0", val);
     }
 
+    // Emit array memory (once)
+    lines ~= "        ; Array storage";
+    foreach (name, base; globalArrays) {
+        foreach (i; 0 .. 10) { // or use known array length if tracked
+            lines ~= base ~ "_" ~ to!string(i) ~ ":    ds.l 1";
+        }
+    }
+
+
     lines ~= "        END";
     return lines.join("\n");
 }
@@ -51,6 +63,7 @@ string generateCode(ASTNode[] nodes) {
 void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, ref string[string] globalVarAddrs) {
     string[string] localVarAddrs; // Function-specific variable map
     string[string] localStrLabels;
+    string[string] localArrLabels;
 
     lines ~= func.name ~ ":";
     lines ~= "        ; Function prologue";
@@ -102,6 +115,9 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
 
         lines ~= label ~ ":";
         lines ~= format(`        dc.b "%s", 0`, content);
+    }
+    foreach (label; localArrLabels) {
+        declareArrayIfNeeded(label, "ds.l 1", lines, globalVarAddrs);
     }
 }
 
@@ -226,32 +242,35 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         generateForeachStmt(foreachStmt, lines, regIndex, varAddrs);
     }
     else if (auto arr = cast(ArrayDecl) node) {
-        string baseLabel = ".arr_" ~ arr.name;
+        string base = "arr" ~ capitalize(arr.name);
+        globalArrays[arr.name] = base;
 
-        varAddrs[arr.name] = baseLabel; // Register array base address
-
-        int i = 0;
-        foreach (elem; arr.elements) {
-            string reg = generateExpr(elem, lines, regIndex, varAddrs);
-            string label = baseLabel ~ "_" ~ to!string(i);
-            lines ~= format("        move.l %s, %s", reg, label);
-            i++;
+        if (!(arr.name in declaredArrays)) {
+            for (int i = 0; i < arr.elements.length; i++) {
+                string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
+                string label = base ~ "_" ~ to!string(i);
+                lines ~= format("        move.l %s, %s", reg, label);
+            }
+            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+            declaredArrays[arr.name] = base;
         }
 
-        // Store array length label if you want `length`
-        lines ~= format("%s_len:    dc.l %d", baseLabel, arr.elements.length);
+        varAddrs[arr.name] = base; // Register for indexed access
     }
+
     else if (auto print = cast(PrintStmt) node) {
-        if (auto str = cast(StringLiteral) print.value) {
-            string label = getOrCreateStringLabel(str.value);
-            lines ~= "        lea " ~ label ~ ", A1";
-            lines ~= "        move.b #9, D0";
-            lines ~= "        trap #14";
-        } else {
-            string reg = generateExpr(print.value, lines, regIndex, varAddrs);
-            lines ~= "        move.l " ~ reg ~ ", D1";
-            lines ~= "        move.b #1, D0";
-            lines ~= "        trap #14";
+        foreach (value; print.values) {
+            if (auto str = cast(StringLiteral) value) {
+                string label = getOrCreateStringLabel(str.value);
+                lines ~= "        lea " ~ label ~ ", A1";
+                lines ~= "        move.b #9, D0";
+                lines ~= "        trap #14";
+            } else {
+                string reg = generateExpr(value, lines, regIndex, varAddrs);
+                lines ~= "        move.l " ~ reg ~ ", D1";
+                lines ~= "        move.b #1, D0";
+                lines ~= "        trap #14";
+            }
         }
     }
     else if (auto sw = cast(SwitchStmt) node) {
@@ -310,35 +329,6 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                 lines ~= "        move.l " ~ reg ~ ", " ~ addr;
                 break;
         }
-    }
-    else if (auto arr = cast(ArrayDecl) node) {
-        string base = ".arr_" ~ arr.name;
-        int i = 0;
-
-        if (arr.type == "string") {
-            foreach (element; arr.elements) {
-                if (auto s = cast(StringLiteral) element) {
-                    string label = base ~ "_" ~ to!string(i++);
-                    string dataLabel = getOrCreateStringLabel(s.value);
-                    lines ~= format("        lea %s, A0", dataLabel);
-                    lines ~= format("        move.l A0, %s", label);
-                }
-            }
-
-            // Store array length
-            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
-
-        } else if (arr.type == "int" || arr.type == "byte") {
-            foreach (element; arr.elements) {
-                string label = base ~ "_" ~ to!string(i++);
-                string valReg = generateExpr(element, lines, regIndex, varAddrs);
-                lines ~= "        move.l " ~ valReg ~ ", " ~ label;
-            }
-            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
-        }
-
-        // Reserve a base label for access
-        lines ~= base ~ ":    ds.l 1";
     }
     else if (auto exprStmt = cast(ExprStmt) node) {
         generateExpr(exprStmt.expr, lines, regIndex, varAddrs);
@@ -403,20 +393,51 @@ void generateForeachStmt(ForeachStmt node, ref string[] lines, ref int regIndex,
     
     lines ~= "        ; Clean up foreach loop variables";
 
-    lines ~= format("%s:    ds.l 1 ; Clean up counter variable", counterVar);
-    lines ~= format("%s:    ds.l 1 ; Clean up char buffer", charBuf);
-
+    if (!(counterVar in emittedVars)) {
+        lines ~= counterVar ~ ":    ds.l 1 ; Clean up counter variable";
+        emittedVars[counterVar] = "1";
+    }
+    if (!(charBuf in emittedVars)) {
+        lines ~= charBuf ~ ":    ds.l 1 ; Clean up char buffer";
+        emittedVars[charBuf] = "1";
+    }
     lines ~= "        ; Reset register counter if needed";
     regIndex = 1;
 }
 
 // Helper to get clean variable name
 string getCleanVarName(string name) {
-    return ".var_" ~ name;
+    return "var_" ~ name;
+}
+
+string getCleanArrayName(string name) {
+    return "arr_" ~ name;
 }
 
 // Helper to declare variables in data section
 void declareVarIfNeeded(string fullName, string type, ref string[] lines, ref string[string] varAddrs) {
+    if (!(fullName in varAddrs)) {
+        varAddrs[fullName] = fullName;
+        
+        // Find where to insert the declaration (before END)
+        bool inserted = false;
+        foreach (i, line; lines) {
+            if (line.strip() == "END") {
+                import std.array : insertInPlace;
+                lines.insertInPlace(i, fullName ~ ": " ~ type);
+                inserted = true;
+                break;
+            }
+        }
+        
+        // If END not found, append to end
+        if (!inserted) {
+            lines ~= fullName ~ ": " ~ type;
+        }
+    }
+}
+
+void declareArrayIfNeeded(string fullName, string type, ref string[] lines, ref string[string] varAddrs) {
     if (!(fullName in varAddrs)) {
         varAddrs[fullName] = fullName;
         
@@ -538,12 +559,12 @@ string nextReg(ref int regIndex) {
 }
 
 string genLabel(string base) {
-    return "." ~ base ~ "_" ~ to!string(labelCounter++);
+    return "" ~ base ~ "_" ~ to!string(labelCounter++);
 }
 
 string getOrCreateVarAddr(string name, ref string[string] map) {
     if (!(name in map)) {
-        map[name] = ".var_" ~ name;
+        map[name] = "var_" ~ name;
     }
     return map[name];
 }
@@ -570,5 +591,12 @@ string toAlphaLabel(int index) {
     int second = index % base;
 
     return "str" ~ [cast(char)(a + first), cast(char)(a + second)].to!string;
+}
+
+string getOrCreateArrayLabel(string name, ref string[string] map) {
+    if (!(name in map)) {
+        map[name] = "arr_" ~ name;
+    }
+    return map[name];
 }
 

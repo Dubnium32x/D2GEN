@@ -71,12 +71,14 @@ class WhileStmt : ASTNode {
 }
 
 class PrintStmt : ASTNode {
-    ASTNode value;
-    this(ASTNode v) {
-        value = v;
+    string functionName;
+    ASTNode[] values;
+
+    this(string functionName, ASTNode[] values) {
+        this.functionName = functionName;
+        this.values = values;
     }
 }
-
 class AssignStmt : ASTNode {
     string name;
     ASTNode value;
@@ -317,11 +319,15 @@ class CallExpr : ASTNode {
 }
 
 class CommentStmt : ASTNode {
-    string comment;
-    this(string c) { comment = c; }
+    string text;
+    this(string text) {
+        this.text = text;
+    }
 }
 
 class CommentBlockStmt : ASTNode {
     string comment;
-    this(string c) { comment = c; }
+    this (string comment) {
+        this.comment = comment;
+    }
 }

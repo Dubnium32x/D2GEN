@@ -9,12 +9,13 @@ void main() {
     writeln("First element: ", numbers[0]);
     writeln("Last element: ", numbers[$ - 1]);
 
-    // Modify an element
-    numbers[2] = 10;
+    
     writeln("Modified Array: ", numbers);
 
     // Iterate over the array
     writeln("Array elements:");
+    int num;
+    num = 0;
     foreach (num; numbers) {
         writeln(num);
     }
