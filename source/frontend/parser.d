@@ -49,52 +49,43 @@ ASTNode[] parseProgram(Token[] inputTokens) {
     tokens = inputTokens;
     index = 0;
 
-    ASTNode[] stmts;
+    ASTNode[] decls;
 
-    // Parse: int main() { ... }
-    expect(TokenType.Int);               // return type
-    expect(TokenType.Identifier);       // function name
-    expect(TokenType.LParen);           // (
-    expect(TokenType.RParen);           // )
-    expect(TokenType.LBrace);           // {
+    while (!check(TokenType.Eof)) {
+        if (isTypeToken(current().type)) {
+            string returnType = advance().lexeme; // e.g. "void", "int"
+            string name = expect(TokenType.Identifier).lexeme;
 
-    if (checkAny(TokenType.Void, TokenType.Int, TokenType.Bool, TokenType.String)) {
-    string returnType = advance().lexeme;
-    string name = expect(TokenType.Identifier).lexeme;
+            expect(TokenType.LParen);
+            string[] params;
 
-    if (check(TokenType.LParen)) {
-        expect(TokenType.LParen);
-        string[] params;
+            if (!check(TokenType.RParen)) {
+                do {
+                    expectAny(TokenType.Int, TokenType.String, TokenType.Bool);
+                    string paramName = expect(TokenType.Identifier).lexeme;
+                    params ~= paramName;
+                } while (match(TokenType.Comma));
+            }
 
-        if (!check(TokenType.RParen)) {
-            do {
-                expectAny(TokenType.Int, TokenType.String, TokenType.Bool); // param type
-                string paramName = expect(TokenType.Identifier).lexeme;
-                params ~= paramName;
-            } while (match(TokenType.Comma));
+            expect(TokenType.RParen);
+            ASTNode[] funcBody = parseBlock();
+
+            decls ~= new FunctionDecl(name, returnType, params, funcBody);
+        } else {
+            throw new Exception("Expected function declaration, got: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
         }
-
-        expect(TokenType.RParen);
-        ASTNode[] funcBody = parseBlock();
-
-        stmts ~= new FunctionDecl(name, returnType, params, funcBody); // Ensure FunctionDecl is defined elsewhere
     }
 
-    // fallback to variable declaration, if needed
+    return decls;
 }
 
-
-    // Parse all statements in the function body
-    while (!check(TokenType.RBrace)) {
-        stmts ~= parseStatement();
-    }
-
-    expect(TokenType.RBrace);           // }
-    expect(TokenType.Eof);              // end of file
-
-    return stmts;
+bool isTypeToken(TokenType t) {
+    return t == TokenType.Int ||
+        t == TokenType.Bool ||
+        t == TokenType.String ||
+        t == TokenType.Void ||
+        t == TokenType.Byte;
 }
-
 
 ASTNode parseExpression(int prec = 0) {
     ASTNode left = parseUnary();
@@ -494,6 +485,7 @@ int getPrecedence() {
     if (check(TokenType.Less) || check(TokenType.LessEqual) || check(TokenType.Greater) || check(TokenType.GreaterEqual)) return 4;
     if (check(TokenType.Plus) || check(TokenType.Minus)) return 5;
     if (check(TokenType.Star) || check(TokenType.Slash)) return 6;
+    if (check(TokenType.Mod)) return 7;
     if (check(TokenType.Assign)) return 0; // Lowest precedence
     return -1; // Default for unknown tokens
 }

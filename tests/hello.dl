@@ -1,9 +1,26 @@
-int main() {
-    sayHello();
-    return 0;
-}
-
 void sayHello() {
     writeln("Hello!");
 }
 
+int add(int a, int b) {
+    return a + b;
+}
+
+void checkEven(int num) {
+    if (num % 2 == 0) {
+        writeln("Even");
+    } else {
+        writeln("Odd");
+    }
+}
+
+int main() {
+    sayHello();
+
+    int result = add(5, 3);
+    writeln(result);
+
+    checkEven(result);
+
+    return 0;
+}

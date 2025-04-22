@@ -3,6 +3,7 @@ module backend.codegen;
 import ast.nodes;
 import std.conv : to;
 import std.array;
+import std.stdio;
 import std.string;
 import std.algorithm : map;
 import std.format : format;
@@ -14,60 +15,123 @@ int strLabelCounter = 0;
 string generateCode(ASTNode[] nodes) {
     string[] lines;
     lines ~= "        ORG $1000";
-    lines ~= "main:";
+    lines ~= "        JMP main"; // jump to main, regardless of function order
 
     int regIndex = 1;
     string[string] varAddrs;
 
+    FunctionDecl[] functions;
+
+    // Gather all functions
     foreach (node; nodes) {
-        generateStmt(node, lines, regIndex, varAddrs);
+        if (auto fn = cast(FunctionDecl) node) {
+            functions ~= fn;
+        }
     }
 
-    lines ~= "        rts";
+    // Emit all functions (main will be jumped to anyway)
+    foreach (func; functions) {
+        generateFunction(func, lines, regIndex, varAddrs);
+    }
 
-    // Variable declarations
+    // Emit all unique string literals ONCE
     lines ~= "";
-    foreach (name, addr; varAddrs) {
-        lines ~= addr ~ ":    ds.l 1";
+    lines ~= "        ; String literals";
+    foreach (val, label; strLabels) {
+        lines ~= label ~ ":";
+        lines ~= format("        dc.b \'%s\', 0", val);
     }
-
-    // String constants
-    if (strLabels.length > 0) {
-        lines ~= "";
-        foreach (val, label; strLabels) {
-            lines ~= label ~ ":";
-            lines ~= "        dc.b '" ~ val ~ "'";
-            lines ~= "        dc.b 0";
-        }
-    }
-
-    // === Emit array contents ===
-    foreach (name, label; varAddrs) {
-        if (label.startsWith(".arr_")) {
-            foreach (i; 0 .. 10) { // or use arrayDecl.elements.length
-                string elemLabel = label ~ "_" ~ to!string(i);
-                lines ~= elemLabel ~ ":    dc.l 0";
-            }
-        }
-    }
-
 
     lines ~= "        END";
     return lines.join("\n");
+}
+
+
+void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, ref string[string] globalVarAddrs) {
+    string[string] localVarAddrs; // Function-specific variable map
+    string[string] localStrLabels;
+
+    lines ~= func.name ~ ":";
+    lines ~= "        ; Function prologue";
+    lines ~= "        move.l A6, -(SP)";
+    lines ~= "        move.l SP, A6";
+
+    // --- Handle function parameters ---
+    foreach_reverse (param; func.params) {
+        string reg = nextReg(regIndex);
+        string addr = getOrCreateVarAddr(param, localVarAddrs);
+        lines ~= format("        move.l (SP)+, %s", reg);
+        lines ~= format("        move.l %s, %s", reg, addr);
+    }
+
+    // --- Generate function body ---
+    foreach (stmt; func.funcBody) {
+        generateStmt(stmt, lines, regIndex, localVarAddrs);
+        generateStmt(stmt, lines, regIndex, localStrLabels);
+    }
+
+    // --- Epilogue ---
+    lines ~= "        ; Function epilogue";
+    lines ~= "        move.l A6, SP";
+    lines ~= "        move.l (SP)+, A6";
+    lines ~= "        rts";
+
+    // --- Local variables + string labels ---
+    foreach (name, addr; localVarAddrs) {
+        declareVarIfNeeded(addr, "ds.l 1", lines, globalVarAddrs);
+    }
+    lines ~= "        ; String literals for " ~ func.name;
+    foreach (label; localStrLabels) {
+        string content;
+        bool found = false;
+
+        foreach (val, lab; strLabels) {
+            if (lab == label) {
+                content = val;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            writeln("⚠ Warning: Could not find content for string label ", label);
+            continue;
+        }
+
+        lines ~= label ~ ":";
+        lines ~= format(`        dc.b "%s", 0`, content);
+    }
 }
 
 void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
     regIndex = 1;
 
     if (auto decl = cast(VarDecl) node) {
-        if (decl.type == "byte") {
-            string valReg = generateExpr(decl.value, lines, regIndex, varAddrs);
-            string addr = getOrCreateVarAddr(decl.name, varAddrs);
-            lines ~= format("        move.b %s, %s", valReg, addr);
-        } else if (decl.type == "int") {
-            string valReg = generateExpr(decl.value, lines, regIndex, varAddrs);
-            string addr = getOrCreateVarAddr(decl.name, varAddrs);
-            lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+        string addr = getOrCreateVarAddr(decl.name, varAddrs);
+
+        final switch (decl.type) {
+            case "int":
+                string intReg = generateExpr(decl.value, lines, regIndex, varAddrs);
+                lines ~= format("        move.l %s, %s", intReg, addr);
+                break;
+
+            case "byte":
+                string byteReg = generateExpr(decl.value, lines, regIndex, varAddrs);
+                lines ~= format("        move.b %s, %s", byteReg, addr);
+                break;
+
+            case "bool":
+                string boolReg = generateExpr(decl.value, lines, regIndex, varAddrs);
+                lines ~= format("        move.l %s, %s", boolReg, addr);
+                break;
+
+            case "string":
+                if (auto str = cast(StringLiteral) decl.value) {
+                    string strLabel = getOrCreateStringLabel(str.value);
+                    lines ~= format("        lea %s, A0", strLabel);
+                    lines ~= format("        move.l A0, %s", addr);
+                }
+                break;
         }
     }
     else if (auto assign = cast(AssignStmt) node) {
@@ -180,14 +244,12 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
             string label = getOrCreateStringLabel(str.value);
             lines ~= "        lea " ~ label ~ ", A1";
             lines ~= "        move.b #9, D0";
-            lines ~= "        trap #15";
-
-        }
-        else {
+            lines ~= "        trap #14";
+        } else {
             string reg = generateExpr(print.value, lines, regIndex, varAddrs);
             lines ~= "        move.l " ~ reg ~ ", D1";
             lines ~= "        move.b #1, D0";
-            lines ~= "        trap #15";
+            lines ~= "        trap #14";
         }
     }
     else if (auto sw = cast(SwitchStmt) node) {
@@ -275,6 +337,22 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
         // Reserve a base label for access
         lines ~= base ~ ":    ds.l 1";
+    }
+    else if (auto exprStmt = cast(ExprStmt) node) {
+        generateExpr(exprStmt.expr, lines, regIndex, varAddrs);
+    }
+    else if (auto str = cast(StringLiteral) node) {
+        string label = getOrCreateStringLabel(str.value);
+        lines ~= format("%s:    dc.b %d, %s", label, str.value.length, str.value);
+    }
+    else if (auto call = cast(CallExpr) node) {
+        foreach_reverse (arg; call.args) {
+            string reg = generateExpr(arg, lines, regIndex, varAddrs);
+            lines ~= "        move.l " ~ reg ~ ", -(SP)";
+        }
+
+        lines ~= "        bsr " ~ call.name;
+        lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
     }
 }
 
@@ -404,6 +482,8 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                        lines ~= "        sne " ~ dest; break;
             case "==": lines ~= format("        cmp.l %s, %s", right, left);
                        lines ~= "        seq " ~ dest; break;
+            case "%": lines ~= format("        move.l %s, %s", left, dest);
+                      lines ~= format("        divu %s, %s", right, dest); break;
         }
     }
     if (auto call = cast(CallExpr) expr) {
@@ -433,6 +513,19 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
 
         lines ~= "        rts";
     }
+    if (auto str = cast(StringLiteral) expr) {
+        // Handle string literals
+        string[] localStrLabels;
+        if (str.value.length > 255) {
+            writeln("⚠ Warning: String literal too long, truncating to 255 characters");
+            str.value = str.value[0 .. 255];
+        }
+        string label = getOrCreateStringLabel(str.value);
+        localStrLabels[str.value.to!uint] = label; // Track this string for the current function
+        lines ~= "        lea " ~ label ~ ", A1";
+        return "A1";
+    }
+
 
     return "#0";
 }
@@ -459,3 +552,4 @@ string getOrCreateStringLabel(string val) {
     }
     return strLabels[val];
 }
+
