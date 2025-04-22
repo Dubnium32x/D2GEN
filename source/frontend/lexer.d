@@ -48,6 +48,10 @@ enum TokenType {
 
 	Byte,
 
+	Comment,
+	CommentBlockStart,
+	CommentBlockEnd,
+
 	LBracket, RBracket,
     LBrace, RBrace,
     LParen, RParen,
@@ -87,6 +91,26 @@ Token[] tokenize(string input) {
 			pos++;
 			continue;
 		}
+		// Comments
+		if (c == '/') {
+			if (peekNext(input, pos) == '/') {
+				while (pos < input.length && input[pos] != '\n')
+					pos++;
+				continue;
+			}
+			else if (peekNext(input, pos) == '*') {
+				tokens ~= Token(TokenType.CommentBlockStart, "/*");
+				pos += 2;
+				continue;
+			}
+		}
+		else if (c == '*') {
+			if (peekNext(input, pos) == '/') {
+				tokens ~= Token(TokenType.CommentBlockEnd, "*/");
+				pos += 2;
+				continue;
+			}
+		}1
 
 		if (c == '+' && peekNext(input, pos) == '+') {
 			tokens ~= Token(TokenType.PlusPlus, "++");
