@@ -11,6 +11,7 @@ import std.format : format;
 int labelCounter = 0;
 string[string] strLabels;
 int strLabelCounter = 0;
+int nextStringIndex = 0;
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
@@ -148,7 +149,7 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         string labelEnd = genLabel("endif");
 
         string condReg = generateExpr(ifstmt.condition, lines, regIndex, varAddrs);
-        lines ~= "        cmp.l #0, " ~ condReg;
+        lines ~= "        cmpa.l " ~ condReg ~ ", A1";
         lines ~= "        beq " ~ labelElse;
 
         foreach (s; ifstmt.thenBody) {
@@ -480,7 +481,7 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                        lines ~= "        sle " ~ dest; break;
             case "!=": lines ~= format("        cmp.l %s, %s", right, left);
                        lines ~= "        sne " ~ dest; break;
-            case "==": lines ~= format("        cmp.l %s, %s", right, left);
+            case "==": lines ~= format("        cmp.l %s, %s", left, right);
                        lines ~= "        seq " ~ dest; break;
             case "%": lines ~= format("        move.l %s, %s", left, dest);
                       lines ~= format("        divu %s, %s", right, dest); break;
@@ -546,10 +547,27 @@ string getOrCreateVarAddr(string name, ref string[string] map) {
     return map[name];
 }
 
+
 string getOrCreateStringLabel(string val) {
-    if (!(val in strLabels)) {
-        strLabels[val] = ".str_" ~ to!string(strLabelCounter++);
+    if (val in strLabels) {
+        return strLabels[val];
     }
-    return strLabels[val];
+
+    string label = toAlphaLabel(nextStringIndex++);
+    strLabels[val] = label;
+    return label;
+}
+
+string toAlphaLabel(int index) {
+    import std.conv : to;
+
+    // Base-26 (A-Z) encoding
+    enum base = 26;
+    char a = 'A';
+
+    int first = index / base;
+    int second = index % base;
+
+    return "str" ~ [cast(char)(a + first), cast(char)(a + second)].to!string;
 }
 

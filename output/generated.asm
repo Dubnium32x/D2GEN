@@ -4,10 +4,10 @@ sayHello:
         ; Function prologue
         move.l A6, -(SP)
         move.l SP, A6
-        lea .str_0, A1
+        lea strAA, A1
         move.b #9, D0
         trap #14
-        lea .str_0, A1
+        lea strAA, A1
         move.b #9, D0
         trap #14
         ; Function epilogue
@@ -51,16 +51,16 @@ checkEven:
         move.l D1, D3
         divu D2, D3
         move.l #0, D4
-        cmp.l D4, #0
+        cmp.l #0, D4
         seq D5
-        cmp.l #0, #0
+        cmpa.l #0, A1
         beq .else_0
-        lea .str_1, A1
+        lea strAB, A1
         move.b #9, D0
         trap #14
         bra .endif_1
 .else_0:
-        lea .str_2, A1
+        lea strAC, A1
         move.b #9, D0
         trap #14
 .endif_1:
@@ -69,16 +69,16 @@ checkEven:
         move.l D1, D3
         divu D2, D3
         move.l #0, D4
-        cmp.l D4, #0
+        cmp.l #0, D4
         seq D5
-        cmp.l #0, #0
+        cmpa.l #0, A1
         beq .else_2
-        lea .str_1, A1
+        lea strAB, A1
         move.b #9, D0
         trap #14
         bra .endif_3
 .else_2:
-        lea .str_2, A1
+        lea strAC, A1
         move.b #9, D0
         trap #14
 .endif_3:
@@ -144,10 +144,10 @@ main:
         ; String literals for main
 
         ; String literals
-.str_1:
+strAB:
         dc.b 'Even', 0
-.str_0:
+strAA:
         dc.b 'Hello!', 0
-.str_2:
+strAC:
         dc.b 'Odd', 0
         END

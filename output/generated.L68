@@ -1,201 +1,181 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/21/2025 5:20:20 PM
+Created On: 4/21/2025 8:59:30 PM
 
 00001000                             1          ORG $1000
-00001000  4EF9 00001112              2          JMP main
+00001000  4EF9 000010FC              2          JMP main
 00001006                             3  sayHello:
 00001006                             4          ; Function prologue
 00001006  2F0E                       5          move.l A6, -(SP)
 00001008  2C4F                       6          move.l SP, A6
-0000100A  43F9 00001028              7          lea .str_0, A1
+0000100A  43F9 00001197              7          lea strAA, A1
 00001010  103C 0009                  8          move.b #9, D0
 00001014  4E4E                       9          trap #14
-00001016  43F9 00001028             10          lea .str_0, A1
+00001016  43F9 00001197             10          lea strAA, A1
 0000101C  103C 0009                 11          move.b #9, D0
 00001020  4E4E                      12          trap #14
 00001022                            13          ; Function epilogue
 00001022  2E4E                      14          move.l A6, SP
 00001024  2C5F                      15          move.l (SP)+, A6
 00001026  4E75                      16          rts
-00001028                            17  
-00001028                            18          ; String literals
-00001028                            19  .str_0:
-00001028= 48 65 6C 6C 6F 21 00      20          dc.b 'Hello!', 0
-0000102F                            21  add:
-0000102F                            22          ; Function prologue
-00001030  2F0E                      23          move.l A6, -(SP)
-00001032  2C4F                      24          move.l SP, A6
-00001034  221F                      25          move.l (SP)+, D1
-00001036  23C1 00001072             26          move.l D1, .var_b
-0000103C  241F                      27          move.l (SP)+, D2
-0000103E  23C2 0000106E             28          move.l D2, .var_a
-00001044  2239 0000106E             29          move.l .var_a, D1
-0000104A  2439 00001072             30          move.l .var_b, D2
-00001050  2601                      31          move.l D1, D3
-00001052  D682                      32          add.l D2, D3
-00001054  7000                      33          move.l #0, D0 ; return
-00001056  2239 0000106E             34          move.l .var_a, D1
-0000105C  2439 00001072             35          move.l .var_b, D2
-00001062  2601                      36          move.l D1, D3
-00001064  D682                      37          add.l D2, D3
-00001066  7000                      38          move.l #0, D0 ; return
-00001068                            39          ; Function epilogue
-00001068  2E4E                      40          move.l A6, SP
-0000106A  2C5F                      41          move.l (SP)+, A6
-0000106C  4E75                      42          rts
-0000106E                            43  .var_a: ds.l 1
-00001072                            44  .var_b: ds.l 1
-00001076                            45  
-00001076                            46          ; String literals
-00001076                            47  .str_0:
-00001076= 48 65 6C 6C 6F 21 00      48          dc.b 'Hello!', 0
-0000107D                            49  checkEven:
-0000107D                            50          ; Function prologue
-0000107E  2F0E                      51          move.l A6, -(SP)
-00001080  2C4F                      52          move.l SP, A6
-00001082  281F                      53          move.l (SP)+, D4
-00001084  23C4 000010FE             54          move.l D4, .var_num
-0000108A  2239 000010FE             55          move.l .var_num, D1
-00001090  7402                      56          move.l #2, D2
-00001092  2601                      57          move.l D1, D3
-00001094  86C2                      58          divu D2, D3
-00001096  7800                      59          move.l #0, D4
-00001098  B8BC 00000000             60          cmp.l #0, D4
-0000109E  57C5                      61          seq D5
-Line 62 ERROR: Invalid addressing mode
-000010A0                            62          cmp.l #0, #0
-000010A0  6700 0012                 63          beq .else_0
-000010A4  43F9 00001102             64          lea .str_1, A1
-000010AA  103C 0009                 65          move.b #9, D0
-000010AE  4E4E                      66          trap #14
-000010B0  6000 000E                 67          bra .endif_1
-000010B4                            68  .else_0:
-000010B4  43F9 0000110E             69          lea .str_2, A1
-000010BA  103C 0009                 70          move.b #9, D0
-000010BE  4E4E                      71          trap #14
-000010C0                            72  .endif_1:
-000010C0  2239 000010FE             73          move.l .var_num, D1
-000010C6  7402                      74          move.l #2, D2
-000010C8  2601                      75          move.l D1, D3
-000010CA  86C2                      76          divu D2, D3
-000010CC  7800                      77          move.l #0, D4
-Line 78 ERROR: Undefined symbol
-000010CE  0CB8 004DBD16 0000        78          cmp.l #D4, 0
-000010D6  57C5                      79          seq D5
-Line 80 ERROR: Invalid addressing mode
-000010D8                            80          cmp.l #0, #0
-000010D8  6700 0012                 81          beq .else_2
-000010DC  43F9 00001102             82          lea .str_1, A1
-000010E2  103C 0009                 83          move.b #9, D0
-000010E6  4E4E                      84          trap #14
-000010E8  6000 000E                 85          bra .endif_3
-000010EC                            86  .else_2:
-000010EC  43F9 0000110E             87          lea .str_2, A1
-000010F2  103C 0009                 88          move.b #9, D0
-000010F6  4E4E                      89          trap #14
-000010F8                            90  .endif_3:
-000010F8                            91          ; Function epilogue
-000010F8  2E4E                      92          move.l A6, SP
-000010FA  2C5F                      93          move.l (SP)+, A6
-000010FC  4E75                      94          rts
-000010FE                            95  .var_num: ds.l 1
-00001102                            96  
-00001102                            97          ; String literals
-00001102                            98  .str_1:
-00001102= 45 76 65 6E 00            99          dc.b 'Even', 0
-00001107                           100  .str_0:
-00001107= 48 65 6C 6C 6F 21 00     101          dc.b 'Hello!', 0
-0000110E                           102  .str_2:
-0000110E= 4F 64 64 00              103          dc.b 'Odd', 0
-00001112                           104  main:
-00001112                           105          ; Function prologue
-00001112  2F0E                     106          move.l A6, -(SP)
-00001114  2C4F                     107          move.l SP, A6
-00001116  6100 FEEE                108          bsr sayHello
-0000111A  DFFC 00000000            109          add.l #0, SP
-00001120  2200                     110          move.l D0, D1
-00001122  6100 FEE2                111          bsr sayHello
-00001126  DFFC 00000000            112          add.l #0, SP
-0000112C  2200                     113          move.l D0, D1
-0000112E  7203                     114          move.l #3, D1
-00001130  2F01                     115          move.l D1, -(SP)
-00001132  7405                     116          move.l #5, D2
-00001134  2F02                     117          move.l D2, -(SP)
-00001136  6100 FEF7                118          bsr add
-0000113A  508F                     119          add.l #8, SP
-0000113C  2600                     120          move.l D0, D3
-0000113E  23C3 000011A4            121          move.l D3, .var_result
-00001144  7203                     122          move.l #3, D1
-00001146  2F01                     123          move.l D1, -(SP)
-00001148  7405                     124          move.l #5, D2
-0000114A  2F02                     125          move.l D2, -(SP)
-0000114C  6100 FEE1                126          bsr add
-00001150  508F                     127          add.l #8, SP
-00001152  2600                     128          move.l D0, D3
-00001154  23C3 000011A4            129          move.l D3, .var_result
-0000115A  2239 000011A4            130          move.l .var_result, D1
-00001160  2201                     131          move.l D1, D1
-00001162  103C 0001                132          move.b #1, D0
-00001166  4E4E                     133          trap #14
-00001168  2239 000011A4            134          move.l .var_result, D1
-0000116E  2201                     135          move.l D1, D1
-00001170  103C 0001                136          move.b #1, D0
-00001174  4E4E                     137          trap #14
-00001176  2239 000011A4            138          move.l .var_result, D1
-0000117C  2F01                     139          move.l D1, -(SP)
-0000117E  6100 FEFD                140          bsr checkEven
-00001182  588F                     141          add.l #4, SP
-00001184  2400                     142          move.l D0, D2
-00001186  2239 000011A4            143          move.l .var_result, D1
-0000118C  2F01                     144          move.l D1, -(SP)
-0000118E  6100 FEED                145          bsr checkEven
-00001192  588F                     146          add.l #4, SP
-00001194  2400                     147          move.l D0, D2
-00001196  7200                     148          move.l #0, D1
-00001198  2001                     149          move.l D1, D0 ; return
-0000119A  7200                     150          move.l #0, D1
-0000119C  2001                     151          move.l D1, D0 ; return
-0000119E                           152          ; Function epilogue
-0000119E  2E4E                     153          move.l A6, SP
-000011A0  2C5F                     154          move.l (SP)+, A6
-000011A2  4E75                     155          rts
-000011A4                           156  .var_result: ds.l 1
-000011A8                           157  
-000011A8                           158          ; String literals
-000011A8                           159  .str_1:
-000011A8= 45 76 65 6E 00           160          dc.b 'Even', 0
-000011AD                           161  .str_0:
-000011AD= 48 65 6C 6C 6F 21 00     162          dc.b 'Hello!', 0
-000011B4                           163  .str_2:
-000011B4= 4F 64 64 00              164          dc.b 'Odd', 0
-Line 165 WARNING: Address expected
-000011B8                           165          END
+00001028                            17          ; String literals for sayHello
+00001028                            18  add:
+00001028                            19          ; Function prologue
+00001028  2F0E                      20          move.l A6, -(SP)
+0000102A  2C4F                      21          move.l SP, A6
+0000102C  221F                      22          move.l (SP)+, D1
+0000102E  23C1 0000106A             23          move.l D1, .var_b
+00001034  241F                      24          move.l (SP)+, D2
+00001036  23C2 00001066             25          move.l D2, .var_a
+0000103C  2239 00001066             26          move.l .var_a, D1
+00001042  2439 0000106A             27          move.l .var_b, D2
+00001048  2601                      28          move.l D1, D3
+0000104A  D682                      29          add.l D2, D3
+0000104C  7000                      30          move.l #0, D0 ; return
+0000104E  2239 00001066             31          move.l .var_a, D1
+00001054  2439 0000106A             32          move.l .var_b, D2
+0000105A  2601                      33          move.l D1, D3
+0000105C  D682                      34          add.l D2, D3
+0000105E  7000                      35          move.l #0, D0 ; return
+00001060                            36          ; Function epilogue
+00001060  2E4E                      37          move.l A6, SP
+00001062  2C5F                      38          move.l (SP)+, A6
+00001064  4E75                      39          rts
+00001066                            40  .var_a: ds.l 1
+0000106A                            41  .var_b: ds.l 1
+0000106E                            42          ; String literals for add
+0000106E                            43  checkEven:
+0000106E                            44          ; Function prologue
+0000106E  2F0E                      45          move.l A6, -(SP)
+00001070  2C4F                      46          move.l SP, A6
+00001072  281F                      47          move.l (SP)+, D4
+00001074  23C4 000010F8             48          move.l D4, .var_num
+0000107A  2239 000010F8             49          move.l .var_num, D1
+00001080  7402                      50          move.l #2, D2
+00001082  2601                      51          move.l D1, D3
+00001084  86C2                      52          divu D2, D3
+00001086  7800                      53          move.l #0, D4
+00001088  B8BC 00000000             54          cmp.l #0, D4
+0000108E  57C5                      55          seq D5
+00001090  B3FC 00000000             56          cmpa.l #0, A1
+00001096  6700 0012                 57          beq .else_0
+0000109A  43F9 00001192             58          lea strAB, A1
+000010A0  103C 0009                 59          move.b #9, D0
+000010A4  4E4E                      60          trap #14
+000010A6  6000 000E                 61          bra .endif_1
+000010AA                            62  .else_0:
+000010AA  43F9 0000119E             63          lea strAC, A1
+000010B0  103C 0009                 64          move.b #9, D0
+000010B4  4E4E                      65          trap #14
+000010B6                            66  .endif_1:
+000010B6  2239 000010F8             67          move.l .var_num, D1
+000010BC  7402                      68          move.l #2, D2
+000010BE  2601                      69          move.l D1, D3
+000010C0  86C2                      70          divu D2, D3
+000010C2  7800                      71          move.l #0, D4
+000010C4  B8BC 00000000             72          cmp.l #0, D4
+000010CA  57C5                      73          seq D5
+000010CC  B3FC 00000000             74          cmpa.l #0, A1
+000010D2  6700 0012                 75          beq .else_2
+000010D6  43F9 00001192             76          lea strAB, A1
+000010DC  103C 0009                 77          move.b #9, D0
+000010E0  4E4E                      78          trap #14
+000010E2  6000 000E                 79          bra .endif_3
+000010E6                            80  .else_2:
+000010E6  43F9 0000119E             81          lea strAC, A1
+000010EC  103C 0009                 82          move.b #9, D0
+000010F0  4E4E                      83          trap #14
+000010F2                            84  .endif_3:
+000010F2                            85          ; Function epilogue
+000010F2  2E4E                      86          move.l A6, SP
+000010F4  2C5F                      87          move.l (SP)+, A6
+000010F6  4E75                      88          rts
+000010F8                            89  .var_num: ds.l 1
+000010FC                            90          ; String literals for checkEven
+000010FC                            91  main:
+000010FC                            92          ; Function prologue
+000010FC  2F0E                      93          move.l A6, -(SP)
+000010FE  2C4F                      94          move.l SP, A6
+00001100  6100 FF04                 95          bsr sayHello
+00001104  DFFC 00000000             96          add.l #0, SP
+0000110A  2200                      97          move.l D0, D1
+0000110C  6100 FEF8                 98          bsr sayHello
+00001110  DFFC 00000000             99          add.l #0, SP
+00001116  2200                     100          move.l D0, D1
+00001118  7203                     101          move.l #3, D1
+0000111A  2F01                     102          move.l D1, -(SP)
+0000111C  7405                     103          move.l #5, D2
+0000111E  2F02                     104          move.l D2, -(SP)
+00001120  6100 FF06                105          bsr add
+00001124  508F                     106          add.l #8, SP
+00001126  2600                     107          move.l D0, D3
+00001128  23C3 0000118E            108          move.l D3, .var_result
+0000112E  7203                     109          move.l #3, D1
+00001130  2F01                     110          move.l D1, -(SP)
+00001132  7405                     111          move.l #5, D2
+00001134  2F02                     112          move.l D2, -(SP)
+00001136  6100 FEF0                113          bsr add
+0000113A  508F                     114          add.l #8, SP
+0000113C  2600                     115          move.l D0, D3
+0000113E  23C3 0000118E            116          move.l D3, .var_result
+00001144  2239 0000118E            117          move.l .var_result, D1
+0000114A  2201                     118          move.l D1, D1
+0000114C  103C 0001                119          move.b #1, D0
+00001150  4E4E                     120          trap #14
+00001152  2239 0000118E            121          move.l .var_result, D1
+00001158  2201                     122          move.l D1, D1
+0000115A  103C 0001                123          move.b #1, D0
+0000115E  4E4E                     124          trap #14
+00001160  2239 0000118E            125          move.l .var_result, D1
+00001166  2F01                     126          move.l D1, -(SP)
+00001168  6100 FF04                127          bsr checkEven
+0000116C  588F                     128          add.l #4, SP
+0000116E  2400                     129          move.l D0, D2
+00001170  2239 0000118E            130          move.l .var_result, D1
+00001176  2F01                     131          move.l D1, -(SP)
+00001178  6100 FEF4                132          bsr checkEven
+0000117C  588F                     133          add.l #4, SP
+0000117E  2400                     134          move.l D0, D2
+00001180  7200                     135          move.l #0, D1
+00001182  2001                     136          move.l D1, D0 ; return
+00001184  7200                     137          move.l #0, D1
+00001186  2001                     138          move.l D1, D0 ; return
+00001188                           139          ; Function epilogue
+00001188  2E4E                     140          move.l A6, SP
+0000118A  2C5F                     141          move.l (SP)+, A6
+0000118C  4E75                     142          rts
+0000118E                           143  .var_result: ds.l 1
+00001192                           144          ; String literals for main
+00001192                           145  
+00001192                           146          ; String literals
+00001192                           147  strAB:
+00001192= 45 76 65 6E 00           148          dc.b 'Even', 0
+00001197                           149  strAA:
+00001197= 48 65 6C 6C 6F 21 00     150          dc.b 'Hello!', 0
+0000119E                           151  strAC:
+0000119E= 4F 64 64 00              152          dc.b 'Odd', 0
+Line 153 WARNING: Address expected
+000011A2                           153          END
 
-3 errors detected
+No errors detected
 1 warning generated
 
 
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ADD                 102F
-ADD:STR_0           1076
-ADD:VAR_A           106E
-ADD:VAR_B           1072
-CHECKEVEN           107D
-CHECKEVEN:ELSE_0    10B4
-CHECKEVEN:ELSE_2    10EC
-CHECKEVEN:ENDIF_1   10C0
-CHECKEVEN:ENDIF_3   10F8
-CHECKEVEN:STR_0     1107
-CHECKEVEN:STR_1     1102
-CHECKEVEN:STR_2     110E
-CHECKEVEN:VAR_NUM   10FE
-MAIN                1112
-MAIN:STR_0          11AD
-MAIN:STR_1          11A8
-MAIN:STR_2          11B4
-MAIN:VAR_RESULT     11A4
+ADD                 1028
+ADD:VAR_A           1066
+ADD:VAR_B           106A
+CHECKEVEN           106E
+CHECKEVEN:ELSE_0    10AA
+CHECKEVEN:ELSE_2    10E6
+CHECKEVEN:ENDIF_1   10B6
+CHECKEVEN:ENDIF_3   10F2
+CHECKEVEN:VAR_NUM   10F8
+MAIN                10FC
+MAIN:VAR_RESULT     118E
 SAYHELLO            1006
-SAYHELLO:STR_0      1028
+STRAA               1197
+STRAB               1192
+STRAC               119E
