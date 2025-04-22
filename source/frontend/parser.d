@@ -324,6 +324,40 @@ ASTNode parseStatement() {
         expect(TokenType.RBrace);
         return new WhileStmt(cond, typeBody);
     }
+    else if (check(TokenType.Comment)) {
+        advance(); // consume comment
+        return new CommentStmt(current().lexeme);
+    }
+    else if (check(TokenType.CommentBlockStart)) {
+        advance(); // consume comment block start
+        string comment = current().lexeme;
+        while (!check(TokenType.CommentBlockEnd)) {
+            comment ~= current().lexeme;
+            advance();
+        }
+        advance(); // consume comment block end
+        return new CommentBlockStmt(comment);
+    }
+    else if (check(TokenType.Struct)) {
+        advance(); // consume 'struct'
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.LBrace);
+
+        ASTNode[] members;
+        while (!check(TokenType.RBrace)) {
+            members ~= parseStatement();
+            if (check(TokenType.Comma)) {
+                advance();
+            } else {
+                break;
+            }
+        }
+
+        expect(TokenType.RBrace);
+        expect(TokenType.Semicolon);
+
+        return new StructDecl(name, members);
+    }
     else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
         advance(); // 'int' or 'byte'
         expect(TokenType.LBracket);

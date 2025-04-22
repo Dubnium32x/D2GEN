@@ -315,3 +315,13 @@ class CallExpr : ASTNode {
         this.args = args;
     }
 }
+
+class CommentStmt : ASTNode {
+    string comment;
+    this(string c) { comment = c; }
+}
+
+class CommentBlockStmt : ASTNode {
+    string comment;
+    this(string c) { comment = c; }
+}
