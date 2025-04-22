@@ -15,6 +15,7 @@ int nextStringIndex = 0;
 string[string] globalArrays;
 string[string] declaredArrays;
 string[string] emittedVars;
+string[string] arrayLabels;
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
@@ -38,7 +39,7 @@ string generateCode(ASTNode[] nodes) {
         generateFunction(func, lines, regIndex, varAddrs);
     }
 
-    // Emit all unique string literals ONCE
+    // Emit all unique string literals (once)
     lines ~= "";
     lines ~= "        ; String literals";
     foreach (val, label; strLabels) {
@@ -54,6 +55,11 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
+    // Emit array labels (once)
+    lines ~= "        ; Array labels";
+    foreach (name, label; arrayLabels) {
+        lines ~= label ~ ":    ds.l 1";
+    }
 
     lines ~= "        END";
     return lines.join("\n");
@@ -535,6 +541,39 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         }
 
         lines ~= "        rts";
+    }
+    if (auto access = cast(ArrayAccessExpr) expr) {
+        // Evaluate the index expression
+        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+
+        // If array is constant-indexed, we can optimize
+        if (auto intLit = cast(IntLiteral) access.index) {
+            string label = access.arrayName ~ "_" ~ to!string(intLit.value);
+            string reg = nextReg(regIndex);
+            lines ~= "        move.l " ~ label ~ ", " ~ reg;
+            // add to the array label map
+            if (!(access.arrayName in arrayLabels)) {
+                arrayLabels[access.arrayName] = label;
+            }
+            return reg;
+        }
+
+        // Otherwise: dynamic access
+        string baseAddr = getOrCreateVarAddr(access.arrayName, varAddrs); // Retrieve the array name properly
+        string tmpAddr = nextReg(regIndex);
+        string scaledIndex = nextReg(regIndex);
+
+        // Multiply index by 4 to get byte offset (longs)
+        lines ~= "        move.l " ~ indexReg ~ ", " ~ scaledIndex;
+        lines ~= "        mulu #4, " ~ scaledIndex;
+
+        // Load address of base into a register (assumes label exists)
+        lines ~= "        lea " ~ baseAddr ~ ", A0";
+
+        // Offset into array
+        lines ~= "        move.l (A0, " ~ scaledIndex ~ ".l), " ~ tmpAddr;
+
+        return tmpAddr;
     }
     if (auto str = cast(StringLiteral) expr) {
         // Handle string literals

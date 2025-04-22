@@ -27,6 +27,7 @@ enum TokenType {
 	GreaterEqual,
 	Bang, // for !
 	Mod,
+	Dollar,
 	
 	For, Foreach,
 	Break, Continue, Default,
@@ -218,6 +219,7 @@ Token[] tokenize(string input) {
 		if (c == '>') { tokens ~= Token(TokenType.Greater, ">"); pos++; continue; }
 		if (c == '.') { tokens ~= Token(TokenType.Dot, "."); pos++; continue; }
 		if (c == '%') { tokens ~= Token(TokenType.Mod, "%"); pos++; continue; }
+		if (c == '$') { tokens ~= Token(TokenType.Dollar, "$"); pos++; continue; }
 
         // Numbers
         if (isDigit(c)) {

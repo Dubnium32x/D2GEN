@@ -193,6 +193,12 @@ ASTNode parsePrimary() {
         return new VarExpr(name);
     }
 
+    if (check(TokenType.Dollar)) {
+        advance();
+        return new VarExpr("$"); // treat `$` as a special variable
+    }
+
+
     if (check(TokenType.LParen)) {
         string name = advance().lexeme;
         advance(); // consume '('
@@ -414,7 +420,7 @@ ASTNode parseStatement() {
 
         string printType = advance().lexeme;
         expect(TokenType.LParen);
-        
+
         ASTNode[] args;
         if (!check(TokenType.RParen)) {
             do {
