@@ -110,7 +110,7 @@ Token[] tokenize(string input) {
 				pos += 2;
 				continue;
 			}
-		}1
+		}
 
 		if (c == '+' && peekNext(input, pos) == '+') {
 			tokens ~= Token(TokenType.PlusPlus, "++");

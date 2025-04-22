@@ -4,6 +4,7 @@ import frontend.lexer;
 import ast.nodes;
 
 import std.stdio;
+import std.algorithm.iteration; // Required for filter
 
 private Token[] tokens;
 private size_t index;
@@ -356,7 +357,10 @@ ASTNode parseStatement() {
         expect(TokenType.RBrace);
         expect(TokenType.Semicolon);
 
-        return new StructDecl(name, members);
+    
+        import std.array : array; // Ensure std.array is imported
+        string[] fieldNames = members.map!(m => cast(VarDecl) m).filter!(v => v !is null).map!(v => v.name).array;
+        return new StructDecl(name, fieldNames);
     }
     else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
         advance(); // 'int' or 'byte'
