@@ -19,6 +19,7 @@ string[string] arrayLabels;
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
+    lines ~= "** GENERATED CODE USING DLANG AND D2GEN COMPILER **";
     lines ~= "        ORG $1000";
     lines ~= "        JMP main"; // jump to main, regardless of function order
 

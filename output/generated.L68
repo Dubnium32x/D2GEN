@@ -1,191 +1,29 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/22/2025 2:26:28 PM
+Created On: 4/22/2025 2:36:00 PM
 
-00001000                             1          ORG $1000
-00001000  4EF9 00001006              2          JMP main
-00001006                             3  main:
-00001006                             4          ; Function prologue
-00001006  2F0E                       5          move.l A6, -(SP)
-00001008  2C4F                       6          move.l SP, A6
-0000100A  7201                       7          move.l #1, D1
-0000100C  23C1 0000122C              8          move.l D1, arrNumbers_0
-00001012  7402                       9          move.l #2, D2
-00001014  23C2 00001230             10          move.l D2, arrNumbers_1
-0000101A  7603                      11          move.l #3, D3
-0000101C  23C3 00001234             12          move.l D3, arrNumbers_2
-00001022  7804                      13          move.l #4, D4
-00001024  23C4 00001238             14          move.l D4, arrNumbers_3
-0000102A  7A05                      15          move.l #5, D5
-0000102C  23C5 0000123C             16          move.l D5, arrNumbers_4
-00001032= 00000005                  17  arrNumbers_len:    dc.l 5
-00001036  43F9 00001224             18          lea strAA, A1
-0000103C  103C 0009                 19          move.b #9, D0
-00001040  4E4E                      20          trap #14
-00001042  2239 000011DC             21          move.l arrNumbers, D1
-00001048  2201                      22          move.l D1, D1
-0000104A  103C 0001                 23          move.b #1, D0
-0000104E  4E4E                      24          trap #14
-00001050  43F9 00001224             25          lea strAA, A1
-00001056  103C 0009                 26          move.b #9, D0
-0000105A  4E4E                      27          trap #14
-0000105C  2239 000011DC             28          move.l arrNumbers, D1
-00001062  2201                      29          move.l D1, D1
-00001064  103C 0001                 30          move.b #1, D0
-00001068  4E4E                      31          trap #14
-0000106A  43F9 00001214             32          lea strAB, A1
-00001070  103C 0009                 33          move.b #9, D0
-00001074  4E4E                      34          trap #14
-00001076  7200                      35          move.l #0, D1
-00001078  2439 00001254             36          move.l numbers_0, D2
-0000107E  2202                      37          move.l D2, D1
-00001080  103C 0001                 38          move.b #1, D0
-00001084  4E4E                      39          trap #14
-00001086  43F9 00001214             40          lea strAB, A1
-0000108C  103C 0009                 41          move.b #9, D0
-00001090  4E4E                      42          trap #14
-00001092  7200                      43          move.l #0, D1
-00001094  2439 00001254             44          move.l numbers_0, D2
-0000109A  2202                      45          move.l D2, D1
-0000109C  103C 0001                 46          move.b #1, D0
-000010A0  4E4E                      47          trap #14
-000010A2  43F9 000011E4             48          lea strAC, A1
-000010A8  103C 0009                 49          move.b #9, D0
-000010AC  4E4E                      50          trap #14
-000010AE  2239 000011D8             51          move.l var_$, D1
-000010B4  7401                      52          move.l #1, D2
-000010B6  2601                      53          move.l D1, D3
-000010B8  9682                      54          sub.l D2, D3
-000010BA  7A00                      55          move.l #0, D5
-000010BC  CAFC 0004                 56          mulu #4, D5
-000010C0  41F9 000011DC             57          lea arrNumbers, A0
-000010C6  2830 5800                 58          move.l (A0, D5.l), D4
-000010CA  2204                      59          move.l D4, D1
-000010CC  103C 0001                 60          move.b #1, D0
-000010D0  4E4E                      61          trap #14
-000010D2  43F9 000011E4             62          lea strAC, A1
-000010D8  103C 0009                 63          move.b #9, D0
-000010DC  4E4E                      64          trap #14
-000010DE  2239 000011D8             65          move.l var_$, D1
-000010E4  7401                      66          move.l #1, D2
-000010E6  2601                      67          move.l D1, D3
-000010E8  9682                      68          sub.l D2, D3
-000010EA  7A00                      69          move.l #0, D5
-000010EC  CAFC 0004                 70          mulu #4, D5
-000010F0  41F9 000011DC             71          lea arrNumbers, A0
-000010F6  2830 5800                 72          move.l (A0, D5.l), D4
-000010FA  2204                      73          move.l D4, D1
-000010FC  103C 0001                 74          move.b #1, D0
-00001100  4E4E                      75          trap #14
-00001102  43F9 000011F3             76          lea strAD, A1
-00001108  103C 0009                 77          move.b #9, D0
-0000110C  4E4E                      78          trap #14
-0000110E  2239 000011DC             79          move.l arrNumbers, D1
-00001114  2201                      80          move.l D1, D1
-00001116  103C 0001                 81          move.b #1, D0
-0000111A  4E4E                      82          trap #14
-0000111C  43F9 000011F3             83          lea strAD, A1
-00001122  103C 0009                 84          move.b #9, D0
-00001126  4E4E                      85          trap #14
-00001128  2239 000011DC             86          move.l arrNumbers, D1
-0000112E  2201                      87          move.l D1, D1
-00001130  103C 0001                 88          move.b #1, D0
-00001134  4E4E                      89          trap #14
-00001136  43F9 00001204             90          lea strAE, A1
-0000113C  103C 0009                 91          move.b #9, D0
-00001140  4E4E                      92          trap #14
-00001142  43F9 00001204             93          lea strAE, A1
-00001148  103C 0009                 94          move.b #9, D0
-0000114C  4E4E                      95          trap #14
-0000114E  23FC 00000000 000011E0    96          move.l #0, var_num
-00001158  23FC 00000000 000011E0    97          move.l #0, var_num
-00001162  7200                      98          move.l #0, D1
-00001164  23C1 000011E0             99          move.l D1, var_num
-0000116A  7200                     100          move.l #0, D1
-0000116C  23C1 000011E0            101          move.l D1, var_num
-00001172                           102          ; Initialize foreach loop (num)
-00001172  7201                     103          move.l #1, D1          ; Start value
-00001174  7405                     104          move.l #5, D2          ; End value
-00001176  23C1 000011A0            105          move.l D1, (var_num_counter) ; Store initial value
-0000117C                           106  foreach_0:
-0000117C                           107          ; Check loop condition
-0000117C  B282                     108          cmp.l D2, D1
-0000117E  6C00 0020                109          bge end_foreach_1
-00001182  23C1 000011E0            110          move.l D1, (var_num) ; Update num
-00001188                           111          ; === Loop body begin ===
-00001188  2239 000011E0            112          move.l var_num, D1
-0000118E  2201                     113          move.l D1, D1
-00001190  103C 0001                114          move.b #1, D0
-00001194  4E4E                     115          trap #14
-00001196                           116          ; === Loop body end ===
-00001196                           117          ; Update loop counter
-00001196  5281                     118          addq.l #1, D1          ; num++
-00001198  23C1 000011A0            119          move.l D1, (var_num_counter) ; Store updated value
-0000119E  60DC                     120          bra foreach_0
-000011A0                           121  end_foreach_1:
-000011A0                           122          ; Foreach loop complete
-000011A0                           123          ; Clean up foreach loop variables
-000011A0                           124  var_num_counter:    ds.l 1 ; Clean up counter variable
-000011A4                           125  var_char_buffer:    ds.l 1 ; Clean up char buffer
-000011A8                           126          ; Reset register counter if needed
-000011A8                           127          ; Initialize foreach loop (num)
-000011A8  7201                     128          move.l #1, D1          ; Start value
-000011AA  7405                     129          move.l #5, D2          ; End value
-000011AC  21C1 11A0                130          move.l D1, (var_num_counter) ; Store initial value
-000011B0                           131  foreach_2:
-000011B0                           132          ; Check loop condition
-000011B0  B282                     133          cmp.l D2, D1
-000011B2  6C00 001E                134          bge end_foreach_3
-000011B6  23C1 000011E0            135          move.l D1, (var_num) ; Update num
-000011BC                           136          ; === Loop body begin ===
-000011BC  2239 000011E0            137          move.l var_num, D1
-000011C2  2201                     138          move.l D1, D1
-000011C4  103C 0001                139          move.b #1, D0
-000011C8  4E4E                     140          trap #14
-000011CA                           141          ; === Loop body end ===
-000011CA                           142          ; Update loop counter
-000011CA  5281                     143          addq.l #1, D1          ; num++
-000011CC  21C1 11A0                144          move.l D1, (var_num_counter) ; Store updated value
-000011D0  60DE                     145          bra foreach_2
-000011D2                           146  end_foreach_3:
-000011D2                           147          ; Foreach loop complete
-000011D2                           148          ; Clean up foreach loop variables
-000011D2                           149          ; Reset register counter if needed
-000011D2                           150          ; Function epilogue
-000011D2  2E4E                     151          move.l A6, SP
-000011D4  2C5F                     152          move.l (SP)+, A6
-000011D6  4E75                     153          rts
-000011D8                           154  var_$: ds.l 1
-000011DC                           155  arrNumbers: ds.l 1
-000011E0                           156  var_num: ds.l 1
-000011E4                           157          ; String literals for main
-000011E4                           158  
-000011E4                           159          ; String literals
-000011E4                           160  strAC:
-000011E4= 4C 61 73 74 20 65 ...    161          dc.b 'Last element: ', 0
-000011F3                           162  strAD:
-000011F3= 4D 6F 64 69 66 69 ...    163          dc.b 'Modified Array: ', 0
-00001204                           164  strAE:
-00001204= 41 72 72 61 79 20 ...    165          dc.b 'Array elements:', 0
-00001214                           166  strAB:
-00001214= 46 69 72 73 74 20 ...    167          dc.b 'First element: ', 0
-00001224                           168  strAA:
-00001224= 41 72 72 61 79 3A ...    169          dc.b 'Array: ', 0
-0000122C                           170          ; Array storage
-0000122C                           171  arrNumbers_0:    ds.l 1
-00001230                           172  arrNumbers_1:    ds.l 1
-00001234                           173  arrNumbers_2:    ds.l 1
-00001238                           174  arrNumbers_3:    ds.l 1
-0000123C                           175  arrNumbers_4:    ds.l 1
-00001240                           176  arrNumbers_5:    ds.l 1
-00001244                           177  arrNumbers_6:    ds.l 1
-00001248                           178  arrNumbers_7:    ds.l 1
-0000124C                           179  arrNumbers_8:    ds.l 1
-00001250                           180  arrNumbers_9:    ds.l 1
-00001254                           181          ; Array labels
-00001254                           182  numbers_0:    ds.l 1
-Line 183 WARNING: Address expected
-00001258                           183          END
+00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
+00001000                             2          ORG $1000
+00001000  4EF9 00001006              3          JMP main
+00001006                             4  main:
+00001006                             5          ; Function prologue
+00001006  2F0E                       6          move.l A6, -(SP)
+00001008  2C4F                       7          move.l SP, A6
+0000100A  7200                       8          move.l #0, D1
+0000100C  2001                       9          move.l D1, D0 ; return
+0000100E  7200                      10          move.l #0, D1
+00001010  2001                      11          move.l D1, D0 ; return
+00001012                            12          ; Function epilogue
+00001012  2E4E                      13          move.l A6, SP
+00001014  2C5F                      14          move.l (SP)+, A6
+00001016  4E75                      15          rts
+00001018                            16          ; String literals for main
+00001018                            17  
+00001018                            18          ; String literals
+00001018                            19          ; Array storage
+00001018                            20          ; Array labels
+Line 21 WARNING: Address expected
+00001018                            21          END
 
 No errors detected
 1 warning generated
@@ -194,30 +32,4 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ARRNUMBERS          11DC
-ARRNUMBERS_0        122C
-ARRNUMBERS_1        1230
-ARRNUMBERS_2        1234
-ARRNUMBERS_3        1238
-ARRNUMBERS_4        123C
-ARRNUMBERS_5        1240
-ARRNUMBERS_6        1244
-ARRNUMBERS_7        1248
-ARRNUMBERS_8        124C
-ARRNUMBERS_9        1250
-ARRNUMBERS_LEN      1032
-END_FOREACH_1       11A0
-END_FOREACH_3       11D2
-FOREACH_0           117C
-FOREACH_2           11B0
 MAIN                1006
-NUMBERS_0           1254
-STRAA               1224
-STRAB               1214
-STRAC               11E4
-STRAD               11F3
-STRAE               1204
-VAR_$               11D8
-VAR_CHAR_BUFFER     11A4
-VAR_NUM             11E0
-VAR_NUM_COUNTER     11A0

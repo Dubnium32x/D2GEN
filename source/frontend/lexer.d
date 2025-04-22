@@ -66,6 +66,7 @@ enum TokenType {
 struct Token {
     TokenType type;
     string lexeme;
+	int line;
 }
 
 Token[] tokenize(string input) {
