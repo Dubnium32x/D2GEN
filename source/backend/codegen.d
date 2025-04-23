@@ -146,12 +146,112 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                     lines ~= format("        move.l A0, %s", addr);
                 }
                 break;
+            case "int[]":
+                // Handle array initialization
+                if (auto arr = cast(ArrayLiteral) decl.value) {
+                    string base = "arr" ~ capitalize(decl.name);
+                    globalArrays[decl.name] = base;
+
+                    if (!(decl.name in declaredArrays)) {
+                        for (int i = 0; i < arr.elements.length; i++) {
+                            string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
+                            string label = base ~ "_" ~ to!string(i);
+                            lines ~= format("        move.l %s, %s", reg, label);
+                        }
+                        lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+                        declaredArrays[decl.name] = base;
+                    }
+
+                    varAddrs[decl.name] = base; // Register for indexed access
+                }
+                break;
+            case "byte[]":
+                // Handle byte array initialization
+                if (auto arr = cast(ArrayLiteral) decl.value) {
+                    string base = "arr" ~ capitalize(decl.name);
+                    globalArrays[decl.name] = base;
+
+                    if (!(decl.name in declaredArrays)) {
+                        for (int i = 0; i < arr.elements.length; i++) {
+                            string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
+                            string label = base ~ "_" ~ to!string(i);
+                            lines ~= format("        move.b %s, %s", reg, label);
+                        }
+                        lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+                        declaredArrays[decl.name] = base;
+                    }
+
+                    varAddrs[decl.name] = base; // Register for indexed access
+                }
+                break;
+            case "bool[]":
+                // Handle bool array initialization
+                if (auto arr = cast(ArrayLiteral) decl.value) {
+                    string base = "arr" ~ capitalize(decl.name);
+                    globalArrays[decl.name] = base;
+
+                    if (!(decl.name in declaredArrays)) {
+                        for (int i = 0; i < arr.elements.length; i++) {
+                            string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
+                            string label = base ~ "_" ~ to!string(i);
+                            lines ~= format("        move.l %s, %s", reg, label);
+                        }
+                        lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+                        declaredArrays[decl.name] = base;
+                    }
+
+                    varAddrs[decl.name] = base; // Register for indexed access
+                }
+                break;
+            case "string[]":
+                // Handle string array initialization
+                if (auto arr = cast(ArrayLiteral) decl.value) {
+                    string base = "arr" ~ capitalize(decl.name);
+                    globalArrays[decl.name] = base;
+
+                    if (!(decl.name in declaredArrays)) {
+                        for (int i = 0; i < arr.elements.length; i++) {
+                            string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
+                            string label = base ~ "_" ~ to!string(i);
+                            lines ~= format("        lea %s, A0", reg);
+                            lines ~= format("        move.l A0, %s", label);
+                        }
+                        lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
+                        declaredArrays[decl.name] = base;
+                    }
+
+                    varAddrs[decl.name] = base; // Register for indexed access
+                }
+                break;
         }
     }
     else if (auto assign = cast(AssignStmt) node) {
+        // Assignment to variable
+        if (auto var = cast(VarExpr) assign.lhs) {
             string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
-            string addr = getOrCreateVarAddr(assign.name, varAddrs);
+            string addr = getOrCreateVarAddr(var.name, varAddrs);
             lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+        }
+        // Assignment to array element
+        else if (auto access = cast(ArrayAccessExpr) assign.lhs) {
+            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
+            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+
+            // Calculate offset: index * 4 (for 32-bit ints)
+            string offsetReg = nextReg(regIndex);
+            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+            lines ~= "        mulu #4, " ~ offsetReg;
+
+            // Get base address of array
+            string baseAddr = getOrCreateVarAddr(access.arrayName, varAddrs);
+            lines ~= "        lea " ~ baseAddr ~ ", A0";
+
+            // Store value at (A0, offsetReg.l)
+            lines ~= "        move.l " ~ valReg ~ ", (A0, " ~ offsetReg ~ ".l)";
+        }
+        else {
+            throw new Exception("Left-hand side of assignment must be a variable or array element");
+        }
     }
     else if (auto ret = cast(ReturnStmt) node) {
         string reg = generateExpr(ret.value, lines, regIndex, varAddrs);
@@ -542,6 +642,12 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             lines ~= format("        move.l %s, %s", leftReg, dest);
             lines ~= format("        divs %s, %s", rightReg, dest);
             return dest;
+            case "%": // Modulo
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        divs %s, D1", rightReg);
+            lines ~= format("        muls %s, D1", rightReg);
+            lines ~= format("        sub.l D1, %s", leftReg);
+            return dest;
             case "+=":
             lines ~= format("        add.l %s, %s", rightReg, leftReg);
             break;
@@ -818,6 +924,14 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         string reg = "A" ~ to!string(regIndex++); // Use A1, A2, etc.
         lines ~= "        lea " ~ label ~ ", " ~ reg;
         return reg;
+    }
+
+    if (auto arrLit = cast(ArrayLiteralExpr) expr) {
+        foreach (i, elem; arrLit.elements) {
+            string valReg = generateExpr(elem, lines, regIndex, varAddrs);
+            string label = "arr_" ~ to!string(i);
+            lines ~= "        move.l " ~ valReg ~ ", " ~ label;
+        }
     }
 
 

@@ -19,7 +19,9 @@ Token expect(TokenType kind) {
     Token t = current();
     if (t.type != kind) {
         hasErrors = true;
-        throw new Exception("Expected " ~ kind.stringof ~ ", got " ~ t.type.stringof ~ " at token '" ~ t.lexeme ~ "'");
+        writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
+        throw new Exception("Expected " ~ kind.stringof ~ ", got " ~ t.type.stringof ~ " at token '" ~ current().lexeme ~ "'");
     }
     index++;
     return t;
@@ -29,7 +31,9 @@ Token expectAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType
     Token t = current();
     if (!checkAny(a, b, c, d)) {
         hasErrors = true;
-        throw new Exception("Expected one of [" ~ a.stringof ~ ", " ~ b.stringof ~ ", " ~ c.stringof ~ ", " ~ d.stringof ~ "], got " ~ t.type.stringof ~ " at '" ~ t.lexeme ~ "'");
+        writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
+        throw new Exception("Expected one of [" ~ a.stringof ~ ", " ~ b.stringof ~ ", " ~ c.stringof ~ ", " ~ d.stringof ~ "], got " ~ t.type.stringof ~ " at '" ~ current().lexeme ~ "'");
     }
     index++;
     return t;
@@ -63,6 +67,8 @@ ASTNode parseExpression(int prec = 0) {
         if (cast(VarExpr) left || cast(ArrayAccessExpr) left) {
             // ok
         } else {
+            writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
             throw new Exception("Left-hand side of assignment must be a variable or array element");
         }
     }
@@ -179,6 +185,18 @@ ASTNode parsePrimary() {
         return expr;
     }
 
+    if (check(TokenType.LBracket)) {
+        advance(); // consume '['
+        ASTNode[] elements;
+        if (!check(TokenType.RBracket)) {
+            do {
+                elements ~= parseExpression();
+            } while (match(TokenType.Comma));
+        }
+        expect(TokenType.RBracket);
+        return new ArrayLiteralExpr(elements);
+    }
+
     if (check(TokenType.TildeEqual)) {
         Token op = advance(); // consume '~='
         ASTNode right = parseExpression();
@@ -187,6 +205,8 @@ ASTNode parsePrimary() {
     }
 
     hasErrors = true;
+    writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
     throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
 
@@ -213,7 +233,7 @@ ASTNode parseStatement() {
 		expect(TokenType.Assign);
 		ASTNode value = parseExpression();
 		expect(TokenType.Semicolon);
-		return new AssignStmt(name, value);
+        return new AssignStmt(new VarExpr(name), value);
 	}
     else if (check(TokenType.Return)) {
         advance();
@@ -282,6 +302,8 @@ ASTNode parseStatement() {
             }
             else {
                 hasErrors = true;
+                writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
                 throw new Exception("Unexpected token in switch: " ~ current().lexeme);
             }
         }
@@ -359,6 +381,8 @@ ASTNode parseStatement() {
             // Accept either [ or { for array literal
             TokenType opening = current().type;
             if (opening != TokenType.LBracket && opening != TokenType.LBrace) {
+                writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+
                 throw new Exception("Expected '[' or '{' for array elements, got: " ~ current().lexeme);
             }
 
@@ -412,7 +436,8 @@ ASTNode parseStatement() {
             case TokenType.SlashEqual: op = "/="; break;
             case TokenType.TildeEqual: op = "~="; break;
             case TokenType.ModEqual:   op = "%="; break;
-            default: throw new Exception("Unknown operator: " ~ opType.stringof);
+            default: writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+            throw new Exception("Unknown operator: " ~ opType.stringof);
         }   
         return new BinaryExpr(op, new VarExpr(name), value);
     }
@@ -444,7 +469,7 @@ ASTNode parseStatement() {
             ASTNode val;
             if (match(TokenType.Assign)) {
                 val = parseExpression();
-            } else {
+            }else {
                 val = null;
             }
             decls ~= new VarDecl(typeToken.lexeme, name, val);
@@ -532,7 +557,7 @@ ASTNode parseStatement() {
 		return new BoolLiteral(false);
 	}
 	writeln("Current token at statement level: ", current().type);
-
+	writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
     throw new Exception("Unknown statement at token: " ~ tokens[index].lexeme);
 }
 
@@ -624,8 +649,13 @@ ASTNode parseFunctionDecl() {
         if (!check(TokenType.RParen)) {
             do {
                 string paramType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool).lexeme;
+                bool isArray = false;
+                if (match(TokenType.LBracket)) {
+                    expect(TokenType.RBracket);
+                    paramType ~= "[]";
+                }
                 string paramName = expect(TokenType.Identifier).lexeme;
-                params ~= paramName;
+                params ~= paramName; // (or store type/name pair if you track types)
             } while (match(TokenType.Comma));
         }
         expect(TokenType.RParen);

@@ -80,12 +80,19 @@ class PrintStmt : ASTNode {
     }
 }
 class AssignStmt : ASTNode {
-    string name;
+    ASTNode lhs;
     ASTNode value;
 
-    this(string n, ASTNode v) {
-        name = n;
-        value = v;
+    this(ASTNode lhs, ASTNode value) {
+        this.lhs = lhs;
+        this.value = value;
+    }
+}
+
+class ArrayLiteralExpr : ASTNode {
+    ASTNode[] elements;
+    this(ASTNode[] elements) {
+        this.elements = elements;
     }
 }
 
