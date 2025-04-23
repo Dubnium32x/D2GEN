@@ -16,9 +16,12 @@ string[string] globalArrays;
 string[string] declaredArrays;
 string[string] emittedVars;
 string[string] arrayLabels;
+string[string] loopVarsUsed;
+string[string] usedLibCalls; // acts as a set
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
+
     lines ~= "** GENERATED CODE USING DLANG AND D2GEN COMPILER **";
     lines ~= "        ORG $1000";
     lines ~= "        JMP main"; // jump to main, regardless of function order
@@ -56,10 +59,31 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
+    // Emit all loop variables (once)
+    lines ~= "        ; Loop variables";
+    foreach (name, _; loopVarsUsed) {
+        lines ~= name ~ ":    ds.l 1";
+    }
+    
+    // Emit all scalar variables (once)
+    lines ~= "        ; Scalar variables";
+    foreach (name, _; emittedVars) {
+        // Avoid redeclaring loop variables
+        if (!(name in loopVarsUsed)) {
+            lines ~= name ~ ":    ds.l 1";
+        }
+    }
+
     // Emit array labels (once)
     lines ~= "        ; Array labels";
     foreach (name, label; arrayLabels) {
         lines ~= label ~ ":    ds.l 1";
+    }
+
+    foreach (lib; usedLibCalls.keys) {
+        lines ~= "";
+        lines ~= lib ~ ":";
+        lines ~= "    rts";
     }
 
     lines ~= "        END";
@@ -68,64 +92,29 @@ string generateCode(ASTNode[] nodes) {
 
 
 void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, ref string[string] globalVarAddrs) {
-    string[string] localVarAddrs; // Function-specific variable map
-    string[string] localStrLabels;
-    string[string] localArrLabels;
-
+    string[string] localVarAddrs;
     lines ~= func.name ~ ":";
     lines ~= "        ; Function prologue";
     lines ~= "        move.l A6, -(SP)";
     lines ~= "        move.l SP, A6";
 
-    // --- Handle function parameters ---
+    // Handle function parameters: put directly in D0, D1, ... if possible
     int offset = 8;
-    foreach (param; func.params) {
-        string reg = nextReg(regIndex);
-        string addr = getOrCreateVarAddr(param, localVarAddrs);
-        lines ~= format("        move.l %d(A6), %s", offset, reg);  // 8(A6), 12(A6), etc.
-        lines ~= format("        move.l %s, %s", reg, addr);
+    foreach (i, param; func.params) {
+        string reg = (i == 0) ? "D0" : nextReg(regIndex);
+        lines ~= format("        move.l %d(A6), %s", offset, reg);
+        localVarAddrs[param] = reg; // Map param name to register
         offset += 4;
     }
-    // --- Generate function body ---
+
     foreach (stmt; func.funcBody) {
         generateStmt(stmt, lines, regIndex, localVarAddrs);
-        generateStmt(stmt, lines, regIndex, localStrLabels);
     }
 
-    // --- Epilogue ---
     lines ~= "        ; Function epilogue";
     lines ~= "        move.l A6, SP";
     lines ~= "        move.l (SP)+, A6";
     lines ~= "        rts";
-
-    // --- Local variables + string labels ---
-    foreach (name, addr; localVarAddrs) {
-        declareVarIfNeeded(addr, "ds.l 1", lines, globalVarAddrs);
-    }
-    lines ~= "        ; String literals for " ~ func.name;
-    foreach (label; localStrLabels) {
-        string content;
-        bool found = false;
-
-        foreach (val, lab; strLabels) {
-            if (lab == label) {
-                content = val;
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            writeln("⚠ Warning: Could not find content for string label ", label);
-            continue;
-        }
-
-        lines ~= label ~ ":";
-        lines ~= format(`        dc.b "%s", 0`, content);
-    }
-    foreach (label; localArrLabels) {
-        declareArrayIfNeeded(label, "ds.l 1", lines, globalVarAddrs);
-    }
 }
 
 void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
@@ -166,13 +155,26 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto ret = cast(ReturnStmt) node) {
         string reg = generateExpr(ret.value, lines, regIndex, varAddrs);
-        lines ~= "        move.l " ~ reg ~ ", D0 ; return";
+        if (reg != "D0") lines ~= "        move.l " ~ reg ~ ", D0 ; return";
+    }
+    else if (auto breakstmt = cast(BreakStmt) node) {
+        lines ~= "        bra end_loop";
+    }
+    else if (auto contstmt = cast(ContinueStmt) node) {
+        lines ~= "        bra start_loop";
+    }
+    else if (auto block = cast(BlockStmt) node) {
+        foreach (stmt; block.blockBody) {
+            generateStmt(stmt, lines, regIndex, varAddrs);
+        }
     }
     else if (auto ifstmt = cast(IfStmt) node) {
         string labelElse = genLabel("else");
         string labelEnd = genLabel("endif");
 
         string condReg = generateExpr(ifstmt.condition, lines, regIndex, varAddrs);
+        if (condReg != "D0")
+            lines ~= "        move.l " ~ condReg ~ ", D0";
         lines ~= "        cmpa.l " ~ condReg ~ ", A1";
         lines ~= "        beq " ~ labelElse;
 
@@ -215,6 +217,8 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         lines ~= labelStart ~ ":";
 
         string condReg = generateExpr(whilestmt.condition, lines, regIndex, varAddrs);
+        if (condReg != "D0")
+            lines ~= "        move.l " ~ condReg ~ ", D0";
         lines ~= "        cmp.l #0, " ~ condReg;
         lines ~= "        beq " ~ labelEnd;
 
@@ -234,6 +238,8 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         lines ~= startLabel ~ ":";
 
         string condReg = generateExpr(forLoop.condition, lines, regIndex, varAddrs);
+        if (condReg != "D0")
+            lines ~= "        move.l " ~ condReg ~ ", D0";
         lines ~= "        cmp.l #0, " ~ condReg;
         lines ~= "        beq " ~ endLabel;
 
@@ -282,27 +288,28 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto sw = cast(SwitchStmt) node) {
         string endLabel = genLabel("switch_end");
-        string condReg = generateExpr(sw.condition, lines, regIndex, varAddrs);
+        string condReg = "D0";
         string[] caseLabels;
         string defaultLabel = endLabel;
 
-        // Emit comparisons and branches
         foreach (i, cNode; sw.cases) {
             auto c = cast(CaseStmt) cNode;
             string label = genLabel("case_" ~ to!string(i));
             caseLabels ~= label;
 
             if (c.condition !is null) {
-                string caseValReg = generateExpr(c.condition, lines, regIndex, varAddrs);
-                lines ~= "        cmp.l " ~ caseValReg ~ ", " ~ condReg;
+                // If the case value is a constant, use immediate
+                if (auto intLit = cast(IntLiteral) c.condition) {
+                    lines ~= "        cmp.l #" ~ to!string(intLit.value) ~ ", " ~ condReg;
+                } else {
+                    string caseValReg = generateExpr(c.condition, lines, regIndex, varAddrs);
+                    lines ~= "        cmp.l " ~ caseValReg ~ ", " ~ condReg;
+                }
                 lines ~= "        beq " ~ label;
             } else {
-                // This is the default case
                 defaultLabel = label;
             }
         }
-
-
         lines ~= "        bra " ~ defaultLabel;
 
         // Emit case bodies
@@ -391,23 +398,17 @@ void generateForeachStmt(ForeachStmt node, ref string[] lines, ref int regIndex,
     lines ~= "        move.l D1, (" ~ counterVar ~ ") ; Store updated value";
     lines ~= "        bra " ~ loopLabel;
     
+    // Track loop variable and counter variable
+    loopVarsUsed[loopVar] = "1";
+    loopVarsUsed[counterVar] = "1";
+
     // End label
     lines ~= endLabel ~ ":";
     lines ~= "        ; Foreach loop complete";
     
     // Reset register counter if needed
     regIndex = 1;
-    
     lines ~= "        ; Clean up foreach loop variables";
-
-    if (!(counterVar in emittedVars)) {
-        lines ~= counterVar ~ ":    ds.l 1 ; Clean up counter variable";
-        emittedVars[counterVar] = "1";
-    }
-    if (!(charBuf in emittedVars)) {
-        lines ~= charBuf ~ ":    ds.l 1 ; Clean up char buffer";
-        emittedVars[charBuf] = "1";
-    }
     lines ~= "        ; Reset register counter if needed";
     regIndex = 1;
 }
@@ -479,7 +480,21 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         return reg;
     }
 
+    if (auto unary = cast(UnaryExpr) expr) {
+        if (unary.op == "&") {
+            auto var = cast(VarExpr) unary.expr;
+            string addr = getOrCreateVarAddr(var.name, varAddrs);
+            string reg = "A" ~ to!string(regIndex++);
+            lines ~= "        lea " ~ addr ~ ", " ~ reg;
+            return reg;
+        }
+    }
+
     if (auto var = cast(VarExpr) expr) {
+        // If the variable is mapped to a register (e.g., function parameter), use it directly
+        if (var.name in varAddrs && varAddrs[var.name].startsWith("D")) {
+            return varAddrs[var.name];
+        }
         string reg = nextReg(regIndex);
         string addr = getOrCreateVarAddr(var.name, varAddrs);
         lines ~= "        move.l " ~ addr ~ ", " ~ reg;
@@ -487,54 +502,274 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     }
 
     if (auto bin = cast(BinaryExpr) expr) {
-        string left = generateExpr(bin.left, lines, regIndex, varAddrs);
-        string right = generateExpr(bin.right, lines, regIndex, varAddrs);
+        string leftReg = generateExpr(bin.left, lines, regIndex, varAddrs);
+        string rightReg = generateExpr(bin.right, lines, regIndex, varAddrs);
         string dest = nextReg(regIndex);
 
         final switch (bin.op) {
-            case "+": lines ~= format("        move.l %s, %s", left, dest);
-                      lines ~= format("        add.l %s, %s", right, dest); break;
-            case "-": lines ~= format("        move.l %s, %s", left, dest);
-                      lines ~= format("        sub.l %s, %s", right, dest); break;
-            case "*": lines ~= format("        move.l %s, %s", left, dest);
-                      lines ~= format("        muls %s, %s", right, dest); break;
-            case "/": lines ~= format("        move.l %s, %s", left, dest);
-                      lines ~= format("        divs %s, %s", right, dest); break;
-            case "<": lines ~= format("        cmp.l %s, %s", right, left);
-                      lines ~= "        slt " ~ dest; break;
-            case "<=": lines ~= format("        cmp.l %s, %s", right, left);
-                       lines ~= "        sle " ~ dest; break;
-            case ">": lines ~= format("        cmp.l %s, %s", left, right);
-                      lines ~= "        slt " ~ dest; break;
-            case ">=": lines ~= format("        cmp.l %s, %s", left, right);
-                       lines ~= "        sle " ~ dest; break;
-            case "!=": lines ~= format("        cmp.l %s, %s", right, left);
-                       lines ~= "        sne " ~ dest; break;
-            case "==": lines ~= format("        cmp.l %s, %s", left, right);
-                       lines ~= "        seq " ~ dest; break;
-            case "%": lines ~= format("        move.l %s, %s", left, dest);
-                      lines ~= format("        divu %s, %s", right, dest); break;
+            case "=":
+            // Assignment: left = right;
+            lines ~= format("        move.l %s, %s", rightReg, leftReg);
+            break;
+            case "+": // Addition
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        add.l %s, %s", rightReg, dest);
+            return dest;
+            case "-": // Subtraction
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        sub.l %s, %s", rightReg, dest);
+            return dest;
+            case "*": // Multiplication
+            // If both operands are the same register, just muls reg, reg
+            if (leftReg == rightReg) {
+                lines ~= format("        muls %s, %s", leftReg, leftReg);
+                return leftReg;
+            }
+            // If either operand is D0, use D0 as the destination
+            if (leftReg == "D0") {
+                lines ~= format("        muls %s, D0", rightReg);
+                return "D0";
+            }
+            if (rightReg == "D0") {
+                lines ~= format("        muls %s, D0", leftReg);
+                    return "D0";
+            }
+            // Otherwise, move leftReg to D0 and muls rightReg, D0
+            lines ~= format("        move.l %s, D0", leftReg);
+            lines ~= format("        muls %s, D0", rightReg);
+            return "D0";
+            case "/": // Division
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        divs %s, %s", rightReg, dest);
+            return dest;
+            case "+=":
+            lines ~= format("        add.l %s, %s", rightReg, leftReg);
+            break;
+            case "-=":
+            lines ~= format("        sub.l %s, %s", rightReg, leftReg);
+            break;
+            case "*=":
+            lines ~= format("        muls %s, %s", rightReg, leftReg);
+            break;
+            case "/=":
+            lines ~= format("        divs %s, %s", rightReg, leftReg);
+            break;
+            case "%=":
+            // Modulo assignment: a %= b
+            // D2GEN doesn't have a direct mod instruction, so do: a = a - (a / b) * b
+            lines ~= format("        move.l %s, D1", leftReg);
+            lines ~= format("        divs %s, D1", rightReg);
+            lines ~= format("        muls %s, D1", rightReg);
+            lines ~= format("        sub.l D1, %s", leftReg);
+            break;
+            case "==":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        beq %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case "!=":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        bne %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case "~=":
+            // Array append: arr ~= val
+            auto leftVarExpr = cast(VarExpr)bin.left;
+            string arrBase = getCleanArrayName(leftVarExpr.name);
+            string lenLabel = arrBase ~ "_len";
+            string idxReg = nextReg(regIndex);
+
+            // load current length
+            lines ~= format("        move.l %s, %s", lenLabel, idxReg);
+            // store value at arrBase_idxReg
+            lines ~= format("        move.l %s, %s_%s", rightReg, arrBase, idxReg);
+            // increment length
+            lines ~= format("        addq.l #1, %s", lenLabel);
+            break;
+            case "<":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        blt %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case "<=":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        ble %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case ">":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        bgt %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case ">=":
+            {
+            string trueLabel = genLabel("Ltrue");
+            string endLabel = genLabel("Lend");
+            lines ~= format("        cmp.l %s, %s", rightReg, dest);
+            lines ~= format("        bge %s", trueLabel);
+            lines ~= "        move.l #0, " ~ dest;
+            lines ~= format("        bra %s", endLabel);
+            lines ~= trueLabel ~ ":";
+            lines ~= "        move.l #1, " ~ dest;
+            lines ~= endLabel ~ ":";
+            return dest;
+            }
+            case "&&":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        and.l %s, %s", rightReg, dest);
+            return dest;
+            case "||":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        or.l %s, %s", rightReg, dest);
+            return dest;
+            case ">>":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        lsr.l %s, %s", rightReg, dest);
+            return dest;
+            case "<<":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        lsl.l %s, %s", rightReg, dest);
+            return dest;
+            case "&":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        and.l %s, %s", rightReg, dest);
+            return dest;
+            case "|":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        or.l %s, %s", rightReg, dest);
+            return dest;
+            case "^":
+            lines ~= format("        move.l %s, %s", leftReg, dest);
+            lines ~= format("        eor.l %s, %s", rightReg, dest);
+            return dest;
         }
     }
+
     if (auto call = cast(CallExpr) expr) {
+        int argAReg = 1; // Start from A1 for address registers
+        int argDReg = 1; // Start from D1 for data registers
+        string[] argRegs;
+
+        // Track library calls
+        if (call.name == "readf" ||
+        call.name == "write" ||
+        call.name == "writeln" ||
+        call.name == "readln" ||
+        call.name == "writef" ||
+        call.name == "import" ||
+        call.name == "importf" ||
+        call.name == "importln" ||
+        call.name == "std." ||
+        call.name == "stdout" ||
+        call.name == "stdin" ||
+        call.name == "stderr" ||
+        call.name == "malloc" ||
+        call.name == "free" ||
+        call.name == "memcpy" ||
+        call.name == "memset" ||
+        call.name == "memmove" ||
+        call.name == "strlen" ||
+        call.name == "strcpy" ||
+        call.name == "strcat" ||
+        call.name == "strcmp" ||
+        call.name == "strchr" ||
+        call.name == "strstr" ||
+        call.name == "strdup" ||
+        call.name == "stdio") {
+            usedLibCalls[call.name] = "1";
+        }
+
+        // Collect argument registers/types
         foreach_reverse (arg; call.args) {
-            string reg = generateExpr(arg, lines, regIndex, varAddrs);
+            string reg;
+            // StringLiteral or address-of (&x) => address register
+            if (cast(StringLiteral) arg || (cast(UnaryExpr) arg && (cast(UnaryExpr)arg).op == "&")) {
+                reg = "A" ~ to!string(argAReg++);
+            } else {
+                reg = "D" ~ to!string(argDReg++);
+            }
+            argRegs ~= reg;
+        }
+
+        // Now generate code for each argument, in reverse order (right-to-left)
+        foreach_reverse (i, arg; call.args) {
+            string reg = argRegs[$ - i - 1];
+            // StringLiteral
+            if (auto str = cast(StringLiteral) arg) {
+                string label = getOrCreateStringLabel(str.value);
+                lines ~= "        lea " ~ label ~ ", " ~ reg;
+            }
+            // Address-of
+            else if (auto unary = cast(UnaryExpr) arg) {
+                if (unary.op == "&") {
+                    auto var = cast(VarExpr) unary.expr;
+                    string addr = getOrCreateVarAddr(var.name, varAddrs);
+                    lines ~= "        lea " ~ addr ~ ", " ~ reg;
+                }
+            }
+            // Everything else (int, var, etc.)
+            else {
+                string valReg = generateExpr(arg, lines, regIndex, varAddrs);
+                if (valReg != reg)
+                    lines ~= "        move.l " ~ valReg ~ ", " ~ reg;
+            }
             lines ~= "        move.l " ~ reg ~ ", -(SP)";
         }
 
         lines ~= "        bsr " ~ call.name;
         lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
-
         string dest = nextReg(regIndex);
         lines ~= "        move.l D0, " ~ dest;
         return dest;
     }
+
     if (auto blit = cast(ByteLiteral) expr) {
         string reg = nextReg(regIndex);
         lines ~= "        move.b #" ~ to!string(blit.value) ~ ", " ~ reg;
         return reg;
     }
-    else if (auto func = cast(FunctionDecl) expr) {
+
+    if (auto func = cast(FunctionDecl) expr) {
         lines ~= func.name ~ ":";
 
         foreach (stmt; func.funcBody) {
@@ -542,7 +777,9 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         }
 
         lines ~= "        rts";
+        return "";
     }
+
     if (auto access = cast(ArrayAccessExpr) expr) {
         // Evaluate the index expression
         string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
@@ -577,16 +814,10 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         return tmpAddr;
     }
     if (auto str = cast(StringLiteral) expr) {
-        // Handle string literals
-        string[] localStrLabels;
-        if (str.value.length > 255) {
-            writeln("⚠ Warning: String literal too long, truncating to 255 characters");
-            str.value = str.value[0 .. 255];
-        }
         string label = getOrCreateStringLabel(str.value);
-        localStrLabels[str.value.to!uint] = label; // Track this string for the current function
-        lines ~= "        lea " ~ label ~ ", A1";
-        return "A1";
+        string reg = "A" ~ to!string(regIndex++); // Use A1, A2, etc.
+        lines ~= "        lea " ~ label ~ ", " ~ reg;
+        return reg;
     }
 
 
@@ -605,10 +836,10 @@ string genLabel(string base) {
 string getOrCreateVarAddr(string name, ref string[string] map) {
     if (!(name in map)) {
         map[name] = "var_" ~ name;
+        emittedVars["var_" ~ name] = "1"; // Track for data section
     }
     return map[name];
 }
-
 
 string getOrCreateStringLabel(string val) {
     if (val in strLabels) {

@@ -3,7 +3,8 @@ module frontend.lexer;
 import std.string;
 
 enum TokenType {
-    Int,
+    Import,
+	Int,
     Identifier,
     Return,
     Number,
@@ -19,14 +20,21 @@ enum TokenType {
 
 	If, Else, While,
 	Greater, Less, EqualEqual, // for `==`
-	Assign,   
+	Assign,
+	Ampersand,
+	TildeEqual, // for `~=` (not equal)
 	Bool,
 	String,
 	NotEqual,
 	LessEqual,
 	GreaterEqual,
+	PlusEqual,
+	MinusEqual,
+	StarEqual,
+	SlashEqual,
 	Bang, // for !
 	Mod,
+	ModEqual,
 	Dollar,
 	
 	For, Foreach,
@@ -66,21 +74,26 @@ enum TokenType {
 struct Token {
     TokenType type;
     string lexeme;
-	int line;
 }
 
 Token[] tokenize(string input) {
-    Token[] tokens;
-    size_t pos = 0;
+	Token[] tokens;
+	size_t pos = 0;
+	int line = 1;
 
-    while (pos < input.length) {
-        char c = input[pos];
+	while (pos < input.length) {
+		char c = input[pos];
 
         // Skip whitespace
         if (c == ' ' || c == '\n' || c == '\r' || c == '\t') {
             pos++;
             continue;
         }
+		if (c == '\n') {
+			tokens ~= Token(TokenType.Comment, "");
+			line++;
+			continue;
+		}
 
         // Double-character operators (check before single '=')
         if (c == '=' && peekNext(input, pos) == '=') {
@@ -92,6 +105,39 @@ Token[] tokenize(string input) {
 			tokens ~= Token(TokenType.Assign, "=");
 			pos++;
 			continue;
+		}
+		if (c == '~' && peekNext(input, pos) == '=') {
+			tokens ~= Token(TokenType.TildeEqual, "~=");
+			pos += 2;
+			continue;
+		}
+		else if (c == '+') {
+			if (peekNext(input, pos) == '=') {
+				tokens ~= Token(TokenType.PlusEqual, "+=");
+				pos += 2;
+				continue;
+			}
+		}
+		else if (c == '-') {
+			if (peekNext(input, pos) == '=') {
+				tokens ~= Token(TokenType.MinusEqual, "-=");
+				pos += 2;
+				continue;
+			}
+		}
+		else if (c == '*') {
+			if (peekNext(input, pos) == '=') {
+				tokens ~= Token(TokenType.StarEqual, "*=");
+				pos += 2;
+				continue;
+			}
+		}
+		else if (c == '/') {
+			if (peekNext(input, pos) == '=') {
+				tokens ~= Token(TokenType.SlashEqual, "/=");
+				pos += 2;
+				continue;
+			}
 		}
 		// Comments
 		if (c == '/') {
@@ -221,6 +267,7 @@ Token[] tokenize(string input) {
 		if (c == '.') { tokens ~= Token(TokenType.Dot, "."); pos++; continue; }
 		if (c == '%') { tokens ~= Token(TokenType.Mod, "%"); pos++; continue; }
 		if (c == '$') { tokens ~= Token(TokenType.Dollar, "$"); pos++; continue; }
+		if (c == '&') { tokens ~= Token(TokenType.Ampersand, "&"); pos++; continue; }
 
         // Numbers
         if (isDigit(c)) {
@@ -291,6 +338,8 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.Void, lexeme);
 			else if (lexeme == "function")
 				tokens ~= Token(TokenType.Function, lexeme);
+			else if (lexeme == "import")
+				tokens ~= Token(TokenType.Import, lexeme);
 			else 
 				tokens ~= Token(TokenType.Identifier, lexeme);
             continue;

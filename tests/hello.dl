@@ -1,20 +1,19 @@
-int square(int x) {
-    return x * x;
+import std.stdio;
+
+int add(int a, int b) {
+    return a + b;
 }
 
 void main() {
-    int[] nums = [1, 2, 3, 4, 5];
-    int[] squares;
-    
-    // Map operation
-    foreach (n; nums) {
-        squares ~= square(n);
+    writeln("Enter two numbers:");
+    int x, y;
+    readf(" %s %s", &x, &y);
+    int result = add(x, y);
+    writeln("The sum of ", x, " and ", y, " is ", result);
+
+    writeln("Counting from 1 to ", result, ":");
+    foreach(i; 1 .. result + 1) {
+        write(i, " ");
     }
-    
-    // Reduction
-    int sum = 0;
-    foreach (s; squares) {
-        sum += s;
-    }
-    print("Sum of squares: ", sum);
+    writeln();
 }
