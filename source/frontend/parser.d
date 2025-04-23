@@ -60,10 +60,10 @@ ASTNode parseExpression(int prec = 0) {
     if (check(TokenType.Assign)) {
         advance(); // consume '='
         ASTNode right = parseExpression();
-        if (auto var = cast(VarExpr) left) {
-            return new AssignStmt(var.name, right);
+        if (cast(VarExpr) left || cast(ArrayAccessExpr) left) {
+            // ok
         } else {
-            throw new Exception("Left-hand side of assignment must be a variable");
+            throw new Exception("Left-hand side of assignment must be a variable or array element");
         }
     }
     if (check(TokenType.Number) && peek().type == TokenType.DotDot) {

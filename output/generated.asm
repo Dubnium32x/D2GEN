@@ -18,6 +18,22 @@ main:
         ; Function prologue
         move.l A6, -(SP)
         move.l SP, A6
+        move.l #1, D1
+        move.l D1, arrArr_0
+        move.l #2, D2
+        move.l D2, arrArr_1
+        move.l #3, D3
+        move.l D3, arrArr_2
+arrArr_len:    dc.l 3
+        move.l #0, D1
+        move.l arr_0, D2
+        move.l #0, D1
+        move.l arr_0, D2
+        move.l D2, D1
+        move.l D1, -(SP)
+        bsr write
+        add.l #4, SP
+        move.l D0, D3
         lea strAA, A1
         move.b #9, D0
         trap #14
@@ -120,6 +136,16 @@ strAE:
 strAG:
         dc.b ':', 0
         ; Array storage
+arrArr_0:    ds.l 1
+arrArr_1:    ds.l 1
+arrArr_2:    ds.l 1
+arrArr_3:    ds.l 1
+arrArr_4:    ds.l 1
+arrArr_5:    ds.l 1
+arrArr_6:    ds.l 1
+arrArr_7:    ds.l 1
+arrArr_8:    ds.l 1
+arrArr_9:    ds.l 1
         ; Loop variables
 var_i:    ds.l 1
 var_i_counter:    ds.l 1
@@ -128,6 +154,7 @@ var_x:    ds.l 1
 var_y:    ds.l 1
 var_result:    ds.l 1
         ; Array labels
+arr_0:    ds.l 1
 
 readf:
     rts

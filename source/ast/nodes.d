@@ -331,3 +331,13 @@ class CommentBlockStmt : ASTNode {
         this.comment = comment;
     }
 }
+
+class IndexExpr : ASTNode {
+    string name;
+    ASTNode index;
+
+    this(string name, ASTNode index) {
+        this.name = name;
+        this.index = index;
+    }
+}

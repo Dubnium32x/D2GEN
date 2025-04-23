@@ -5,6 +5,9 @@ int add(int a, int b) {
 }
 
 void main() {
+    int[] arr = [1, 2, 3];
+    arr[0] = 42;
+    write(arr[0]);
     writeln("Enter two numbers:");
     int x, y;
     readf(" %s %s", &x, &y);
