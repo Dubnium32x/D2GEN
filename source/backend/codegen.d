@@ -48,22 +48,19 @@ string generateCode(ASTNode[] nodes) {
         generateFunction(func, lines, regIndex, varAddrs);
     }
 
-    // Emit all unique string literals (once)
+    // --- EMIT ALL DATA LABELS AT THE BOTTOM, ONCE ---
     lines ~= "";
     lines ~= "        ; String literals";
     foreach (val, label; strLabels) {
         lines ~= label ~ ":";
-        lines ~= format("        dc.b \'%s\', 0", val);
+        lines ~= format("        dc.b '%s', 0", val);
     }
 
-    // Emit all scalar and struct variables (once)
-    lines ~= "        ; Scalar variables";
-    // Track which symbols have been emitted
+    lines ~= "        ; Scalar and struct variables";
     string[string] emittedSymbols;
     foreach (name, countStr; emittedVars) {
-        if (!(name in loopVarsUsed) && !(name in emittedSymbols) && !(name in functionNames)) {
+        if (!(name in emittedSymbols)) {
             int count = to!int(countStr);
-            // For function pointers, emit var_fp as data label
             if (varTypes.get(name, "").startsWith("void function(") && !(name in functionNames)) {
                 string varLabel = "var_" ~ name;
                 if (!(varLabel in emittedSymbols)) {
@@ -79,30 +76,35 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
-    // Emit array memory (once)
-    lines ~= "        ; Array storage";
-    foreach (name, base; globalArrays) {
-        // Emit a base label for the array
-        lines ~= base ~ ":";
-        int arrLen = 10;
-        if (name ~ "_len" in emittedVars) {
-            arrLen = to!int(emittedVars[name ~ "_len"]);
-        }
-        foreach (i; 0 .. arrLen) {
-            lines ~= base ~ "_" ~ to!string(i) ~ ":    ds.l 1";
+    // Emit all referenced array element labels (for arrays/struct arrays)
+    foreach (name, _; emittedVars) {
+        import std.regex : matchFirst;
+        auto m = name.matchFirst(`^(\w+)_([0-9]+)$`);
+        if (!m.empty && !(name in emittedSymbols)) {
+            lines ~= name ~ ":    ds.l 1";
+            emittedSymbols[name] = "1";
         }
     }
 
-    // Emit array labels (once)
     lines ~= "        ; Array labels";
     foreach (name, label; arrayLabels) {
+        // Only emit arrayLabels for primitive/function pointer arrays, not struct arrays
+        bool isStructArray = false;
+        foreach (stype, _; structFieldOffsets) {
+            if (name == stype || name.startsWith(stype ~ "_")) {
+                isStructArray = true;
+                break;
+            }
+        }
+        // FINAL FIX: skip emitting arrayLabels for struct arrays
+        if (isStructArray) continue;
         if (!(label in emittedSymbols)) {
             lines ~= label ~ ":    ds.l 1";
             emittedSymbols[label] = "1";
         }
     }
 
-    // Emit function pointer trampolines (for bsr fp support)
+    // Function pointer trampolines (for bsr fp support)
     foreach (name, type; varTypes) {
         if (type.startsWith("void function(") && !(name in emittedSymbols) && !(name in functionNames)) {
             lines ~= "";
@@ -114,7 +116,6 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
-    // Emit all loop variables (once)
     lines ~= "        ; Loop variables";
     foreach (name, _; loopVarsUsed) {
         if (!(name in emittedSymbols)) {
@@ -132,10 +133,8 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
-    // add a clean halt instruction
     lines ~= "";
     lines ~= "        SIMHALT";
-
     lines ~= "        END";
     return lines.join("\n");
 }
@@ -286,7 +285,6 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                     varAddrs[decl.name] = decl.name;
                     emittedVars[decl.name] = to!string(structFieldOffsets[decl.type].length);
                 } else if (decl.type.endsWith("]")) {
-                    // Array of structs, e.g., Point[2]
                     import std.regex : matchFirst;
                     auto m = decl.type.matchFirst(`([A-Za-z_][A-Za-z0-9_]*)\[(\d+)\]`);
                     if (!m.empty && m.captures.length == 3) {
@@ -294,12 +292,7 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                         int arrLen = m.captures[2].to!int;
                         if (structType in structFieldOffsets) {
                             for (int i = 0; i < arrLen; i++) {
-                                foreach (fieldName, _; structFieldOffsets[structType]) {
-                                    string elemField = decl.name ~ "_" ~ to!string(i) ~ "_" ~ fieldName;
-                                    varAddrs[elemField] = elemField;
-                                    emittedVars[elemField] = "1";
-                                    varTypes[elemField] = "int"; // or use actual type if available
-                                }
+                                flattenStructFields(structType, decl.name ~ "_" ~ to!string(i), varAddrs, emittedVars, varTypes);
                             }
                         } else {
                             lines ~= format("        ; array of unknown struct type %s (not implemented)", structType);
@@ -322,59 +315,34 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         }
         // Assignment to array element
         else if (auto access = cast(ArrayAccessExpr) assign.lhs) {
-            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
-            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
-
-            // Calculate offset: index * 4 (for 32-bit ints)
-            string offsetReg = nextReg(regIndex);
-            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
-            lines ~= "        mulu #4, " ~ offsetReg;
-
-            // Get base address of array
-            string baseAddr = getOrCreateVarAddr(access.arrayName, varAddrs);
-            lines ~= "        lea " ~ baseAddr ~ ", A0";
-
-            // Store value at (A0, offsetReg.l)
-            lines ~= "        move.l " ~ valReg ~ ", (A0, " ~ offsetReg ~ ".l)";
-        }
-        else if (auto field = cast(StructFieldAccess) assign.lhs) {
-            // Handle arr[index].field for struct arrays
-            if (auto arrAccess = cast(ArrayAccessExpr) field.baseExpr) {
+            // Special case: array of function pointers assignment
+            if (varTypes.get(access.arrayName, "").startsWith("void function(")) {
                 // Only support constant index for now
-                if (auto intLit = cast(IntLiteral) arrAccess.index) {
-                    string elemField = arrAccess.arrayName ~ "_" ~ to!string(intLit.value) ~ "_" ~ field.field;
+                if (auto intLit = cast(IntLiteral) access.index) {
+                    string label = access.arrayName ~ "_" ~ to!string(intLit.value);
                     string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
-                    string addr = getOrCreateVarAddr(elemField, varAddrs);
-                    lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
+                    // If assigning &func, valReg will be an address register (A1, etc.)
+                    // Move the address to the slot
+                    lines ~= "        move.l " ~ valReg ~ ", " ~ label;
                 } else {
-                    lines ~= "; ERROR: Only constant indices supported for struct array field access";
+                    lines ~= "; ERROR: Only constant indices supported for function pointer array assignment";
                 }
             } else {
-                // ...existing code for structVar.field...
-                auto baseVar = cast(VarExpr)field.baseExpr;
-                if (!(baseVar.name in varTypes)) {
-                    writeln("ERROR: varTypes does not contain: ", baseVar.name);
-                    throw new Exception("varTypes missing entry for " ~ baseVar.name);
-                }
-                string structType = varTypes[baseVar.name];
-                if (isBuiltinType(structType)) {
-                    writeln("ERROR: Field access on built-in type: ", structType, ".", field.field);
-                    throw new Exception("Field access on built-in type " ~ structType ~ " is not supported (yet)");
-                }
-                if (!(structType in structFieldOffsets)) {
-                    writeln("ERROR: structFieldOffsets does not contain: ", structType);
-                    throw new Exception("structFieldOffsets missing entry for " ~ structType);
-                }
-                if (!(field.field in structFieldOffsets[structType])) {
-                    writeln("ERROR: structFieldOffsets[", structType, "] does not contain field: ", field.field);
-                    writeln("Available fields: ", structFieldOffsets[structType].keys);
-                    throw new Exception("structFieldOffsets[" ~ structType ~ "] missing field " ~ field.field);
-                }
                 string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
-                string baseAddr = getOrCreateVarAddr(baseVar.name, varAddrs);
-                int offset = structFieldOffsets[structType][field.field];   
-                lines ~= format("        move.l %s, %s+%d", valReg, baseAddr, offset);
+                string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+                string offsetReg = nextReg(regIndex);
+                lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+                lines ~= "        mulu #4, " ~ offsetReg;
+                string baseAddr = getOrCreateVarAddr(access.arrayName, varAddrs);
+                lines ~= "        lea " ~ baseAddr ~ ", A0";
+                lines ~= "        move.l " ~ valReg ~ ", (A0, " ~ offsetReg ~ ".l)";
             }
+        }
+        else if (auto field = cast(StructFieldAccess) assign.lhs) {
+            string elemField = resolveNestedStructFieldName(assign.lhs);
+            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
+            string addr = getOrCreateVarAddr(elemField, varAddrs);
+            lines ~= "        move.l " ~ valReg ~ ", " ~ addr;
         }
         else {
             throw new Exception("Left-hand side of assignment must be a variable or array element");
@@ -484,17 +452,36 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     else if (auto arr = cast(ArrayDecl) node) {
         string base = "arr" ~ capitalize(arr.name);
         globalArrays[arr.name] = base;
-
-        if (!(arr.name in declaredArrays)) {
-            for (int i = 0; i < arr.elements.length; i++) {
-                string reg = generateExpr(arr.elements[i], lines, regIndex, varAddrs);
-                string label = base ~ "_" ~ to!string(i);
-                lines ~= format("        move.l %s, %s", reg, label);
+        int arrLen = arr.elements.length;
+        // If no initializers, try to get the declared size from the AST
+        if (arrLen == 0 && arr.elements.length == 0 && arr.elements !is null && arr.elements.length == 0) {
+            if (arr.elements.length == 1) {
+                if (auto intLit = cast(IntLiteral) arr.elements[0]) {
+                    arrLen = intLit.value;
+                }
             }
-            lines ~= base ~ "_len:    dc.l " ~ to!string(arr.elements.length);
-            declaredArrays[arr.name] = base;
+        } else if (arr.elements.length == 1) {
+            if (auto intLit = cast(IntLiteral) arr.elements[0]) {
+                arrLen = intLit.value;
+            }
         }
-
+        if (arrLen == 0) arrLen = 1; // fallback to 1 if not found
+        // Only emit data for primitive/function pointer arrays, not struct arrays
+        bool isStructArray = false;
+        foreach (stype, _; structFieldOffsets) {
+            if (arr.type == stype || arr.type.startsWith(stype ~ "[")) {
+                isStructArray = true;
+                break;
+            }
+        }
+        if (!isStructArray) {
+            emittedVars[base ~ "_len"] = to!string(arrLen);
+            for (int i = 0; i < arrLen; i++) {
+                string label = arr.name ~ "_" ~ to!string(i);
+                emittedVars[label] = "1";
+            }
+            arrayLabels[arr.name] = base;
+        }
         varAddrs[arr.name] = base; // Register for indexed access
     }
 
@@ -608,109 +595,43 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
 }
 
-void generateForeachStmt(ForeachStmt node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
-    string loopLabel = genLabel("foreach");
-    string endLabel = genLabel("end_foreach");
-    
-    // Get clean variable names (without declarations)
-    string counterVar = getCleanVarName(node.varName ~ "_counter");
-    string loopVar = getCleanVarName(node.varName);
-    string charBuf = getCleanVarName("char_buffer");
-    // Initialize loop (range 1..5)
-    lines ~= "        ; Initialize foreach loop (" ~ node.varName ~ ")";
-    lines ~= "        move.l #1, D1          ; Start value";
-    lines ~= "        move.l #5, D2          ; End value";
-    lines ~= "        move.l D1, (" ~ counterVar ~ ") ; Store initial value";
-    
-    // Loop start
-    lines ~= loopLabel ~ ":";
-    lines ~= "        ; Check loop condition";
-    lines ~= "        cmp.l D2, D1";
-    lines ~= "        bge " ~ endLabel;
-    
-    // Store current value in loop variable
-    lines ~= "        move.l D1, (" ~ loopVar ~ ") ; Update " ~ node.varName;
-    
-    // Generate loop body
-    lines ~= "        ; === Loop body begin ===";
-    foreach (stmt; node.forEachBody) {
-        generateStmt(stmt, lines, regIndex, varAddrs);
-    }
-    lines ~= "        ; === Loop body end ===";
-    
-    // Increment and loop
-    lines ~= "        ; Update loop counter";
-    lines ~= "        addq.l #1, D1          ; " ~ node.varName ~ "++";
-    lines ~= "        move.l D1, (" ~ counterVar ~ ") ; Store updated value";
-    lines ~= "        bra " ~ loopLabel;
-    
-    // Track loop variable and counter variable
-    loopVarsUsed[loopVar] = "1";
-    loopVarsUsed[counterVar] = "1";
-
-    // End label
-    lines ~= endLabel ~ ":";
-    lines ~= "        ; Foreach loop complete";
-    
-    // Reset register counter if needed
-    regIndex = 1;
-    lines ~= "        ; Clean up foreach loop variables";
-    lines ~= "        ; Reset register counter if needed";
-    regIndex = 1;
-}
-
-// Helper to get clean variable name
-string getCleanVarName(string name) {
-    return "var_" ~ name;
-}
-
-string getCleanArrayName(string name) {
-    return "arr_" ~ name;
-}
-
-// Helper to declare variables in data section
-void declareVarIfNeeded(string fullName, string type, ref string[] lines, ref string[string] varAddrs) {
-    if (!(fullName in varAddrs)) {
-        varAddrs[fullName] = fullName;
-        
-        // Find where to insert the declaration (before END)
-        bool inserted = false;
-        foreach (i, line; lines) {
-            if (line.strip() == "END") {
-                import std.array : insertInPlace;
-                lines.insertInPlace(i, fullName ~ ": " ~ type);
-                inserted = true;
-                break;
+// Recursively flatten struct fields for arrays of structs
+void flattenStructFields(string structType, string prefix, ref string[string] varAddrs, ref string[string] emittedVars, ref string[string] varTypes) {
+    if (!(structType in structFieldOffsets)) return;
+    foreach (fieldName, _; structFieldOffsets[structType]) {
+        // Try to get the type from varTypes if available, fallback to int
+        string fieldType = "int";
+        if (structType ~ "." ~ fieldName in varTypes) {
+            fieldType = varTypes[structType ~ "." ~ fieldName];
+        }
+        if (fieldType in structFieldOffsets) {
+            flattenStructFields(fieldType, prefix ~ "_" ~ fieldName, varAddrs, emittedVars, varTypes);
+        } else {
+            string elemField = prefix ~ "_" ~ fieldName;
+            if (!(elemField in emittedVars)) {
+                varAddrs[elemField] = elemField;
+                emittedVars[elemField] = "1";
+                varTypes[elemField] = fieldType;
             }
         }
-        
-        // If END not found, append to end
-        if (!inserted) {
-            lines ~= fullName ~ ": " ~ type;
-        }
     }
 }
 
-void declareArrayIfNeeded(string fullName, string type, ref string[] lines, ref string[string] varAddrs) {
-    if (!(fullName in varAddrs)) {
-        varAddrs[fullName] = fullName;
-        
-        // Find where to insert the declaration (before END)
-        bool inserted = false;
-        foreach (i, line; lines) {
-            if (line.strip() == "END") {
-                import std.array : insertInPlace;
-                lines.insertInPlace(i, fullName ~ ": " ~ type);
-                inserted = true;
-                break;
-            }
+// Helper to resolve full variable name for nested struct field accesses
+string resolveNestedStructFieldName(ASTNode node) {
+    if (auto field = cast(StructFieldAccess) node) {
+        string base = resolveNestedStructFieldName(field.baseExpr);
+        return base ~ "_" ~ field.field;
+    } else if (auto arrAccess = cast(ArrayAccessExpr) node) {
+        if (auto intLit = cast(IntLiteral) arrAccess.index) {
+            return arrAccess.arrayName ~ "_" ~ to!string(intLit.value);
+        } else {
+            throw new Exception("Only constant indices supported for struct array field access");
         }
-        
-        // If END not found, append to end
-        if (!inserted) {
-            lines ~= fullName ~ ": " ~ type;
-        }
+    } else if (auto var = cast(VarExpr) node) {
+        return var.name;
     }
+    return "";
 }
 
 string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[string] varAddrs) {
@@ -748,55 +669,20 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                 return reg;
             } else {
                 lines ~= "; ERROR: Only constant indices supported for struct array field access";
-                return "#0";
-            }
-        }
-        auto baseVar = cast(VarExpr)field.baseExpr;
-        if (!(baseVar.name in varTypes)) {
-            writeln("ERROR: varTypes does not contain: ", baseVar.name);
-            throw new Exception("varTypes missing entry for " ~ baseVar.name);
-        }
-        string structType = varTypes[baseVar.name];
-        if (isBuiltinType(structType)) {
-            if (structType == "string" && field.field == "empty") {
-                // Generate code to check if the string is empty
-                // (Assuming you store string pointers and can check for null or length)
-                // Example: move.l var_s, D0; cmp.l #0, D0; seq D1 (set D1=1 if equal)
+                // Return a dummy register to allow codegen to continue
                 string reg = nextReg(regIndex);
-                string addr = getOrCreateVarAddr(baseVar.name, varAddrs);
-                lines ~= "        move.l " ~ addr ~ ", D0";
-                lines ~= "        cmp.l #0, D0";
-                lines ~= "        seq " ~ reg; // Set reg to 1 if string is empty
+                lines ~= "        move.l #0, " ~ reg;
                 return reg;
             }
-            if (structType == "string" && (field.field == "length" || field.field == "len")) {
-                // Generate code to get the length of the string
-                // (Assume you store the length at var_s_len or similar)
-                string reg = nextReg(regIndex);
-                string lenLabel = baseVar.name ~ "_len";
-                lines ~= "        move.l " ~ lenLabel ~ ", " ~ reg;
-                return reg;
-            }
-            writeln("ERROR: Field access on built-in type: ", structType, ".", field.field);
-            throw new Exception("Field access on built-in type " ~ structType ~ " is not supported (yet)");
         }
-        if (!(structType in structFieldOffsets)) {
-            writeln("ERROR: structFieldOffsets does not contain: ", structType);
-            throw new Exception("structFieldOffsets missing entry for " ~ structType);
+        // Nested struct field access
+        else {
+            string elemField = resolveNestedStructFieldName(expr);
+            string reg = nextReg(regIndex);
+            string addr = getOrCreateVarAddr(elemField, varAddrs);
+            lines ~= "        move.l " ~ addr ~ ", " ~ reg;
+            return reg;
         }
-        if (!(field.field in structFieldOffsets[structType])) {
-            writeln("ERROR: structFieldOffsets[", structType, "] does not contain field: ", field.field);
-            writeln("Available fields: ", structFieldOffsets[structType].keys);
-            throw new Exception("structFieldOffsets[" ~ structType ~ "] missing field " ~ field.field);
-        }
-        int offset = structFieldOffsets[structType][field.field];
-        string reg = nextReg(regIndex);
-        if (baseVar.name in varAddrs && varAddrs[baseVar.name].startsWith("D")) {
-            lines ~= format("        move.l %d(A6), %s", 8 + offset, reg);
-        } else {
-            lines ~= format("        move.l %d(A6), %s", 8 + offset, reg);
-        }
-        return reg;
     }
 
     if (auto var = cast(VarExpr) expr) {
@@ -1102,9 +988,21 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             string label = access.arrayName ~ "_" ~ to!string(intLit.value);
             string reg = nextReg(regIndex);
             lines ~= "        move.l " ~ label ~ ", " ~ reg;
-            // add to the array label map
-            if (!(access.arrayName in arrayLabels)) {
-                arrayLabels[access.arrayName] = label;
+            // Ensure the label is emitted
+            emittedVars[label] = "1";
+            // Only emit array base label for primitive/function pointer arrays
+            bool isStructArray = false;
+            foreach (stype, _; structFieldOffsets) {
+                if (access.arrayName == stype || access.arrayName.startsWith(stype ~ "_")) {
+                    isStructArray = true;
+                    break;
+                }
+            }
+            // FINAL: never add arrPixels to emittedVars or arrayLabels for struct arrays
+            if (!isStructArray && !(access.arrayName in arrayLabels)) {
+                string base = "arr" ~ capitalize(access.arrayName);
+                arrayLabels[access.arrayName] = base;
+                emittedVars[base] = "1";
             }
             return reg;
         }
@@ -1194,4 +1092,43 @@ string getOrCreateArrayLabel(string name, ref string[string] map) {
 
 bool isBreakOrReturn(ASTNode node) {
     return (cast(BreakStmt) node !is null || cast(ReturnStmt) node !is null);
+}
+
+// Helper to get clean array variable name
+string getCleanArrayName(string name) {
+    return "arr_" ~ name;
+}
+
+// Foreach loop code generation
+void generateForeachStmt(ForeachStmt node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
+    string loopLabel = genLabel("foreach");
+    string endLabel = genLabel("end_foreach");
+    string counterVar = "foreach_counter_" ~ to!string(labelCounter++);
+    string iterVar = node.varName;
+
+    // Assume iterable is a variable with _len label
+    string arrName = (cast(VarExpr)node.iterable).name;
+    string lenLabel = arrName ~ "_len";
+    string idxReg = nextReg(regIndex);
+    string lenReg = nextReg(regIndex);
+
+    // idx = 0
+    lines ~= "        move.l #0, " ~ idxReg;
+    lines ~= loopLabel ~ ":";
+    // if idx >= arr_len goto endLabel
+    lines ~= "        move.l " ~ lenLabel ~ ", " ~ lenReg;
+    lines ~= "        cmp.l " ~ lenReg ~ ", " ~ idxReg;
+    lines ~= "        bge " ~ endLabel;
+    // assign arr[idx] to iterVar (assume int for simplicity)
+    string elemLabel = arrName ~ "_" ~ idxReg;
+    string iterAddr = getOrCreateVarAddr(iterVar, varAddrs);
+    lines ~= "        move.l " ~ elemLabel ~ ", " ~ iterAddr;
+    // loop body
+    foreach (stmt; node.forEachBody) {
+        generateStmt(stmt, lines, regIndex, varAddrs);
+    }
+    // idx++
+    lines ~= "        addq.l #1, " ~ idxReg;
+    lines ~= "        bra " ~ loopLabel;
+    lines ~= endLabel ~ ":";
 }

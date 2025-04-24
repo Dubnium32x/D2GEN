@@ -305,8 +305,21 @@ ASTNode parseStatement() {
         expect(TokenType.RParen);
         type ~= "(" ~ innerType ~ ")";
         string name = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.Semicolon);
-        return new VarDecl(type, name, null);
+        // Support array of function pointers: void function(Pixel) fpArr[2];
+        if (check(TokenType.LBracket)) {
+            advance();
+            ASTNode sizeExpr = null;
+            if (!check(TokenType.RBracket)) {
+                sizeExpr = parseExpression();
+            }
+            expect(TokenType.RBracket);
+            expect(TokenType.Semicolon);
+            ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
+            return new ArrayDecl(type, name, elements);
+        } else {
+            expect(TokenType.Semicolon);
+            return new VarDecl(type, name, null);
+        }
     }
     else if (check(TokenType.Identifier) && peek().type == TokenType.PlusPlus) {
         string name = expect(TokenType.Identifier).lexeme;
@@ -397,7 +410,7 @@ ASTNode parseStatement() {
         return new CommentBlockStmt(comment);
     }
     // Array declaration: type identifier [ size ];
-    if ((isTypeToken(current().type) || isStructType()) &&
+    if ((isTypeToken(current().type) || isStructType() || isEnumType()) &&
         peek().type == TokenType.Identifier &&
         tokens.length > index+2 && tokens[index+2].type == TokenType.LBracket) {
         string type = advance().lexeme;
@@ -413,7 +426,7 @@ ASTNode parseStatement() {
         return new ArrayDecl(type, name, elements);
     }
     // General variable declaration
-    else if (isTypeToken(current().type) || isStructType()) {
+    else if (isTypeToken(current().type) || isStructType() || isEnumType()) {
         Token typeToken = advance();
         ASTNode[] decls;
         do {
@@ -489,21 +502,45 @@ ASTNode parseStatement() {
         if (!check(TokenType.RParen)) {
             do {
                 string paramType;
+                // Parse type (with possible [] after type or after name)
                 if (check(TokenType.Void) && peek().type == TokenType.Function) {
                     paramType = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
                     expect(TokenType.LParen);
                     string innerType;
                     if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool)) {
                         innerType = advance().lexeme;
-                    } else if (check(TokenType.Identifier) && isStructType()) {
+                    } else if ((check(TokenType.Identifier) && (isStructType() || isEnumType()))) {
                         innerType = advance().lexeme;
                     } else {
                         throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                     }
+                    // Support array type for function pointer parameter (Pixel[])
+                    if (check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        innerType ~= "[]";
+                    }
                     expect(TokenType.RParen);
                     paramType ~= "(" ~ innerType ~ ")";
-                } else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool) || isStructType()) {
+                } else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool) || isStructType() || isEnumType()) {
                     paramType = advance().lexeme;
+                    // Support array type for parameter (Pixel[] pixels or Pixel pixels[])
+                    bool arrayType = false;
+                    if (check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        paramType ~= "[]";
+                        arrayType = true;
+                    }
+                    string paramName = expect(TokenType.Identifier).lexeme;
+                    // Support Pixel pixels[]
+                    if (!arrayType && check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        paramType ~= "[]";
+                    }
+                    params ~= ParamInfo(paramType, paramName);
+                    continue;
                 } else {
                     throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                 }
@@ -636,7 +673,7 @@ ASTNode parseStructDecl() {
         expect(TokenType.LBrace);
         ASTNode[] members;
         while (!check(TokenType.RBrace) && !isAtEnd()) {
-            if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String) || isStructType()) {
+            if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String) || isStructType() || isEnumType()) {
                 members ~= parseStatement();
             } else {
                 throw new Exception(errorWithLine("Only variable declarations are allowed in structs. Got: " ~ current().lexeme));
@@ -725,21 +762,45 @@ ASTNode parseFunctionDecl() {
         if (!check(TokenType.RParen)) {
             do {
                 string paramType;
+                // Parse type (with possible [] after type or after name)
                 if (check(TokenType.Void) && peek().type == TokenType.Function) {
                     paramType = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
                     expect(TokenType.LParen);
                     string innerType;
                     if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool)) {
                         innerType = advance().lexeme;
-                    } else if (check(TokenType.Identifier) && isStructType()) {
+                    } else if ((check(TokenType.Identifier) && (isStructType() || isEnumType()))) {
                         innerType = advance().lexeme;
                     } else {
                         throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                     }
+                    // Support array type for function pointer parameter (Pixel[])
+                    if (check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        innerType ~= "[]";
+                    }
                     expect(TokenType.RParen);
                     paramType ~= "(" ~ innerType ~ ")";
-                } else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool) || isStructType()) {
+                } else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool) || isStructType() || isEnumType()) {
                     paramType = advance().lexeme;
+                    // Support array type for parameter (Pixel[] pixels or Pixel pixels[])
+                    bool arrayType = false;
+                    if (check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        paramType ~= "[]";
+                        arrayType = true;
+                    }
+                    string paramName = expect(TokenType.Identifier).lexeme;
+                    // Support Pixel pixels[]
+                    if (!arrayType && check(TokenType.LBracket)) {
+                        advance();
+                        expect(TokenType.RBracket);
+                        paramType ~= "[]";
+                    }
+                    params ~= ParamInfo(paramType, paramName);
+                    continue;
                 } else {
                     throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                 }
@@ -761,6 +822,10 @@ bool isStructType() {
     return check(TokenType.Identifier)
         && !builtinTypes.canFind(current().lexeme)
         && structTypes.canFind(current().lexeme);
+}
+
+bool isEnumType() {
+    return check(TokenType.Identifier) && (current().lexeme in enumTable);
 }
 
 void parseArguments() {
