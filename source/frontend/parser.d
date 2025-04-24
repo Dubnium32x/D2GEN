@@ -424,6 +424,28 @@ ASTNode parseStatement() {
         ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
         return new ArrayDecl(type, name, elements);
     }
+    else if ((check(TokenType.Public) || check(TokenType.Private)) &&
+        (isTypeToken(peek().type) || isStructType())) {
+        string visibility = advance().type == TokenType.Public ? "public" : "private";
+        Token typeToken = advance();
+        ASTNode[] decls;
+        do {
+            if (!check(TokenType.Identifier)) {
+                writeln("ERROR: Expected variable name, but got ", current().lexeme, " (", current().type, ")");
+                throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
+            }
+            string varName = expect(TokenType.Identifier).lexeme;
+            ASTNode val;
+            if (match(TokenType.Assign)) {
+                val = parseExpression();
+            } else {
+                val = null;
+            }
+            decls ~= new VarDecl(typeToken.lexeme, varName, val, visibility);
+        } while (match(TokenType.Comma));
+        expect(TokenType.Semicolon);
+        return decls.length == 1 ? decls[0] : new BlockStmt(decls);
+    }
     // General variable declaration
     else if (isTypeToken(current().type) || isStructType()) {
         Token typeToken = advance();

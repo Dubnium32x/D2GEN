@@ -16,6 +16,7 @@ int nextStringIndex = 0;
 string[string] globalArrays;
 string[string] declaredArrays;
 string[string] emittedVars;
+string[string] emittedSymbols;
 string[string] arrayLabels;
 string[string] loopVarsUsed;
 string[string] usedLibCalls; // acts as a set
@@ -30,7 +31,7 @@ string generateCode(ASTNode[] nodes) {
     nextStringIndex = 0;
     globalArrays = null;
     declaredArrays = null;
-    emittedVars = null;
+    emittedVars = null;     
     arrayLabels = null;
     loopVarsUsed = null;
     usedLibCalls = null;
@@ -64,22 +65,49 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
+    import globals : publicThings, privateThings;
+    publicThings.destroy();
+    privateThings.destroy();
+    foreach (node; globalAssignments) {
+        if (auto decl = cast(VarDecl)node) {
+            if (decl.visibility == "public")
+                publicThings[decl.name] = 1;
+            else if (decl.visibility == "private")
+                privateThings[decl.name] = 1;
+        }
+    }
+
     // --- PATCH: Emit __global_init function for global assignments ---
     lines ~= "";
     lines ~= "__global_init:";
-    // Optionally, function prologue if needed
-    // lines ~= "        move.l A6, -(SP)";
-    // lines ~= "        move.l SP, A6";
     foreach (node; globalAssignments) {
-        // Only emit code for assignments and declarations with initializers
         if (auto decl = cast(VarDecl)node) {
-            if (decl.value !is null) {
-                generateStmt(decl, lines, regIndex, varAddrs);
+            string label = decl.name;
+            if (label in emittedSymbols) continue;
+            // Only emit if public
+            if (label in publicThings) {
+                emittedSymbols[label] = "1";
+                varTypes[label] = decl.type;
+                emittedVars[label] = "1";
+                if (decl.value is null) {
+                    lines ~= format("%s:    ds.l 1", label);
+                }
+                // Emit a base label for arrays of structs if public
+                if (decl.type.endsWith("]")) {
+                    import std.regex : matchFirst;
+                    auto m = decl.type.matchFirst(`([A-Za-z_][A-Za-z0-9_]*)\\[(\\d+)\\]`);
+                    if (!m.empty && m.captures.length == 3) {
+                        string structType = m.captures[1];
+                        if (structType in structFieldOffsets) {
+                            string arrayLabel = decl.name ~ ":";
+                            if (!(arrayLabel in emittedSymbols)) {
+                                lines ~= arrayLabel;
+                                emittedSymbols[arrayLabel] = "1";
+                            }
+                        }
+                    }
+                }
             }
-        } else if (auto assign = cast(AssignStmt)node) {
-            generateStmt(assign, lines, regIndex, varAddrs);
-        } else if (auto exprStmt = cast(ExprStmt)node) {
-            generateStmt(exprStmt, lines, regIndex, varAddrs);
         }
     }
     lines ~= "        rts";
@@ -99,18 +127,33 @@ string generateCode(ASTNode[] nodes) {
     }
 
     lines ~= "        ; Scalar and struct variables";
-    string[string] emittedSymbols;
-    // --- PATCH: Emit all global variables (VarDecl) as ds.l 1 if not already emitted ---
+    // --- PATCH: Emit all public global variables (VarDecl) as ds.l 1 if not already emitted ---
     foreach (node; globalAssignments) {
         if (auto decl = cast(VarDecl)node) {
             string label = decl.name;
             if (label in emittedSymbols) continue;
-            emittedSymbols[label] = "1";
-            varTypes[label] = decl.type;
-            emittedVars[label] = "1";
-            // Only emit if not initialized in __global_init
-            if (decl.value is null) {
-                lines ~= format("%s:    ds.l 1", label);
+            if (label in publicThings) {
+                emittedSymbols[label] = "1";
+                varTypes[label] = decl.type;
+                emittedVars[label] = "1";
+                if (decl.value is null) {
+                    lines ~= format("%s:    ds.l 1", label);
+                }
+                // Emit a base label for arrays of structs if public
+                if (decl.type.endsWith("]")) {
+                    import std.regex : matchFirst;
+                    auto m = decl.type.matchFirst(`([A-Za-z_][A-Za-z0-9_]*)\\[(\\d+)\\]`);
+                    if (!m.empty && m.captures.length == 3) {
+                        string structType = m.captures[1];
+                        if (structType in structFieldOffsets) {
+                            string arrayLabel = decl.name ~ ":";
+                            if (!(arrayLabel in emittedSymbols)) {
+                                lines ~= arrayLabel;
+                                emittedSymbols[arrayLabel] = "1";
+                            }
+                        }
+                    }
+                }
             }
         }
     }

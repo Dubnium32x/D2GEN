@@ -351,6 +351,14 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.Function, lexeme);
 			else if (lexeme == "import")
 				tokens ~= Token(TokenType.Import, lexeme);
+			else if (lexeme == "public")
+				tokens ~= Token(TokenType.Public, lexeme);
+			else if (lexeme == "private")
+				tokens ~= Token(TokenType.Private, lexeme);
+			else if (lexeme == "protected")
+				tokens ~= Token(TokenType.Protected, lexeme);
+			else if (lexeme == "static")
+				tokens ~= Token(TokenType.Static, lexeme);
 			else 
 				tokens ~= Token(TokenType.Identifier, lexeme);
             continue;
