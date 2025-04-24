@@ -1,40 +1,48 @@
-import std.stdio;
-
 struct Point {
     int x;
     int y;
 };
 
 void printPoint(Point p) {
-    writeln("Point: (", p.x, ", ", p.y, ")");
-}
-
-void describe(int code) {
-    switch (code) {
-        case 1:
-            writeln("Code is one");
-            break;
-        case 2:
-            writeln("Code is two");
-            break;
-        default:
-            writeln("Unknown code");
-            break;
-    }
+    writeln(p.x);
+    writeln(p.y);
 }
 
 void main() {
-    Point pt;
-    pt.x = 7;
-    pt.y = 8;
+    // Struct and array of structs
+    Point p;
+    p.x = 10;
+    p.y = 20;
 
+    Point arr[2];
+    arr[0].x = 1;
+    arr[0].y = 2;
+    arr[1].x = 3;
+    arr[1].y = 4;
+
+    // Function pointer
     void function(Point) fp;
     fp = &printPoint;
-    fp(pt);
+    fp(p);
+    fp(arr[1]);
 
-    int val = 2;
-    describe(val);
+    // String and built-in methods
+    string s;
+    writeln(s.empty());
+    // Uncomment if you support length:
+    // writeln(s.length);
 
-    val = 42;
-    describe(val);
+    // Control flow
+    int sum = 0;
+    for (int i = 0; i < 2; i = i + 1) {
+        sum = sum + arr[i].x;
+    }
+    writeln(sum);
+
+    // If/else
+    if (sum > 3) {
+        writeln(42);
+    } else {
+        writeln(0);
+    }
 }

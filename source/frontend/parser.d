@@ -56,7 +56,8 @@ bool isTypeToken(TokenType t) {
         t == TokenType.Bool ||
         t == TokenType.String ||
         t == TokenType.Void ||
-        t == TokenType.Byte;
+        t == TokenType.Byte ||
+        t == TokenType.Short;
 }
 
 ASTNode parseExpression(int prec = 0) {
@@ -107,6 +108,16 @@ ASTNode parseExpression(int prec = 0) {
         left = new BinaryExpr(op.lexeme, left, right);
     }
 
+    if (check(TokenType.LParen)) {
+        advance();
+        ASTNode[] args;
+        if (!check(TokenType.RParen)) {
+            do {
+                args ~= parseExpression();
+            } while (match(TokenType.Comma));
+        }
+        expect(TokenType.RParen);
+    }
     return left;
 }
 
@@ -271,7 +282,22 @@ ASTNode parseStatement() {
         // Parse function pointer variable declaration: void function(Foo) fp;
         string type = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
         expect(TokenType.LParen);
-        string innerType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Identifier).lexeme;
+        string innerType;
+        switch (peek().type) {
+            case TokenType.Int:
+            case TokenType.String:
+            case TokenType.Bool:
+            case TokenType.Identifier:
+            case TokenType.Void:
+            case TokenType.Byte:
+            case TokenType.Short:
+                innerType = advance().lexeme;
+                break;
+            default:
+                hasErrors = true;
+                writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
+                throw new Exception("Expected type in function pointer declaration, got " ~ current().lexeme);
+        }
         expect(TokenType.RParen);
         type ~= "(" ~ innerType ~ ")";
         string name = expect(TokenType.Identifier).lexeme;
@@ -363,7 +389,7 @@ ASTNode parseStatement() {
         // Handle the content between /* and */
         return new CommentBlockStmt(comment);
     }
-    else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
+    else if (isTypeToken(current().type) && peek().type == TokenType.LBracket) {
         string type = advance().lexeme; // 'int', 'byte', or 'string'
         expect(TokenType.LBracket);
         expect(TokenType.RBracket);
@@ -458,7 +484,7 @@ ASTNode parseStatement() {
     }
     else if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String) || isStructType()) {
         Token typeToken;
-        if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String, TokenType.Byte)) {
+        if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String, TokenType.Byte, TokenType.Short)) {
             typeToken = advance();
         }
         else if (isStructType()) {
@@ -659,11 +685,11 @@ ASTNode[] parse(Token[] inputTokens) {
             expect(TokenType.Semicolon);
             continue;
         }
-        else if (check(TokenType.Struct)) {
+        if (check(TokenType.Struct)) {
             nodes ~= parseStructDecl();
             continue;
         }
-        if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void)) {
+        else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void)) {
             nodes ~= parseFunctionDecl();
             continue;
         }
@@ -680,9 +706,13 @@ ASTNode parseStructDecl() {
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.LBrace);
         ASTNode[] members;
-        while (!check(TokenType.RBrace) && !isAtEnd()) {
+    while (!check(TokenType.RBrace) && !isAtEnd()) {
+        if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String) || isStructType()) {
             members ~= parseStatement();
+        } else {
+            throw new Exception("Only variable declarations are allowed in structs. Got: " ~ current().lexeme);
         }
+    }
         expect(TokenType.RBrace);
         expect(TokenType.Semicolon);
         import std.array : array;
@@ -754,5 +784,17 @@ ASTNode parseFunctionDecl() {
 
 import std.algorithm.searching : canFind;
 bool isStructType() {
-    return check(TokenType.Identifier) && structTypes.canFind(current().lexeme);
+    static string[] builtinTypes = ["int", "string", "bool", "void", "byte", "short"];
+    return check(TokenType.Identifier)
+        && !builtinTypes.canFind(current().lexeme)
+        && structTypes.canFind(current().lexeme);
+}
+
+void parseArguments() {
+    expect(TokenType.LParen);
+    while (!check(TokenType.RParen)) {
+        parseExpression();
+        if (check(TokenType.Comma)) advance();
+    }
+    expect(TokenType.RParen);
 }

@@ -72,12 +72,14 @@ string generateCode(ASTNode[] nodes) {
         lines ~= name ~ ":    ds.l 1";
     }
     
-    // Emit all scalar variables (once)
+    // Emit all scalar and struct variables (once)
     lines ~= "        ; Scalar variables";
-    foreach (name, _; emittedVars) {
-        // Avoid redeclaring loop variables
+    foreach (name, countStr; emittedVars) {
         if (!(name in loopVarsUsed)) {
-            lines ~= name ~ ":    ds.l 1";
+            int count = to!int(countStr);
+            // Only emit if not already emitted (avoid duplicates)
+            if (count > 0)
+                lines ~= name ~ ":    ds.l " ~ to!string(count);
         }
     }
 
@@ -111,15 +113,18 @@ string generateCode(ASTNode[] nodes) {
         lines ~= "    rts";
     }
 
-    // Emit any switch labels left out
-    foreach (label; switchLabels.values) {
-        lines ~= label ~ ":";
-    }
+    // add a clean halt instruction
+    lines ~= "";
+    lines ~= "        SIMHALT";
 
     lines ~= "        END";
     return lines.join("\n");
 }
 
+bool isBuiltinType(string t) {
+    return t == "int" || t == "byte" || t == "short" || t == "bool" || t == "string" ||
+           t == "int[]" || t == "byte[]" || t == "short[]" || t == "bool[]" || t == "string[]";
+}
 
 void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, ref string[string] globalVarAddrs) {
     string[string] localVarAddrs;
@@ -143,12 +148,12 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
     }
 
     lines ~= "        ; Function epilogue";
-    lines ~= "        move.l A6, SP";
+    // lines ~= "        move.l A6, SP";
     lines ~= "        move.l (SP)+, A6";
     lines ~= "        rts";
 }
 
-void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
+void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varAddrs, string breakLabel = "", string continueLabel = "") {
     regIndex = 1;
 
     if (auto decl = cast(VarDecl) node) {
@@ -256,8 +261,14 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                 }
                 break;
             default:
-                // Handle struct types or unknown types
-                lines ~= format("        ; variable of type %s (struct or unknown type, not implemented)", decl.type);
+                // Handle struct types
+                if (decl.type in structFieldOffsets) {
+                    // Allocate space for the struct variable
+                    varAddrs[decl.name] = decl.name;
+                    emittedVars[decl.name] = to!string(structFieldOffsets[decl.type].length);
+                } else {
+                    lines ~= format("        ; variable of type %s (unknown type, not implemented)", decl.type);
+                }
                 break;
         }
     }
@@ -295,6 +306,13 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
             }
             string structType = varTypes[baseVar.name];
 
+            // Handle built-in types (like string) specially
+            if (isBuiltinType(structType)) {
+                // Optionally: handle built-in methods like string.empty() here
+                writeln("ERROR: Field access on built-in type: ", structType, ".", field.field);
+                throw new Exception("Field access on built-in type " ~ structType ~ " is not supported (yet)");
+            }
+
             // Check structFieldOffsets
             if (!(structType in structFieldOffsets)) {
                 writeln("ERROR: structFieldOffsets does not contain: ", structType);
@@ -323,10 +341,10 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         if (reg != "D0") lines ~= "        move.l " ~ reg ~ ", D0 ; return";
     }
     else if (auto breakstmt = cast(BreakStmt) node) {
-        lines ~= "        bra end_loop";
+        lines ~= "        bra " ~ breakLabel;
     }
     else if (auto contstmt = cast(ContinueStmt) node) {
-        lines ~= "        bra start_loop";
+        lines ~= "        bra " ~ continueLabel;
     }
     else if (auto block = cast(BlockStmt) node) {
         foreach (stmt; block.blockBody) {
@@ -377,7 +395,7 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto whilestmt = cast(WhileStmt) node) {
         string labelStart = genLabel("while");
-        string labelEnd = genLabel("endwhile");
+        string labelEnd = genLabel("end_loop");
 
         lines ~= labelStart ~ ":";
 
@@ -453,17 +471,15 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto sw = cast(SwitchStmt) node) {
         string endLabel = genLabel("switch_end");
-        switchLabels["end"] = endLabel;
+        string defaultLabel = endLabel;
+
+        breakLabel = "break" ~ to!string(labelCounter++);
+        continueLabel = "switch_continue" ~ to!string(labelCounter++);
 
         string condReg = "D0";
         string[] caseLabels;
-        string defaultLabel = endLabel;
-
-        // Assign unique labels for each case
         foreach (i, cNode; sw.cases) {
-            string label = genLabel("case_" ~ to!string(i));
-            caseLabels ~= label;
-            switchLabels["case_" ~ to!string(i)] = label;
+            caseLabels ~= genLabel("case_" ~ to!string(i));
         }
 
         // Emit case comparisons
@@ -491,10 +507,14 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
             string label = caseLabels[i];
             lines ~= label ~ ":";
 
-            foreach (stmt; c.caseBody) {
-                generateStmt(stmt, lines, regIndex, varAddrs);
+            foreach (j, stmt; c.caseBody) {
+                generateStmt(stmt, lines, regIndex, varAddrs, endLabel);
             }
-            lines ~= "        bra " ~ endLabel;
+            // Only emit bra if the last statement is not a break/return
+            if (c.caseBody.length == 0 ||
+                !isBreakOrReturn(c.caseBody[$-1])) {
+                lines ~= "        bra " ~ endLabel;
+            }
         }
 
         lines ~= endLabel ~ ":";
@@ -680,6 +700,30 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         }
         string structType = varTypes[baseVar.name];
 
+        if (isBuiltinType(structType)) {
+            if (structType == "string" && field.field == "empty") {
+                // Generate code to check if the string is empty
+                // (Assuming you store string pointers and can check for null or length)
+                // Example: move.l var_s, D0; cmp.l #0, D0; seq D1 (set D1=1 if equal)
+                string reg = nextReg(regIndex);
+                string addr = getOrCreateVarAddr(baseVar.name, varAddrs);
+                lines ~= "        move.l " ~ addr ~ ", D0";
+                lines ~= "        cmp.l #0, D0";
+                lines ~= "        seq " ~ reg; // Set reg to 1 if string is empty
+                return reg;
+            }
+            if (structType == "string" && (field.field == "length" || field.field == "len")) {
+                // Generate code to get the length of the string
+                // (Assume you store the length at var_s_len or similar)
+                string reg = nextReg(regIndex);
+                string lenLabel = baseVar.name ~ "_len";
+                lines ~= "        move.l " ~ lenLabel ~ ", " ~ reg;
+                return reg;
+            }
+            writeln("ERROR: Field access on built-in type: ", structType, ".", field.field);
+            throw new Exception("Field access on built-in type " ~ structType ~ " is not supported (yet)");
+        }
+
         if (!(structType in structFieldOffsets)) {
             writeln("ERROR: structFieldOffsets does not contain: ", structType);
             throw new Exception("structFieldOffsets missing entry for " ~ structType);
@@ -694,6 +738,7 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         int offset = structFieldOffsets[structType][field.field];
 
         string reg = nextReg(regIndex);
+
 
         // If the baseVar is a function parameter, access via stack frame (A6)
         // Assume all struct params are passed on stack at offset 8+ (A6)
@@ -1066,8 +1111,8 @@ string genLabel(string base) {
 
 string getOrCreateVarAddr(string name, ref string[string] map) {
     if (!(name in map)) {
-        map[name] = "var_" ~ name;
-        emittedVars["var_" ~ name] = "1"; // Track for data section
+        map[name] = name; // Use the variable name directly
+        emittedVars[name] = "1"; // Track for data section
     }
     return map[name];
 }
@@ -1102,3 +1147,6 @@ string getOrCreateArrayLabel(string name, ref string[string] map) {
     return map[name];
 }
 
+bool isBreakOrReturn(ASTNode node) {
+    return (cast(BreakStmt) node !is null || cast(ReturnStmt) node !is null);
+}

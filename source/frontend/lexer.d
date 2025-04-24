@@ -56,6 +56,7 @@ enum TokenType {
 	OrOr,
 
 	Byte,
+	Short,
 
 	Comment,
 	CommentBlockStart,
