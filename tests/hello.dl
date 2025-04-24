@@ -34,13 +34,14 @@ void resetSprites() {
 }
 
 void updateScore(int delta) {
-    score = score + delta;
+    // Test cast: forcibly cast score to int before assignment
+    score = cast(int)(score + delta);
     debugFlag = score * 2;
-    hiddenValues[0] = score;
+    hiddenValues[0] = cast(int)score;
 }
 
 void main() {
     resetSprites();
     updateScore(10);
-    palette[0].r = 128;
+    palette[0].r = cast(int)128.0;
 }

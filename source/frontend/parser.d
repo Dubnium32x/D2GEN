@@ -116,6 +116,15 @@ ASTNode parseUnary() {
         ASTNode expr = parseUnary();
         return new UnaryExpr(op.lexeme, expr);
     }
+    // --- CAST SUPPORT ---
+    if (check(TokenType.Cast)) {
+        advance(); // consume 'cast'
+        expect(TokenType.LParen);
+        string typeName = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.RParen);
+        ASTNode expr = parseUnary();
+        return new UnaryExpr("cast:" ~ typeName, expr); // or define a CastExpr node
+    }
     return parsePrimary();
 }
 
@@ -238,8 +247,59 @@ byte parseByteValue(string lexeme) {
 }
 
 ASTNode parseStatement() {
-    if (check(TokenType.Enum)) {
-        return parseEnumDecl();
+    // Handle public/private variable declarations at top level and in blocks
+    // --- PATCH: allow struct types and arrays after public/private ---
+    if ((check(TokenType.Public) || check(TokenType.Private)) &&
+        (isTypeToken(peek().type) || peek().type == TokenType.Auto ||
+         (peek().type == TokenType.Identifier && structTypes.canFind(peek().lexeme)))) {
+        string visibility = advance().type == TokenType.Public ? "public" : "private";
+        Token typeToken = advance();
+        ASTNode[] decls;
+        do {
+            if (!check(TokenType.Identifier)) {
+                writeln("ERROR: Expected variable name, but got ", current().lexeme, " (", current().type, ")");
+                throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
+            }
+            string varName = expect(TokenType.Identifier).lexeme;
+            // --- PATCH: Support array declaration after public/private ---
+            if (check(TokenType.LBracket)) {
+                advance();
+                ASTNode sizeExpr = null;
+                if (!check(TokenType.RBracket)) {
+                    sizeExpr = parseExpression();
+                }
+                expect(TokenType.RBracket);
+                // Defensive: Only allow semicolon or comma after array declaration
+                if (check(TokenType.Comma)) {
+                    writeln("ERROR: Comma after array declaration is not supported. Only one array variable per statement.");
+                    throw new Exception(errorWithLine("Comma after array declaration is not supported. Only one array variable per statement."));
+                }
+                ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
+                decls ~= new ArrayDecl(typeToken.lexeme, varName, elements);
+                break; // Only one array decl per statement
+            } else {
+                ASTNode val;
+                if (match(TokenType.Assign)) {
+                    val = parseExpression();
+                } else {
+                    val = null;
+                }
+                decls ~= new VarDecl(typeToken.lexeme, varName, val, visibility);
+            }
+            // Defensive: If next token is not comma or semicolon, error
+            if (!(check(TokenType.Comma) || check(TokenType.Semicolon))) {
+                writeln("ERROR: Expected ',' or ';' after variable declaration, but got '", current().lexeme, "' (", current().type, ")");
+                throw new Exception(errorWithLine("Expected ',' or ';' after variable declaration, but got '" ~ current().lexeme ~ "' (" ~ current().type.stringof ~ ")"));
+            }
+        } while (match(TokenType.Comma));
+        expect(TokenType.Semicolon);
+        return decls.length == 1 ? decls[0] : new BlockStmt(decls);
+    }
+    // --- PATCH: Error if public/private is not followed by a valid declaration ---
+    if (check(TokenType.Public) || check(TokenType.Private)) {
+        string vis = advance().type == TokenType.Public ? "public" : "private";
+        writeln("ERROR: '" ~ vis ~ "' must be followed by a type, struct, or 'auto', but got '", current().lexeme, "' (", current().type, ")");
+        throw new Exception(errorWithLine("'" ~ vis ~ "' must be followed by a type, struct, or 'auto', but got '" ~ current().lexeme ~ "' (" ~ current().type.stringof ~ ")"));
     }
     // Prefix increment/decrement (e.g., ++x;)
     if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) {
@@ -424,28 +484,6 @@ ASTNode parseStatement() {
         ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
         return new ArrayDecl(type, name, elements);
     }
-    else if ((check(TokenType.Public) || check(TokenType.Private)) &&
-        (isTypeToken(peek().type) || isStructType() || peek().type == TokenType.Auto)) {
-        string visibility = advance().type == TokenType.Public ? "public" : "private";
-        Token typeToken = advance();
-        ASTNode[] decls;
-        do {
-            if (!check(TokenType.Identifier)) {
-                writeln("ERROR: Expected variable name, but got ", current().lexeme, " (", current().type, ")");
-                throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
-            }
-            string varName = expect(TokenType.Identifier).lexeme;
-            ASTNode val;
-            if (match(TokenType.Assign)) {
-                val = parseExpression();
-            } else {
-                val = null;
-            }
-            decls ~= new VarDecl(typeToken.lexeme, varName, val, visibility);
-        } while (match(TokenType.Comma));
-        expect(TokenType.Semicolon);
-        return decls.length == 1 ? decls[0] : new BlockStmt(decls);
-    }
     // General variable declaration
     else if (isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto) {
         Token typeToken = advance();
@@ -571,7 +609,8 @@ ASTNode parseStatement() {
         }
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
-        return new FunctionDecl(name, returnType, params, funcBody);
+        // --- PATCH: Pass visibility to FunctionDecl if needed ---
+        return new FunctionDecl(name, returnType, params, funcBody, visibility);
     }
     // Fallback for expression statements
     // Handles assignments to fields, arrays, and any complex lvalue
@@ -597,7 +636,12 @@ ASTNode[] parseBlock() {
     ASTNode[] parseBody;
     expect(TokenType.LBrace);
     while (!check(TokenType.RBrace) && !check(TokenType.Eof)) {
-        parseBody ~= parseStatement();
+        // Allow public/private at block scope (for top-level and struct blocks)
+        if (check(TokenType.Public) || check(TokenType.Private)) {
+            parseBody ~= parseStatement();
+        } else {
+            parseBody ~= parseStatement();
+        }
     }
     expect(TokenType.RBrace);
     return parseBody;
@@ -670,14 +714,14 @@ ASTNode[] parse(Token[] inputTokens) {
             nodes ~= parseStructDecl();
             continue;
         }
-        // Function declaration: type identifier '(' or structType identifier '('
-        if ((checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void, TokenType.Byte, TokenType.Short) || isStructType())
+        // Function declaration: type identifier '(' or structType identifier '(' or public/private
+        if ((checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void, TokenType.Byte, TokenType.Short) || isStructType() || check(TokenType.Public) || check(TokenType.Private))
             && peek().type == TokenType.Identifier && tokens.length > index+2 && tokens[index+2].type == TokenType.LParen) {
             nodes ~= parseFunctionDecl();
             continue;
         }
-        // Top-level variable declaration
-        if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void, TokenType.Byte, TokenType.Short) || isStructType()) {
+        // Top-level variable declaration: allow public/private
+        if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void, TokenType.Byte, TokenType.Short) || isStructType() || check(TokenType.Public) || check(TokenType.Private) || check(TokenType.Auto)) {
             nodes ~= parseStatement();
             continue;
         }
@@ -788,6 +832,11 @@ bool isAtEnd() {
 }
 
 ASTNode parseFunctionDecl() {
+    // --- PATCH: Support optional public/private before return type ---
+    string visibility = "";
+    if (check(TokenType.Public) || check(TokenType.Private)) {
+        visibility = advance().type == TokenType.Public ? "public" : "private";
+    }
     if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void)) {
         string returnType = advance().lexeme;
         string name = expect(TokenType.Identifier).lexeme;
@@ -844,7 +893,8 @@ ASTNode parseFunctionDecl() {
         }
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
-        return new FunctionDecl(name, returnType, params, funcBody);
+        // --- PATCH: Pass visibility to FunctionDecl if needed ---
+        return new FunctionDecl(name, returnType, params, funcBody, visibility);
     }
     assert(0, "parseFunctionDecl called when current token is not a function declaration");
     return null;
