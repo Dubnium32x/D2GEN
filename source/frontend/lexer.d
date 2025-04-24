@@ -50,6 +50,11 @@ enum TokenType {
 	Function,
 	Void,
 
+	Auto,
+	Cast,
+	Null,
+	Assert,
+
 	Public,
 	Private,
 	Protected,
@@ -294,73 +299,80 @@ Token[] tokenize(string input) {
             string lexeme = input[start .. pos];
 
             // Check if lexeme is a keyword
-			if (lexeme == "int")
-				tokens ~= Token(TokenType.Int, lexeme);
-			else if (lexeme == "return")
-				tokens ~= Token(TokenType.Return, lexeme);
-			else if (lexeme == "byte")
-				tokens ~= Token(TokenType.Byte, lexeme);
-			else if (lexeme == "enum")
-				tokens ~= Token(TokenType.Enum, lexeme);
-
-			else if (lexeme == "if")
-				tokens ~= Token(TokenType.If, lexeme);
-			else if (lexeme == "else")
-				tokens ~= Token(TokenType.Else, lexeme);
-			else if (lexeme == "while")
-				tokens ~= Token(TokenType.While, lexeme);
-			else if (lexeme == "true")
-				tokens ~= Token(TokenType.True, lexeme);
-			else if (lexeme == "false")
-				tokens ~= Token(TokenType.False, lexeme);
-			else if (lexeme == "bool")
-				tokens ~= Token(TokenType.Bool, lexeme);
-			else if (lexeme == "string")
-				tokens ~= Token(TokenType.String, lexeme);
-			else if (lexeme == "for")
-				tokens ~= Token(TokenType.For, lexeme);
-			else if (lexeme == "foreach")
-				tokens ~= Token(TokenType.Foreach, lexeme);
-			else if (lexeme == "break")
-				tokens ~= Token(TokenType.Break, lexeme);
-			else if (lexeme == "case")
-				tokens ~= Token(TokenType.Case, lexeme);
-			else if (lexeme == "continue")
-				tokens ~= Token(TokenType.Continue, lexeme);
-			else if (lexeme == "default")
-				tokens ~= Token(TokenType.Default, lexeme);
-			else if (lexeme == "var")
-				tokens ~= Token(TokenType.Var, lexeme);
-			else if (lexeme == "struct")
-				tokens ~= Token(TokenType.Struct, lexeme);
-			else if (lexeme == "function")
-				tokens ~= Token(TokenType.Function, lexeme);
-			else if (lexeme == "switch")
-				tokens ~= Token(TokenType.Switch, lexeme);
-			else if (lexeme == "case")
-				tokens ~= Token(TokenType.Identifier, lexeme);
-			else if (lexeme == "to")
-				tokens ~= Token(TokenType.To, lexeme);
-			else if (lexeme == "step")
-				tokens ~= Token(TokenType.Step, lexeme);
-			else if (lexeme == "struct")
-				tokens ~= Token(TokenType.Struct, lexeme);
-			else if (lexeme == "void")
-				tokens ~= Token(TokenType.Void, lexeme);
-			else if (lexeme == "function")
-				tokens ~= Token(TokenType.Function, lexeme);
-			else if (lexeme == "import")
-				tokens ~= Token(TokenType.Import, lexeme);
-			else if (lexeme == "public")
-				tokens ~= Token(TokenType.Public, lexeme);
-			else if (lexeme == "private")
-				tokens ~= Token(TokenType.Private, lexeme);
-			else if (lexeme == "protected")
-				tokens ~= Token(TokenType.Protected, lexeme);
-			else if (lexeme == "static")
-				tokens ~= Token(TokenType.Static, lexeme);
-			else 
-				tokens ~= Token(TokenType.Identifier, lexeme);
+            if (lexeme == "int")
+                tokens ~= Token(TokenType.Int, lexeme);
+            else if (lexeme == "return")
+                tokens ~= Token(TokenType.Return, lexeme);
+            else if (lexeme == "byte")
+                tokens ~= Token(TokenType.Byte, lexeme);
+            else if (lexeme == "enum")
+                tokens ~= Token(TokenType.Enum, lexeme);
+            else if (lexeme == "auto")
+                tokens ~= Token(TokenType.Auto, lexeme);
+            else if (lexeme == "cast")
+                tokens ~= Token(TokenType.Cast, lexeme);
+            else if (lexeme == "if")
+                tokens ~= Token(TokenType.If, lexeme);
+            else if (lexeme == "else")
+                tokens ~= Token(TokenType.Else, lexeme);
+            else if (lexeme == "while")
+                tokens ~= Token(TokenType.While, lexeme);
+            else if (lexeme == "true")
+                tokens ~= Token(TokenType.True, lexeme);
+            else if (lexeme == "false")
+                tokens ~= Token(TokenType.False, lexeme);
+            else if (lexeme == "bool")
+                tokens ~= Token(TokenType.Bool, lexeme);
+            else if (lexeme == "string")
+                tokens ~= Token(TokenType.String, lexeme);
+            else if (lexeme == "for")
+                tokens ~= Token(TokenType.For, lexeme);
+            else if (lexeme == "foreach")
+                tokens ~= Token(TokenType.Foreach, lexeme);
+            else if (lexeme == "null")
+                tokens ~= Token(TokenType.Null, lexeme);
+            else if (lexeme == "assert")
+                tokens ~= Token(TokenType.Assert, lexeme);
+            else if (lexeme == "break")
+                tokens ~= Token(TokenType.Break, lexeme);
+            else if (lexeme == "case")
+                tokens ~= Token(TokenType.Case, lexeme);
+            else if (lexeme == "continue")
+                tokens ~= Token(TokenType.Continue, lexeme);
+            else if (lexeme == "default")
+                tokens ~= Token(TokenType.Default, lexeme);
+            else if (lexeme == "var")
+                tokens ~= Token(TokenType.Var, lexeme);
+            else if (lexeme == "struct")
+                tokens ~= Token(TokenType.Struct, lexeme);
+            else if (lexeme == "function")
+                tokens ~= Token(TokenType.Function, lexeme);
+            else if (lexeme == "switch")
+                tokens ~= Token(TokenType.Switch, lexeme);
+            else if (lexeme == "case")
+                tokens ~= Token(TokenType.Identifier, lexeme);
+            else if (lexeme == "to")
+                tokens ~= Token(TokenType.To, lexeme);
+            else if (lexeme == "step")
+                tokens ~= Token(TokenType.Step, lexeme);
+            else if (lexeme == "struct")
+                tokens ~= Token(TokenType.Struct, lexeme);
+            else if (lexeme == "void")
+                tokens ~= Token(TokenType.Void, lexeme);
+            else if (lexeme == "function")
+                tokens ~= Token(TokenType.Function, lexeme);
+            else if (lexeme == "import")
+                tokens ~= Token(TokenType.Import, lexeme);
+            else if (lexeme == "public")
+                tokens ~= Token(TokenType.Public, lexeme);
+            else if (lexeme == "private")
+                tokens ~= Token(TokenType.Private, lexeme);
+            else if (lexeme == "protected")
+                tokens ~= Token(TokenType.Protected, lexeme);
+            else if (lexeme == "static")
+                tokens ~= Token(TokenType.Static, lexeme);
+            else 
+                tokens ~= Token(TokenType.Identifier, lexeme);
             continue;
         }
 

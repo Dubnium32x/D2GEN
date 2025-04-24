@@ -1,85 +1,86 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/24/2025 3:47:32 PM
+Created On: 4/24/2025 4:05:12 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          JSR __global_init
-00001006  4EF9 00001082              4          JMP main
+00001006  4EF9 00001084              4          JMP main
 0000100C                             5  
 0000100C                             6  __global_init:
-0000100C                             7  score:    ds.l 1
-00001010                             8  debugFlag:    ds.l 1
-00001014  4E75                       9          rts
-00001016                            10  resetSprites:
-00001016                            11          ; Function prologue
-00001016  2F0E                      12          move.l A6, -(SP)
-00001018  2C4F                      13          move.l SP, A6
-0000101A  7200                      14          move.l #0, D1
-0000101C  23C1 0000109A             15          move.l D1, i
-00001022                            16  for_start_0:
-00001022  2439 0000109A             17          move.l i, D2
-00001028  7604                      18          move.l #4, D3
-0000102A  B883                      19          cmp.l D3, D4
-0000102C  6D00 0008                 20          blt Ltrue_2
-00001030  7800                      21          move.l #0, D4
-00001032  6000 0004                 22          bra Lend_3
-00001036                            23  Ltrue_2:
-00001036  7801                      24          move.l #1, D4
-00001038                            25  Lend_3:
-00001038  2004                      26          move.l D4, D0
-0000103A  B8BC 00000000             27          cmp.l #0, D4
-00001040  6700 0016                 28          beq for_end_1
-00001044  2239 0000109A             29          move.l i, D1
-0000104A  7401                      30          move.l #1, D2
-0000104C  2601                      31          move.l D1, D3
-0000104E  D682                      32          add.l D2, D3
-00001050  23C3 0000109A             33          move.l D3, i
-00001056  60CA                      34          bra for_start_0
-00001058                            35  for_end_1:
-00001058                            36          ; Function epilogue
-00001058  2C5F                      37          move.l (SP)+, A6
-0000105A  4E75                      38          rts
-0000105C                            39  updateScore:
-0000105C                            40          ; Function prologue
-0000105C  2F0E                      41          move.l A6, -(SP)
-0000105E  2C4F                      42          move.l SP, A6
-00001060  202E 0008                 43          move.l 8(A6), D0
-00001064  2238 100C                 44          move.l score, D1
-00001068  2401                      45          move.l D1, D2
-0000106A  D480                      46          add.l D0, D2
-0000106C  21C2 100C                 47          move.l D2, score
-00001070  2238 100C                 48          move.l score, D1
-00001074  7402                      49          move.l #2, D2
-00001076  2001                      50          move.l D1, D0
-00001078  C1C2                      51          muls D2, D0
-0000107A  21C0 1010                 52          move.l D0, debugFlag
-0000107E                            53          ; Function epilogue
-0000107E  2C5F                      54          move.l (SP)+, A6
-00001080  4E75                      55          rts
-00001082                            56  main:
-00001082                            57          ; Function prologue
-00001082  2F0E                      58          move.l A6, -(SP)
-00001084  2C4F                      59          move.l SP, A6
-00001086  DFFC 00000000             60          add.l #0, SP
-0000108C  2200                      61          move.l D0, D1
-0000108E  720A                      62          move.l #10, D1
-00001090  2F01                      63          move.l D1, -(SP)
-00001092  588F                      64          add.l #4, SP
-00001094  2400                      65          move.l D0, D2
-00001096                            66          ; Function epilogue
-00001096  2C5F                      67          move.l (SP)+, A6
-00001098  4E75                      68          rts
-0000109A                            69  
-0000109A                            70          ; String literals
-0000109A                            71          ; Scalar and struct variables
-0000109A                            72  i:    ds.l 1
-0000109E                            73          ; Array labels
-0000109E                            74          ; Loop variables
-0000109E                            75  
-0000109E  FFFF FFFF                 76          SIMHALT
-Line 77 WARNING: Address expected
-000010A2                            77          END
+0000100C                             7  debugFlag:    ds.l 1
+00001010  4E75                       8          rts
+00001012                             9  resetSprites:
+00001012                            10          ; Function prologue
+00001012  2F0E                      11          move.l A6, -(SP)
+00001014  2C4F                      12          move.l SP, A6
+00001016  7200                      13          move.l #0, D1
+00001018  23C1 000010A2             14          move.l D1, i
+0000101E                            15  for_start_0:
+0000101E  2439 000010A2             16          move.l i, D2
+00001024  7604                      17          move.l #4, D3
+00001026  B883                      18          cmp.l D3, D4
+00001028  6D00 0008                 19          blt Ltrue_2
+0000102C  7800                      20          move.l #0, D4
+0000102E  6000 0004                 21          bra Lend_3
+00001032                            22  Ltrue_2:
+00001032  7801                      23          move.l #1, D4
+00001034                            24  Lend_3:
+00001034  2004                      25          move.l D4, D0
+00001036  B8BC 00000000             26          cmp.l #0, D4
+0000103C  6700 0016                 27          beq for_end_1
+00001040  2239 000010A2             28          move.l i, D1
+00001046  7401                      29          move.l #1, D2
+00001048  2601                      30          move.l D1, D3
+0000104A  D682                      31          add.l D2, D3
+0000104C  23C3 000010A2             32          move.l D3, i
+00001052  60CA                      33          bra for_start_0
+00001054                            34  for_end_1:
+00001054                            35          ; Function epilogue
+00001054  2C5F                      36          move.l (SP)+, A6
+00001056  4E75                      37          rts
+00001058                            38  updateScore:
+00001058                            39          ; Function prologue
+00001058  2F0E                      40          move.l A6, -(SP)
+0000105A  2C4F                      41          move.l SP, A6
+0000105C  202E 0008                 42          move.l 8(A6), D0
+00001060  2239 000010A6             43          move.l score, D1
+00001066  2401                      44          move.l D1, D2
+00001068  D480                      45          add.l D0, D2
+0000106A  23C2 000010A6             46          move.l D2, score
+00001070  2239 000010A6             47          move.l score, D1
+00001076  7402                      48          move.l #2, D2
+00001078  2001                      49          move.l D1, D0
+0000107A  C1C2                      50          muls D2, D0
+0000107C  21C0 100C                 51          move.l D0, debugFlag
+00001080                            52          ; Function epilogue
+00001080  2C5F                      53          move.l (SP)+, A6
+00001082  4E75                      54          rts
+00001084                            55  main:
+00001084                            56          ; Function prologue
+00001084  2F0E                      57          move.l A6, -(SP)
+00001086  2C4F                      58          move.l SP, A6
+00001088  DFFC 00000000             59          add.l #0, SP
+0000108E  2200                      60          move.l D0, D1
+00001090  720A                      61          move.l #10, D1
+00001092  2F01                      62          move.l D1, -(SP)
+00001094  588F                      63          add.l #4, SP
+00001096  2400                      64          move.l D0, D2
+00001098                            65          ; Function epilogue
+00001098  2C5F                      66          move.l (SP)+, A6
+0000109A  4E75                      67          rts
+0000109C                            68  
+0000109C                            69          ; String literals
+0000109C                            70          ; Scalar and struct variables
+0000109C  2239 000010A6             71          move.l score, D1
+000010A2                            72  i:    ds.l 1
+000010A6                            73  score:    ds.l 1
+000010AA                            74          ; Array labels
+000010AA                            75          ; Loop variables
+000010AA                            76  
+000010AA  FFFF FFFF                 77          SIMHALT
+Line 78 WARNING: Address expected
+000010AE                            78          END
 
 No errors detected
 1 warning generated
@@ -88,14 +89,14 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-DEBUGFLAG           1010
-FOR_END_1           1058
-FOR_START_0         1022
-I                   109A
-LEND_3              1038
-LTRUE_2             1036
-MAIN                1082
-RESETSPRITES        1016
-SCORE               100C
-UPDATESCORE         105C
+DEBUGFLAG           100C
+FOR_END_1           1054
+FOR_START_0         101E
+I                   10A2
+LEND_3              1034
+LTRUE_2             1032
+MAIN                1084
+RESETSPRITES        1012
+SCORE               10A6
+UPDATESCORE         1058
 __GLOBAL_INIT       100C

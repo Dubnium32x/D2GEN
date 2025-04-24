@@ -4,7 +4,6 @@
         JMP main
 
 __global_init:
-score:    ds.l 1
 debugFlag:    ds.l 1
         rts
 resetSprites:
@@ -69,7 +68,9 @@ main:
 
         ; String literals
         ; Scalar and struct variables
+        move.l score, D1
 i:    ds.l 1
+score:    ds.l 1
         ; Array labels
         ; Loop variables
 

@@ -17,7 +17,7 @@ struct Sprite {
 
 public Sprite sprites[4];
 private Color palette[8];
-public int score;
+public auto score;
 private int debugFlag;
 public Vec2 checkpoints[2];
 private int hiddenValues[5];

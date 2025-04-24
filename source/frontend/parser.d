@@ -410,7 +410,7 @@ ASTNode parseStatement() {
         return new CommentBlockStmt(comment);
     }
     // Array declaration: type identifier [ size ];
-    if ((isTypeToken(current().type) || isStructType())
+    if ((isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto)
         && peek().type == TokenType.Identifier && tokens.length > index+2 && tokens[index+2].type == TokenType.LBracket) {
         string type = advance().lexeme;
         string name = expect(TokenType.Identifier).lexeme;
@@ -425,7 +425,7 @@ ASTNode parseStatement() {
         return new ArrayDecl(type, name, elements);
     }
     else if ((check(TokenType.Public) || check(TokenType.Private)) &&
-        (isTypeToken(peek().type) || isStructType())) {
+        (isTypeToken(peek().type) || isStructType() || peek().type == TokenType.Auto)) {
         string visibility = advance().type == TokenType.Public ? "public" : "private";
         Token typeToken = advance();
         ASTNode[] decls;
@@ -447,7 +447,7 @@ ASTNode parseStatement() {
         return decls.length == 1 ? decls[0] : new BlockStmt(decls);
     }
     // General variable declaration
-    else if (isTypeToken(current().type) || isStructType()) {
+    else if (isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto) {
         Token typeToken = advance();
         ASTNode[] decls;
         do {
