@@ -1,44 +1,19 @@
 import std.stdio;
 
-int sumArray(int[] arr, int len) {
-    int sum = 0;
-    for (int i = 0; i < len; i++) {
-        sum += arr[i];
-    }
-    return sum;
-}
+struct Vec2 {
+    int x;
+    int y;
+};
 
 void main() {
-    int[] arr = [5, 3, 8, 1, 4];
-    int len = 5;
-    writeln("Original array:");
-    for (int i = 0; i < len; i++) {
-        write(arr[i], " ");
-    }
-    writeln();
+    Vec2 pos;
+    pos.x = 12;
+    pos.y = 34;
 
-    // Find max value
-    int max = arr[0];
-    for (int i = 1; i < len; i++) {
-        if (arr[i] > max) {
-            max = arr[i];
-        }
-    }
-    writeln("Max value: ", max);
+    writeln("Position: (", pos.x, ", ", pos.y, ")");
 
-    // Set all even elements to zero
-    for (int i = 0; i < len; i++) {
-        if (arr[i] % 2 == 0) {
-            arr[i] = 0;
-        }
-    }
-
-    writeln("Modified array:");
-    for (int i = 0; i < len; i++) {
-        write(arr[i], " ");
-    }
-    writeln();
-
-    int total = sumArray(arr, len);
-    writeln("Sum of modified array: ", total);
+    // Struct assignment
+    Vec2 other;
+    other = pos;
+    writeln("Other: (", other.x, ", ", other.y, ")");
 }

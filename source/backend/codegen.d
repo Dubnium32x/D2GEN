@@ -1,6 +1,7 @@
 module backend.codegen;
 
 import ast.nodes;
+import globals;
 import std.conv : to;
 import std.array;
 import std.stdio;
@@ -18,6 +19,7 @@ string[string] emittedVars;
 string[string] arrayLabels;
 string[string] loopVarsUsed;
 string[string] usedLibCalls; // acts as a set
+string[string] varTypes; // varTypes["pos"] = "Vec2"
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
@@ -54,6 +56,10 @@ string generateCode(ASTNode[] nodes) {
     // Emit array memory (once)
     lines ~= "        ; Array storage";
     foreach (name, base; globalArrays) {
+        // Emit a base label for the array
+        lines ~= base ~ ":";
+
+        // Emit each element label (for compatibility with existing code)
         foreach (i; 0 .. 10) { // or use known array length if tracked
             lines ~= base ~ "_" ~ to!string(i) ~ ":    ds.l 1";
         }
@@ -121,9 +127,10 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     regIndex = 1;
 
     if (auto decl = cast(VarDecl) node) {
+        varTypes[decl.name] = decl.type;
         string addr = getOrCreateVarAddr(decl.name, varAddrs);
 
-        final switch (decl.type) {
+        switch (decl.type) {
             case "int":
                 string intReg = generateExpr(decl.value, lines, regIndex, varAddrs);
                 lines ~= format("        move.l %s, %s", intReg, addr);
@@ -223,6 +230,10 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                     varAddrs[decl.name] = base; // Register for indexed access
                 }
                 break;
+            default:
+                // Handle struct types or unknown types
+                lines ~= format("        ; variable of type %s (struct or unknown type, not implemented)", decl.type);
+                break;
         }
     }
     else if (auto assign = cast(AssignStmt) node) {
@@ -248,6 +259,35 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
             // Store value at (A0, offsetReg.l)
             lines ~= "        move.l " ~ valReg ~ ", (A0, " ~ offsetReg ~ ".l)";
+        }
+        else if (auto field = cast(StructFieldAccess) assign.lhs) {
+            auto baseVar = cast(VarExpr)field.baseExpr;
+
+            // Check varTypes
+            if (!(baseVar.name in varTypes)) {
+                writeln("ERROR: varTypes does not contain: ", baseVar.name);
+                throw new Exception("varTypes missing entry for " ~ baseVar.name);
+            }
+            string structType = varTypes[baseVar.name];
+
+            // Check structFieldOffsets
+            if (!(structType in structFieldOffsets)) {
+                writeln("ERROR: structFieldOffsets does not contain: ", structType);
+                throw new Exception("structFieldOffsets missing entry for " ~ structType);
+            }
+
+            // Check field.field
+            if (!(field.field in structFieldOffsets[structType])) {
+                writeln("ERROR: structFieldOffsets[", structType, "] does not contain field: ", field.field);
+                writeln("Available fields: ", structFieldOffsets[structType].keys);
+                throw new Exception("structFieldOffsets[" ~ structType ~ "] missing field " ~ field.field);
+            }
+
+            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
+            string baseAddr = getOrCreateVarAddr(baseVar.name, varAddrs);
+
+            int offset = structFieldOffsets[structType][field.field];   
+            lines ~= format("        move.l %s, %s+%d", valReg, baseAddr, offset);
         }
         else {
             throw new Exception("Left-hand side of assignment must be a variable or array element");
@@ -588,6 +628,25 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             lines ~= "        lea " ~ addr ~ ", " ~ reg;
             return reg;
         }
+    }
+
+    if (auto field = cast(StructFieldAccess) expr) {
+        auto baseVar = cast(VarExpr)field.baseExpr;
+        string structType = varTypes[baseVar.name];        
+        int offset = structFieldOffsets[structType][field.field];
+
+        string reg = nextReg(regIndex);
+        string baseAddr = getOrCreateVarAddr(baseVar.name, varAddrs);
+        lines ~= format("        move.l %s+%d, %s", baseAddr, offset, reg);
+
+        writeln("DEBUG: structType=", structType, " field=", field.field);
+        writeln("DEBUG: structFieldOffsets keys: ", structFieldOffsets.keys);
+        if (structType in structFieldOffsets)
+            writeln("DEBUG: fields for ", structType, ": ", structFieldOffsets[structType].keys);
+        else
+            writeln("ERROR: structType not found in structFieldOffsets!");
+
+        return reg;
     }
 
     if (auto var = cast(VarExpr) expr) {

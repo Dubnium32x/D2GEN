@@ -2,6 +2,7 @@ module frontend.parser;
 
 import frontend.lexer;
 import ast.nodes;
+import globals;
 import main;
 
 import std.stdio;
@@ -9,6 +10,7 @@ import std.algorithm.iteration; // Required for filter
 
 private Token[] tokens;
 private size_t index;
+string[] structTypes;
 
 // ---------------------------
 // 🔧 XP-safe helper functions
@@ -27,9 +29,9 @@ Token expect(TokenType kind) {
     return t;
 }
 
-Token expectAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d = TokenType.Eof) {
+Token expectAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d = TokenType.Eof, TokenType e = TokenType.Eof) {
     Token t = current();
-    if (!checkAny(a, b, c, d)) {
+    if (!checkAny(a, b, c, d, e)) {
         hasErrors = true;
         writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
 
@@ -149,27 +151,33 @@ ASTNode parsePrimary() {
     if (check(TokenType.Identifier)) {
         string name = advance().lexeme;
 
+        ASTNode expr;
         if (check(TokenType.LBracket)) {
-            advance(); // consume '['
-            ASTNode indexExpr = parseExpression(); // Parse the index expression
-            expect(TokenType.RBracket); // Ensure the closing bracket is present
-            return new ArrayAccessExpr(name, indexExpr);
-        }
-        if (check(TokenType.LParen)) {
-            advance(); // consume '('
+            advance();
+            ASTNode indexExpr = parseExpression();
+            expect(TokenType.RBracket);
+            expr = new ArrayAccessExpr(name, indexExpr);
+        } else if (check(TokenType.LParen)) {
+            advance();
             ASTNode[] args;
-
             if (!check(TokenType.RParen)) {
                 do {
-                    args ~= parseExpression();  // 👈 this handles each arg
+                    args ~= parseExpression();
                 } while (match(TokenType.Comma));
             }
-
             expect(TokenType.RParen);
-            return new CallExpr(name, args);
+            expr = new CallExpr(name, args);
+        } else {
+            expr = new VarExpr(name);
         }
 
-        return new VarExpr(name);
+        // Now handle chained field accesses
+        while (check(TokenType.Dot)) {
+            advance(); // consume '.'
+            string field = expect(TokenType.Identifier).lexeme;
+            expr = new StructFieldAccess(expr, field);
+        }
+        return expr;
     }
 
     if (check(TokenType.Dollar)) {
@@ -203,13 +211,11 @@ ASTNode parsePrimary() {
         ASTNode left = parsePrimary();
         return new BinaryExpr(op.lexeme, left, right);
     }
-
     hasErrors = true;
     writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
 
     throw new Exception("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")");
 }
-
 
 byte parseByteValue(string lexeme) {
     // Handle 0xAB, 'A', or decimal formats
@@ -345,29 +351,6 @@ ASTNode parseStatement() {
         // Handle the content between /* and */
         return new CommentBlockStmt(comment);
     }
-    else if (check(TokenType.Struct)) {
-        advance(); // consume 'struct'
-        string name = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.LBrace);
-
-        ASTNode[] members;
-        while (!check(TokenType.RBrace)) {
-            members ~= parseStatement();
-            if (check(TokenType.Comma)) {
-                advance();
-            } else {
-                break;
-            }
-        }
-
-        expect(TokenType.RBrace);
-        expect(TokenType.Semicolon);
-
-    
-        import std.array : array; // Ensure std.array is imported
-        string[] fieldNames = members.map!(m => cast(VarDecl) m).filter!(v => v !is null).map!(v => v.name).array;
-        return new StructDecl(name, fieldNames);
-    }
     else if ((check(TokenType.Int) || check(TokenType.Byte) || check(TokenType.String)) && peek().type == TokenType.LBracket) {
         string type = advance().lexeme; // 'int', 'byte', or 'string'
         expect(TokenType.LBracket);
@@ -461,18 +444,32 @@ ASTNode parseStatement() {
         expect(TokenType.Semicolon);
         return new PrintStmt(printType, args); // ✅ List of args, not a single node
     }
-    else if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String)) {
-        Token typeToken = expectAny(TokenType.Int, TokenType.Bool, TokenType.String);
+    else if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String) || isStructType()) {
+        Token typeToken;
+        if (checkAny(TokenType.Int, TokenType.Bool, TokenType.String, TokenType.Byte)) {
+            typeToken = advance();
+        }
+        else if (isStructType()) {
+            typeToken = advance();
+        } 
+        else {
+            throw new Exception("Expected type at start of variable declaration, got " ~ current().lexeme);
+        }   
         ASTNode[] decls;
         do {
-            string name = expect(TokenType.Identifier).lexeme;
+            if (!check(TokenType.Identifier)) {
+                writeln("ERROR: Expected variable name, but got ", current().lexeme, " (", current().type, ")");
+                writeln("Did you forget a semicolon after a previous declaration?");
+                throw new Exception("Expected variable name, got " ~ current().lexeme);
+            }
+            string structName = expect(TokenType.Identifier).lexeme;
             ASTNode val;
             if (match(TokenType.Assign)) {
                 val = parseExpression();
             }else {
                 val = null;
             }
-            decls ~= new VarDecl(typeToken.lexeme, name, val);
+            decls ~= new VarDecl(typeToken.lexeme, structName, val);
         } while (match(TokenType.Comma));
         expect(TokenType.Semicolon);
         // If only one, return it directly, else return a block of declarations
@@ -485,6 +482,25 @@ ASTNode parseStatement() {
         ASTNode val = parseExpression();
         expect(TokenType.Semicolon);
         return new VarDecl("byte", name, val); // Assuming you added `type` to VarDecl
+    }
+    else if (check(TokenType.Identifier) && peek().type == TokenType.Dot){
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Dot);
+        string field = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Assign);
+        ASTNode value = parseExpression();
+        expect(TokenType.Semicolon);
+        return new AssignStmt(new StructFieldAccess(new VarExpr(name), field), value);
+    }
+    else if (check(TokenType.Break)) {
+        advance(); // consume 'break'
+        expect(TokenType.Semicolon);
+        return new BreakStmt();
+    }
+    else if (check(TokenType.Continue)) {
+        advance(); // consume 'continue'
+        expect(TokenType.Semicolon);
+        return new ContinueStmt();
     }
     else if (check(TokenType.For)) {
         advance(); // consume 'for'
@@ -587,9 +603,9 @@ bool check(TokenType kind) {
     return tokens[index].type == kind;
 }
 
-bool checkAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d = TokenType.Eof) {
+bool checkAny(TokenType a, TokenType b, TokenType c = TokenType.Eof, TokenType d = TokenType.Eof, TokenType e = TokenType.Eof) {
     auto t = tokens[index].type;
-    return t == a || t == b || t == c || t == d;
+    return t == a || t == b || t == c || t == d || t == e;
 }
 
 int getPrecedence() {
@@ -622,16 +638,62 @@ ASTNode[] parse(Token[] inputTokens) {
     index = 0;
     tokens = inputTokens;
     while (!isAtEnd()) {
+        writeln("Parsing token: ", current().lexeme, " (", current().type, ")");
         if (check(TokenType.Import)) {
-            // Skip import statements
             advance(); // consume 'import'
-            while (!check(TokenType.Semicolon) && !isAtEnd()) advance();
-            if (check(TokenType.Semicolon)) advance();
+            while (!check(TokenType.Semicolon) && !isAtEnd()) {
+                advance(); // consume module path (std . stdio)
+            }
+            expect(TokenType.Semicolon);
             continue;
         }
-        nodes ~= parseFunctionDecl();
+        else if (check(TokenType.Struct)) {
+            nodes ~= parseStructDecl();
+            continue;
+        }
+        if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void)) {
+            nodes ~= parseFunctionDecl();
+            continue;
+        }
+        // If you get here, it's an unknown token at the top level
+        writeln("Unknown top-level token: ", current().lexeme, " (", current().type, ")");
+        advance(); // Prevent infinite loop
     }
     return nodes;
+}
+
+ASTNode parseStructDecl() {
+    if (check(TokenType.Struct)) {
+        advance(); // consume 'struct'
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.LBrace);
+        ASTNode[] members;
+        while (!check(TokenType.RBrace) && !isAtEnd()) {
+            members ~= parseStatement();
+        }
+        expect(TokenType.RBrace);
+        expect(TokenType.Semicolon);
+        import std.array : array;
+        string[] fieldNames = members.map!(m => cast(VarDecl) m).filter!(v => v !is null).map!(v => v.name).array;
+
+        // --- Populate structFieldOffsets here ---
+        int offset = 0;
+        int[string] fieldOffsets;
+        foreach (fname; fieldNames) {
+            fieldOffsets[fname] = offset;
+            offset += 4; // or correct size for the field type
+        }
+        structFieldOffsets[name] = fieldOffsets;
+        // ----------------------------------------
+
+        structTypes ~= name; // Add struct type to the list
+        writeln("Struct type added: ", name);
+
+        return new StructDecl(name, fieldNames);
+    }
+
+    assert(0, "parseStructDecl called when current token is not a struct declaration");
+    return null;
 }
 
 bool isAtEnd() {
@@ -665,4 +727,9 @@ ASTNode parseFunctionDecl() {
     }
     assert(0, "parseFunctionDecl called when current token is not a function declaration");
     return null;
+}
+
+import std.algorithm.searching : canFind;
+bool isStructType() {
+    return check(TokenType.Identifier) && structTypes.canFind(current().lexeme);
 }

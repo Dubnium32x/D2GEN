@@ -291,16 +291,6 @@ class ArrayAccessExpr : ASTNode {
     }
 }
 
-class StructDecl : ASTNode {
-    string name;
-    string[] fields;
-
-    this(string name, string[] fields) {
-        this.name = name;
-        this.fields = fields;
-    }
-}
-
 class FunctionDecl : ASTNode {
     string name;
     string returnType;
@@ -346,5 +336,23 @@ class IndexExpr : ASTNode {
     this(string name, ASTNode index) {
         this.name = name;
         this.index = index;
+    }
+}
+
+class StructDecl : ASTNode {
+    string name;
+    string[] fields;
+    this(string name, string[] fields) {
+        this.name = name;
+        this.fields = fields;
+    }
+}
+class StructFieldAccess : ASTNode {
+    ASTNode baseExpr;
+    string field;
+
+    this(ASTNode baseExpr, string field) {
+        this.baseExpr = baseExpr;
+        this.field = field;
     }
 }
