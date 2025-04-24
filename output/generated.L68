@@ -1,207 +1,38 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/24/2025 2:50:12 PM
+Created On: 4/24/2025 3:13:06 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
-00001000  4EF9 000010A4              3          JMP main
-00001006                             4  printPixel:
-00001006                             5          ; Function prologue
-00001006  2F0E                       6          move.l A6, -(SP)
-00001008  2C4F                       7          move.l SP, A6
-0000100A  202E 0008                  8          move.l 8(A6), D0
-0000100E  2239 00001208              9          move.l p_pos_x, D1
-00001014  2F01                      10          move.l D1, -(SP)
-00001016  588F                      11          add.l #4, SP
-00001018  2400                      12          move.l D0, D2
-0000101A  2239 00001214             13          move.l p_pos_y, D1
-00001020  2F01                      14          move.l D1, -(SP)
-00001022  588F                      15          add.l #4, SP
-00001024  2400                      16          move.l D0, D2
-00001026  2239 000011E4             17          move.l p_color, D1
-0000102C  2F01                      18          move.l D1, -(SP)
-0000102E  588F                      19          add.l #4, SP
-00001030  2400                      20          move.l D0, D2
-00001032                            21          ; Function epilogue
-00001032  2C5F                      22          move.l (SP)+, A6
-00001034  4E75                      23          rts
-00001036                            24  sumColors:
-00001036                            25          ; Function prologue
-00001036  2F0E                      26          move.l A6, -(SP)
-00001038  2C4F                      27          move.l SP, A6
-0000103A  202E 0008                 28          move.l 8(A6), D0
-0000103E  262E 000C                 29          move.l 12(A6), D3
-00001042  7200                      30          move.l #0, D1
-00001044  23C1 00001218             31          move.l D1, sum
-0000104A  7200                      32          move.l #0, D1
-0000104C  23C1 00001200             33          move.l D1, i
-00001052                            34  for_start_0:
-00001052  2439 00001200             35          move.l i, D2
-00001058  B683                      36          cmp.l D3, D3
-0000105A  6D00 0008                 37          blt Ltrue_2
-0000105E  7600                      38          move.l #0, D3
-00001060  6000 0004                 39          bra Lend_3
-00001064                            40  Ltrue_2:
-00001064  7601                      41          move.l #1, D3
-00001066                            42  Lend_3:
-00001066  2003                      43          move.l D3, D0
-00001068  B6BC 00000000             44          cmp.l #0, D3
-0000106E  6700 0028                 45          beq for_end_1
-00001072  2239 00001218             46          move.l sum, D1
-00001078                            47  ; ERROR: Only constant indices supported for struct array field access
-00001078  7400                      48          move.l #0, D2
-0000107A  2601                      49          move.l D1, D3
-0000107C  D682                      50          add.l D2, D3
-0000107E  23C3 00001218             51          move.l D3, sum
-00001084  2239 00001200             52          move.l i, D1
-0000108A  7401                      53          move.l #1, D2
-0000108C  2601                      54          move.l D1, D3
-0000108E  D682                      55          add.l D2, D3
-00001090  23C3 00001200             56          move.l D3, i
-00001096  60BA                      57          bra for_start_0
-00001098                            58  for_end_1:
-00001098  2239 00001218             59          move.l sum, D1
-0000109E  2001                      60          move.l D1, D0 ; return
-000010A0                            61          ; Function epilogue
-000010A0  2C5F                      62          move.l (SP)+, A6
-000010A2  4E75                      63          rts
-000010A4                            64  main:
-000010A4                            65          ; Function prologue
-000010A4  2F0E                      66          move.l A6, -(SP)
-000010A6  2C4F                      67          move.l SP, A6
-000010A8  7200                      68          move.l #0, D1
-000010AA  2439 0000120C             69          move.l pixels_0, D2
-000010B0  2202                      70          move.l D2, D1
-000010B2  2F01                      71          move.l D1, -(SP)
-000010B4  588F                      72          add.l #4, SP
-000010B6  2600                      73          move.l D0, D3
-000010B8  7202                      74          move.l #2, D1
-000010BA  2439 000011F4             75          move.l pixels_2, D2
-000010C0  2202                      76          move.l D2, D1
-000010C2  2F01                      77          move.l D1, -(SP)
-000010C4  588F                      78          add.l #4, SP
-000010C6  2600                      79          move.l D0, D3
-000010C8  7200                      80          move.l #0, D1
-000010CA  23C1 000011F8             81          move.l D1, total
-000010D0  7200                      82          move.l #0, D1
-000010D2  23C1 00001200             83          move.l D1, i
-000010D8                            84  for_start_4:
-000010D8  2439 00001200             85          move.l i, D2
-000010DE  7603                      86          move.l #3, D3
-000010E0  B883                      87          cmp.l D3, D4
-000010E2  6D00 0008                 88          blt Ltrue_6
-000010E6  7800                      89          move.l #0, D4
-000010E8  6000 0004                 90          bra Lend_7
-000010EC                            91  Ltrue_6:
-000010EC  7801                      92          move.l #1, D4
-000010EE                            93  Lend_7:
-000010EE  2004                      94          move.l D4, D0
-000010F0  B8BC 00000000             95          cmp.l #0, D4
-000010F6  6700 0092                 96          beq for_end_5
-000010FA  B0BC 00000001             97          cmp.l #1, D0
-00001100  6700 001A                 98          beq case_0_11
-00001104  B0BC 00000002             99          cmp.l #2, D0
-0000110A  6700 0026                100          beq case_1_12
-0000110E  B0BC 00000003            101          cmp.l #3, D0
-00001114  6700 0032                102          beq case_2_13
-00001118  6000 0044                103          bra case_3_14
-0000111C                           104  case_0_11:
-0000111C  2239 000011F8            105          move.l total, D1
-00001122  740A                     106          move.l #10, D2
-00001124  2601                     107          move.l D1, D3
-00001126  D682                     108          add.l D2, D3
-00001128  23C3 000011F8            109          move.l D3, total
-0000112E  6000 0044                110          bra switch_end_8
-00001132                           111  case_1_12:
-00001132  2239 000011F8            112          move.l total, D1
-00001138  7414                     113          move.l #20, D2
-0000113A  2601                     114          move.l D1, D3
-0000113C  D682                     115          add.l D2, D3
-0000113E  23C3 000011F8            116          move.l D3, total
-00001144  6000 002E                117          bra switch_end_8
-00001148                           118  case_2_13:
-00001148  2239 000011F8            119          move.l total, D1
-0000114E  741E                     120          move.l #30, D2
-00001150  2601                     121          move.l D1, D3
-00001152  D682                     122          add.l D2, D3
-00001154  23C3 000011F8            123          move.l D3, total
-0000115A  6000 0018                124          bra switch_end_8
-0000115E                           125  case_3_14:
-0000115E  2239 000011F8            126          move.l total, D1
-00001164  7401                     127          move.l #1, D2
-00001166  2601                     128          move.l D1, D3
-00001168  D682                     129          add.l D2, D3
-0000116A  23C3 000011F8            130          move.l D3, total
-00001170  6000 0002                131          bra switch_end_8
-00001174                           132  switch_end_8:
-00001174  2239 00001200            133          move.l i, D1
-0000117A  7401                     134          move.l #1, D2
-0000117C  2601                     135          move.l D1, D3
-0000117E  D682                     136          add.l D2, D3
-00001180  23C3 00001200            137          move.l D3, i
-00001186  6000 FF50                138          bra for_start_4
-0000118A                           139  for_end_5:
-0000118A  2239 000011F8            140          move.l total, D1
-00001190  2F01                     141          move.l D1, -(SP)
-00001192  588F                     142          add.l #4, SP
-00001194  2400                     143          move.l D0, D2
-00001196  7203                     144          move.l #3, D1
-00001198  2F01                     145          move.l D1, -(SP)
-0000119A  2439 00001210            146          move.l arrPixels, D2
-000011A0  2F02                     147          move.l D2, -(SP)
-000011A2  508F                     148          add.l #8, SP
-000011A4  2600                     149          move.l D0, D3
-000011A6  23C3 000011FC            150          move.l D3, colorSum
-000011AC  2239 000011FC            151          move.l colorSum, D1
-000011B2  2F01                     152          move.l D1, -(SP)
-000011B4  588F                     153          add.l #4, SP
-000011B6  2400                     154          move.l D0, D2
-000011B8  DFFC 00000000            155          add.l #0, SP
-000011BE  2200                     156          move.l D0, D1
-000011C0  2001                     157          move.l D1, D0
-000011C2  B3C1                     158          cmpa.l D1, A1
-000011C4  6700 000E                159          beq else_15
-000011C8  727B                     160          move.l #123, D1
-000011CA  2F01                     161          move.l D1, -(SP)
-000011CC  588F                     162          add.l #4, SP
-000011CE  2400                     163          move.l D0, D2
-000011D0  6000 000E                164          bra endif_16
-000011D4                           165  else_15:
-000011D4  223C 000001C8            166          move.l #456, D1
-000011DA  2F01                     167          move.l D1, -(SP)
-000011DC  588F                     168          add.l #4, SP
-000011DE  2400                     169          move.l D0, D2
-000011E0                           170  endif_16:
-000011E0                           171          ; Function epilogue
-000011E0  2C5F                     172          move.l (SP)+, A6
-000011E2  4E75                     173          rts
-000011E4                           174  
-000011E4                           175          ; String literals
-000011E4                           176          ; Scalar and struct variables
-000011E4                           177  p_color:    ds.l 1
-000011E8                           178  arrFparr_len:    ds.l 2
-000011F0                           179  fpArr_0:    ds.l 1
-000011F4                           180  pixels_2:    ds.l 1
-000011F8                           181  total:    ds.l 1
-000011FC                           182  colorSum:    ds.l 1
-00001200                           183  i:    ds.l 1
-00001204                           184  fpArr_1:    ds.l 1
-00001208                           185  p_pos_x:    ds.l 1
-0000120C                           186  pixels_0:    ds.l 1
-00001210                           187  arrPixels:    ds.l 1
-00001214                           188  p_pos_y:    ds.l 1
-00001218                           189  sum:    ds.l 1
-0000121C                           190  s:    ds.l 1
-00001220                           191          ; Array labels
-00001220                           192  arrFparr:    ds.l 1
-00001224                           193          ; Loop variables
-00001224                           194  
-00001224                           195  writeln:
-00001224  4E75                     196      rts
-00001226                           197  
-00001226  FFFF FFFF                198          SIMHALT
-Line 199 WARNING: Address expected
-0000122A                           199          END
+00001000  4EB9 0000100C              3          JSR __global_init
+00001006  4EF9 0000100E              4          JMP main
+0000100C                             5  
+0000100C                             6  __global_init:
+0000100C  4E75                       7          rts
+0000100E                             8  main:
+0000100E                             9          ; Function prologue
+0000100E  2F0E                      10          move.l A6, -(SP)
+00001010  2C4F                      11          move.l SP, A6
+00001012  2239 00001034             12          move.l pixels_0_x, D1
+00001018  2439 0000102C             13          move.l pixels_1_y, D2
+0000101E  2601                      14          move.l D1, D3
+00001020  D682                      15          add.l D2, D3
+00001022  23C3 00001030             16          move.l D3, sum
+00001028                            17          ; Function epilogue
+00001028  2C5F                      18          move.l (SP)+, A6
+0000102A  4E75                      19          rts
+0000102C                            20  
+0000102C                            21          ; String literals
+0000102C                            22          ; Scalar and struct variables
+0000102C                            23  pixels_1_y:    ds.l 1
+00001030                            24  sum:    ds.l 1
+00001034                            25  pixels_0_x:    ds.l 1
+00001038                            26          ; Array labels
+00001038                            27          ; Loop variables
+00001038                            28  
+00001038  FFFF FFFF                 29          SIMHALT
+Line 30 WARNING: Address expected
+0000103C                            30          END
 
 No errors detected
 1 warning generated
@@ -210,37 +41,8 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ARRFPARR            1220
-ARRFPARR_LEN        11E8
-ARRPIXELS           1210
-CASE_0_11           111C
-CASE_1_12           1132
-CASE_2_13           1148
-CASE_3_14           115E
-COLORSUM            11FC
-ELSE_15             11D4
-ENDIF_16            11E0
-FOR_END_1           1098
-FOR_END_5           118A
-FOR_START_0         1052
-FOR_START_4         10D8
-FPARR_0             11F0
-FPARR_1             1204
-I                   1200
-LEND_3              1066
-LEND_7              10EE
-LTRUE_2             1064
-LTRUE_6             10EC
-MAIN                10A4
-PIXELS_0            120C
-PIXELS_2            11F4
-PRINTPIXEL          1006
-P_COLOR             11E4
-P_POS_X             1208
-P_POS_Y             1214
-S                   121C
-SUM                 1218
-SUMCOLORS           1036
-SWITCH_END_8        1174
-TOTAL               11F8
-WRITELN             1224
+MAIN                100E
+PIXELS_0_X          1034
+PIXELS_1_Y          102C
+SUM                 1030
+__GLOBAL_INIT       100C

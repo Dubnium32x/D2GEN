@@ -410,9 +410,8 @@ ASTNode parseStatement() {
         return new CommentBlockStmt(comment);
     }
     // Array declaration: type identifier [ size ];
-    if ((isTypeToken(current().type) || isStructType() || isEnumType()) &&
-        peek().type == TokenType.Identifier &&
-        tokens.length > index+2 && tokens[index+2].type == TokenType.LBracket) {
+    if ((isTypeToken(current().type) || isStructType())
+        && peek().type == TokenType.Identifier && tokens.length > index+2 && tokens[index+2].type == TokenType.LBracket) {
         string type = advance().lexeme;
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.LBracket);
@@ -426,7 +425,7 @@ ASTNode parseStatement() {
         return new ArrayDecl(type, name, elements);
     }
     // General variable declaration
-    else if (isTypeToken(current().type) || isStructType() || isEnumType()) {
+    else if (isTypeToken(current().type) || isStructType()) {
         Token typeToken = advance();
         ASTNode[] decls;
         do {
@@ -658,6 +657,19 @@ ASTNode[] parse(Token[] inputTokens) {
         // Top-level variable declaration
         if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Void, TokenType.Byte, TokenType.Short) || isStructType()) {
             nodes ~= parseStatement();
+            continue;
+        }
+        // --- PATCH: Accept top-level assignments and field/array assignments ---
+        if (check(TokenType.Identifier) || check(TokenType.LParen) || check(TokenType.LBracket) || check(TokenType.Number) || check(TokenType.Dollar)) {
+            // Accept assignment, field assignment, array assignment, or expression statement at top level
+            auto stmt = parseStatement();
+            // Only add if it's an assignment or ExprStmt (for field/array assignment)
+            import ast.nodes : AssignStmt, ExprStmt;
+            if (cast(AssignStmt)stmt !is null || cast(ExprStmt)stmt !is null) {
+                nodes ~= stmt;
+            } else {
+                // Ignore other expression statements at top level
+            }
             continue;
         }
         writeln("Unknown top-level token: ", current().lexeme, " (", current().type, ")");

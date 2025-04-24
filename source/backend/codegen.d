@@ -23,25 +23,67 @@ string[string] varTypes;
 string[string] switchLabels;
 
 string generateCode(ASTNode[] nodes) {
+    // --- PATCH: Reset all global state for codegen ---
+    labelCounter = 0;
+    strLabels = null;
+    strLabelCounter = 0;
+    nextStringIndex = 0;
+    globalArrays = null;
+    declaredArrays = null;
+    emittedVars = null;
+    arrayLabels = null;
+    loopVarsUsed = null;
+    usedLibCalls = null;
+    varTypes = null;
+    switchLabels = null;
+    // --- END PATCH ---
+
     string[] lines;
 
     lines ~= "** GENERATED CODE USING DLANG AND D2GEN COMPILER **";
     lines ~= "        ORG $1000";
-    lines ~= "        JMP main"; // jump to main, regardless of function order
+    // --- PATCH: Call __global_init before main ---
+    lines ~= "        JSR __global_init";
+    lines ~= "        JMP main";
+    // --- END PATCH ---
 
     int regIndex = 1;
     string[string] varAddrs;
 
     FunctionDecl[] functions;
-
-    // Gather all functions
     string[string] functionNames;
+    ASTNode[] globalAssignments;
     foreach (node; nodes) {
-        if (auto fn = cast(FunctionDecl) node) {
-            functions ~= fn;
-            functionNames[fn.name] = "1";
+        if (cast(FunctionDecl)node !is null) {
+            functions ~= cast(FunctionDecl)node;
+            functionNames[(cast(FunctionDecl)node).name] = "1";
+        } else if (cast(VarDecl)node !is null ||
+                   cast(AssignStmt)node !is null ||
+                   cast(ExprStmt)node !is null) {
+            globalAssignments ~= node;
         }
     }
+
+    // --- PATCH: Emit __global_init function for global assignments ---
+    lines ~= "";
+    lines ~= "__global_init:";
+    // Optionally, function prologue if needed
+    // lines ~= "        move.l A6, -(SP)";
+    // lines ~= "        move.l SP, A6";
+    foreach (node; globalAssignments) {
+        // Only emit code for assignments and declarations with initializers
+        if (auto decl = cast(VarDecl)node) {
+            if (decl.value !is null) {
+                generateStmt(decl, lines, regIndex, varAddrs);
+            }
+        } else if (auto assign = cast(AssignStmt)node) {
+            generateStmt(assign, lines, regIndex, varAddrs);
+        } else if (auto exprStmt = cast(ExprStmt)node) {
+            generateStmt(exprStmt, lines, regIndex, varAddrs);
+        }
+    }
+    lines ~= "        rts";
+    // --- END PATCH ---
 
     // Emit all functions (main will be jumped to anyway)
     foreach (func; functions) {
@@ -58,6 +100,37 @@ string generateCode(ASTNode[] nodes) {
 
     lines ~= "        ; Scalar and struct variables";
     string[string] emittedSymbols;
+    // --- PATCH: Emit all global variables (VarDecl) as ds.l 1 if not already emitted ---
+    foreach (node; globalAssignments) {
+        if (auto decl = cast(VarDecl)node) {
+            string label = decl.name;
+            if (label in emittedSymbols) continue;
+            emittedSymbols[label] = "1";
+            varTypes[label] = decl.type;
+            emittedVars[label] = "1";
+            // Only emit if not initialized in __global_init
+            if (decl.value is null) {
+                lines ~= format("%s:    ds.l 1", label);
+            }
+        }
+    }
+    // --- END PATCH ---
+
+    // --- PATCH: Emit initial values for global assignments and declarations ---
+    foreach (node; globalAssignments) {
+        if (auto decl = cast(VarDecl)node) {
+            if (decl.value !is null) {
+                generateStmt(decl, lines, regIndex, varAddrs);
+            }
+        } else if (auto assign = cast(AssignStmt)node) {
+            generateStmt(assign, lines, regIndex, varAddrs);
+        } else if (auto exprStmt = cast(ExprStmt)node) {
+            generateStmt(exprStmt, lines, regIndex, varAddrs);
+        }
+    }
+    // --- END PATCH ---
+
+    // Emit zero-initialized variables/fields not already initialized
     foreach (name, countStr; emittedVars) {
         if (!(name in emittedSymbols)) {
             int count = to!int(countStr);
@@ -121,15 +194,6 @@ string generateCode(ASTNode[] nodes) {
         if (!(name in emittedSymbols)) {
             lines ~= name ~ ":    ds.l 1";
             emittedSymbols[name] = "1";
-        }
-    }
-
-    foreach (lib; usedLibCalls.keys) {
-        if (!(lib in emittedSymbols)) {
-            lines ~= "";
-            lines ~= lib ~ ":";
-            lines ~= "    rts";
-            emittedSymbols[lib] = "1";
         }
     }
 

@@ -50,6 +50,11 @@ enum TokenType {
 	Function,
 	Void,
 
+	Public,
+	Private,
+	Protected,
+	Static,
+
 	StringLiteral,
 	
 	True,

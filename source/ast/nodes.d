@@ -19,11 +19,13 @@ class VarDecl : ASTNode {
     string name;
     string type;
     ASTNode value;
+    string visibility;
 
-    this(string t, string n, ASTNode v) {
+    this(string t, string n, ASTNode v, string vis = "public") {
         type = t;
         name = n;
         value = v;
+        visibility = vis;
     }
 }
 
