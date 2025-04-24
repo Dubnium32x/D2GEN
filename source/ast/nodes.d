@@ -294,10 +294,10 @@ class ArrayAccessExpr : ASTNode {
 class FunctionDecl : ASTNode {
     string name;
     string returnType;
-    string[] params;
+    ParamInfo[] params;
     ASTNode[] funcBody;
 
-    this(string name, string returnType, string[] params, ASTNode[] funcBody) {
+    this(string name, string returnType, ParamInfo[] params, ASTNode[] funcBody) {
         this.name = name;
         this.returnType = returnType;
         this.params = params;
@@ -355,4 +355,9 @@ class StructFieldAccess : ASTNode {
         this.baseExpr = baseExpr;
         this.field = field;
     }
+}
+
+struct ParamInfo {
+    string type;
+    string name;
 }

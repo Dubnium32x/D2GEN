@@ -19,7 +19,8 @@ string[string] emittedVars;
 string[string] arrayLabels;
 string[string] loopVarsUsed;
 string[string] usedLibCalls; // acts as a set
-string[string] varTypes; // varTypes["pos"] = "Vec2"
+string[string] varTypes; 
+string[string] switchLabels;
 
 string generateCode(ASTNode[] nodes) {
     string[] lines;
@@ -92,6 +93,29 @@ string generateCode(ASTNode[] nodes) {
         lines ~= "    rts";
     }
 
+    // Emit function pointer trampolines (for bsr fp support)
+    foreach (name, type; varTypes) {
+        if (type.startsWith("void function(")) {
+            lines ~= "";
+            lines ~= name ~ ":";
+            lines ~= format("        move.l var_%s, A0", name);
+            lines ~= "        jsr (A0)";
+            lines ~= "        rts";
+        }
+    }
+
+    // Emit library stubs, END, etc.
+    foreach (lib; usedLibCalls.keys) {
+        lines ~= "";
+        lines ~= lib ~ ":";
+        lines ~= "    rts";
+    }
+
+    // Emit any switch labels left out
+    foreach (label; switchLabels.values) {
+        lines ~= label ~ ":";
+    }
+
     lines ~= "        END";
     return lines.join("\n");
 }
@@ -107,9 +131,10 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
     // Handle function parameters: put directly in D0, D1, ... if possible
     int offset = 8;
     foreach (i, param; func.params) {
+        varTypes[param.name] = param.type;
         string reg = (i == 0) ? "D0" : nextReg(regIndex);
         lines ~= format("        move.l %d(A6), %s", offset, reg);
-        localVarAddrs[param] = reg; // Map param name to register
+        localVarAddrs[param.name] = reg; // Map param name to register
         offset += 4;
     }
 
@@ -428,17 +453,25 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     }
     else if (auto sw = cast(SwitchStmt) node) {
         string endLabel = genLabel("switch_end");
+        switchLabels["end"] = endLabel;
+
         string condReg = "D0";
         string[] caseLabels;
         string defaultLabel = endLabel;
 
+        // Assign unique labels for each case
         foreach (i, cNode; sw.cases) {
-            auto c = cast(CaseStmt) cNode;
             string label = genLabel("case_" ~ to!string(i));
             caseLabels ~= label;
+            switchLabels["case_" ~ to!string(i)] = label;
+        }
+
+        // Emit case comparisons
+        foreach (i, cNode; sw.cases) {
+            auto c = cast(CaseStmt) cNode;
+            string label = caseLabels[i];
 
             if (c.condition !is null) {
-                // If the case value is a constant, use immediate
                 if (auto intLit = cast(IntLiteral) c.condition) {
                     lines ~= "        cmp.l #" ~ to!string(intLit.value) ~ ", " ~ condReg;
                 } else {
@@ -497,8 +530,17 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
             lines ~= "        move.l " ~ reg ~ ", -(SP)";
         }
 
-        lines ~= "        bsr " ~ call.name;
+        if (varTypes.get(call.name, "").startsWith("void function(")) {
+            // Function pointer call
+            lines ~= format("        move.l var_%s, A0", call.name);
+            lines ~= "        jsr (A0)";
+        } else {
+            // Normal function call
+            lines ~= "        bsr " ~ call.name;
+        }
         lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
+        string dest = nextReg(regIndex);
+        lines ~= "        move.l D0, " ~ dest;
     }
 }
 
@@ -632,19 +674,37 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
 
     if (auto field = cast(StructFieldAccess) expr) {
         auto baseVar = cast(VarExpr)field.baseExpr;
-        string structType = varTypes[baseVar.name];        
+        if (!(baseVar.name in varTypes)) {
+            writeln("ERROR: varTypes does not contain: ", baseVar.name);
+            throw new Exception("varTypes missing entry for " ~ baseVar.name);
+        }
+        string structType = varTypes[baseVar.name];
+
+        if (!(structType in structFieldOffsets)) {
+            writeln("ERROR: structFieldOffsets does not contain: ", structType);
+            throw new Exception("structFieldOffsets missing entry for " ~ structType);
+        }
+
+        if (!(field.field in structFieldOffsets[structType])) {
+            writeln("ERROR: structFieldOffsets[", structType, "] does not contain field: ", field.field);
+            writeln("Available fields: ", structFieldOffsets[structType].keys);
+            throw new Exception("structFieldOffsets[" ~ structType ~ "] missing field " ~ field.field);
+        }
+
         int offset = structFieldOffsets[structType][field.field];
 
         string reg = nextReg(regIndex);
-        string baseAddr = getOrCreateVarAddr(baseVar.name, varAddrs);
-        lines ~= format("        move.l %s+%d, %s", baseAddr, offset, reg);
 
-        writeln("DEBUG: structType=", structType, " field=", field.field);
-        writeln("DEBUG: structFieldOffsets keys: ", structFieldOffsets.keys);
-        if (structType in structFieldOffsets)
-            writeln("DEBUG: fields for ", structType, ": ", structFieldOffsets[structType].keys);
-        else
-            writeln("ERROR: structType not found in structFieldOffsets!");
+        // If the baseVar is a function parameter, access via stack frame (A6)
+        // Assume all struct params are passed on stack at offset 8+ (A6)
+        // You may want to track the offset for each param, but for now:
+        if (baseVar.name in varAddrs && varAddrs[baseVar.name].startsWith("D")) {
+            // It's in a register (not typical for structs), fallback to stack
+            lines ~= format("        move.l %d(A6), %s", 8 + offset, reg);
+        } else {
+            // Assume variable is on stack at offset (for struct param)
+            lines ~= format("        move.l %d(A6), %s", 8 + offset, reg);
+        }
 
         return reg;
     }
@@ -920,8 +980,6 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             }
             lines ~= "        move.l " ~ reg ~ ", -(SP)";
         }
-
-        lines ~= "        bsr " ~ call.name;
         lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
         string dest = nextReg(regIndex);
         lines ~= "        move.l D0, " ~ dest;

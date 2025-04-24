@@ -1,90 +1,164 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/23/2025 5:21:33 PM
+Created On: 4/24/2025 6:40:02 AM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
-00001000  4EF9 00001006              3          JMP main
-00001006                             4  main:
+00001000  4EF9 000010B2              3          JMP main
+00001006                             4  printPoint:
 00001006                             5          ; Function prologue
 00001006  2F0E                       6          move.l A6, -(SP)
 00001008  2C4F                       7          move.l SP, A6
-0000100A                             8          ; variable of type Vec2 (struct or unknown type, not implemented)
-0000100A  720C                       9          move.l #12, D1
-0000100C  23C1 000010C6             10          move.l D1, var_pos+0
-00001012  7222                      11          move.l #34, D1
-00001014  23C1 000010CA             12          move.l D1, var_pos+4
-0000101A  43F9 000010AF             13          lea strAA, A1
-00001020  103C 0009                 14          move.b #9, D0
+0000100A  202E 0008                  8          move.l 8(A6), D0
+0000100E  43F9 0000111D              9          lea strAA, A1
+00001014  103C 0009                 10          move.b #9, D0
+00001018  4E4E                      11          trap #14
+0000101A  222E 0008                 12          move.l 8(A6), D1
+0000101E  2201                      13          move.l D1, D1
+00001020  103C 0001                 14          move.b #1, D0
 00001024  4E4E                      15          trap #14
-00001026  2239 000010C6             16          move.l var_pos+0, D1
-0000102C  2201                      17          move.l D1, D1
-0000102E  103C 0001                 18          move.b #1, D0
-00001032  4E4E                      19          trap #14
-00001034  43F9 000010AC             20          lea strAB, A1
-0000103A  103C 0009                 21          move.b #9, D0
-0000103E  4E4E                      22          trap #14
-00001040  2439 000010CA             23          move.l var_pos+4, D2
-00001046  2202                      24          move.l D2, D1
-00001048  103C 0001                 25          move.b #1, D0
-0000104C  4E4E                      26          trap #14
-0000104E  43F9 000010BB             27          lea strAC, A1
-00001054  103C 0009                 28          move.b #9, D0
-00001058  4E4E                      29          trap #14
-0000105A                            30          ; variable of type Vec2 (struct or unknown type, not implemented)
-0000105A  2239 000010C6             31          move.l var_pos, D1
-00001060  23C1 000010CA             32          move.l D1, var_other
-00001066  43F9 000010BD             33          lea strAD, A1
-0000106C  103C 0009                 34          move.b #9, D0
-00001070  4E4E                      35          trap #14
-00001072  2239 000010CA             36          move.l var_other+0, D1
-00001078  2201                      37          move.l D1, D1
-0000107A  103C 0001                 38          move.b #1, D0
-0000107E  4E4E                      39          trap #14
-00001080  43F9 000010AC             40          lea strAB, A1
-00001086  103C 0009                 41          move.b #9, D0
-0000108A  4E4E                      42          trap #14
-0000108C  2439 000010CE             43          move.l var_other+4, D2
-00001092  2202                      44          move.l D2, D1
-00001094  103C 0001                 45          move.b #1, D0
-00001098  4E4E                      46          trap #14
-0000109A  43F9 000010BB             47          lea strAC, A1
-000010A0  103C 0009                 48          move.b #9, D0
-000010A4  4E4E                      49          trap #14
-000010A6                            50          ; Function epilogue
-000010A6  2E4E                      51          move.l A6, SP
-000010A8  2C5F                      52          move.l (SP)+, A6
-000010AA  4E75                      53          rts
-000010AC                            54  
-000010AC                            55          ; String literals
-000010AC                            56  strAB:
-000010AC= 2C 20 00                  57          dc.b ', ', 0
-000010AF                            58  strAA:
-000010AF= 50 6F 73 69 74 69 ...     59          dc.b 'Position: (', 0
-000010BB                            60  strAC:
-000010BB= 29 00                     61          dc.b ')', 0
-000010BD                            62  strAD:
-000010BD= 4F 74 68 65 72 3A ...     63          dc.b 'Other: (', 0
-000010C6                            64          ; Array storage
-000010C6                            65          ; Loop variables
-000010C6                            66          ; Scalar variables
-000010C6                            67  var_pos:    ds.l 1
-000010CA                            68  var_other:    ds.l 1
-000010CE                            69          ; Array labels
-Line 70 WARNING: Address expected
-000010CE                            70          END
+00001026  43F9 0000110C             16          lea strAB, A1
+0000102C  103C 0009                 17          move.b #9, D0
+00001030  4E4E                      18          trap #14
+00001032  242E 000C                 19          move.l 12(A6), D2
+00001036  2202                      20          move.l D2, D1
+00001038  103C 0001                 21          move.b #1, D0
+0000103C  4E4E                      22          trap #14
+0000103E  43F9 0000110F             23          lea strAC, A1
+00001044  103C 0009                 24          move.b #9, D0
+00001048  4E4E                      25          trap #14
+0000104A                            26          ; Function epilogue
+0000104A  2E4E                      27          move.l A6, SP
+0000104C  2C5F                      28          move.l (SP)+, A6
+0000104E  4E75                      29          rts
+00001050                            30  describe:
+00001050                            31          ; Function prologue
+00001050  2F0E                      32          move.l A6, -(SP)
+00001052  2C4F                      33          move.l SP, A6
+00001054  202E 0008                 34          move.l 8(A6), D0
+00001058  B0BC 00000001             35          cmp.l #1, D0
+0000105E  6700 0010                 36          beq case_0_1
+00001062  B0BC 00000002             37          cmp.l #2, D0
+00001068  6700 001A                 38          beq case_1_2
+0000106C  6000 002A                 39          bra case_2_3
+00001070                            40  case_0_1:
+00001070  43F9 00001126             41          lea strAD, A1
+00001076  103C 0009                 42          move.b #9, D0
+0000107A  4E4E                      43          trap #14
+Line 44 ERROR: Undefined symbol
+0000107C  6000 AC98                 44          bra end_loop
+00001080  6000 002A                 45          bra switch_end_0
+00001084                            46  case_1_2:
+00001084  43F9 00001111             47          lea strAE, A1
+0000108A  103C 0009                 48          move.b #9, D0
+0000108E  4E4E                      49          trap #14
+Line 50 ERROR: Undefined symbol
+00001090  6000 AC84                 50          bra end_loop
+00001094  6000 0016                 51          bra switch_end_0
+00001098                            52  case_2_3:
+00001098  43F9 00001132             53          lea strAF, A1
+0000109E  103C 0009                 54          move.b #9, D0
+000010A2  4E4E                      55          trap #14
+Line 56 ERROR: Undefined symbol
+000010A4  6000 AC70                 56          bra end_loop
+000010A8  6000 0002                 57          bra switch_end_0
+000010AC                            58  switch_end_0:
+000010AC                            59          ; Function epilogue
+000010AC  2E4E                      60          move.l A6, SP
+000010AE  2C5F                      61          move.l (SP)+, A6
+000010B0  4E75                      62          rts
+000010B2                            63  main:
+000010B2                            64          ; Function prologue
+000010B2  2F0E                      65          move.l A6, -(SP)
+000010B4  2C4F                      66          move.l SP, A6
+000010B6                            67          ; variable of type Point (struct or unknown type, not implemented)
+000010B6  7207                      68          move.l #7, D1
+000010B8  23C1 00001140             69          move.l D1, var_pt+0
+000010BE  7208                      70          move.l #8, D1
+000010C0  23C1 00001144             71          move.l D1, var_pt+4
+000010C6                            72          ; variable of type void function(Point) (struct or unknown type, not implemented)
+000010C6  43F9 0000114C             73          lea var_printPoint, A1
+000010CC  23C9 00001148             74          move.l A1, var_fp
+000010D2  2239 00001140             75          move.l var_pt, D1
+000010D8  2F01                      76          move.l D1, -(SP)
+000010DA  588F                      77          add.l #4, SP
+000010DC  2400                      78          move.l D0, D2
+000010DE  7202                      79          move.l #2, D1
+000010E0  23C1 00001144             80          move.l D1, var_val
+000010E6  2239 00001144             81          move.l var_val, D1
+000010EC  2F01                      82          move.l D1, -(SP)
+000010EE  588F                      83          add.l #4, SP
+000010F0  2400                      84          move.l D0, D2
+000010F2  722A                      85          move.l #42, D1
+000010F4  23C1 00001144             86          move.l D1, var_val
+000010FA  2239 00001144             87          move.l var_val, D1
+00001100  2F01                      88          move.l D1, -(SP)
+00001102  588F                      89          add.l #4, SP
+00001104  2400                      90          move.l D0, D2
+00001106                            91          ; Function epilogue
+00001106  2E4E                      92          move.l A6, SP
+00001108  2C5F                      93          move.l (SP)+, A6
+0000110A  4E75                      94          rts
+0000110C                            95  
+0000110C                            96          ; String literals
+0000110C                            97  strAB:
+0000110C= 2C 20 00                  98          dc.b ', ', 0
+0000110F                            99  strAC:
+0000110F= 29 00                    100          dc.b ')', 0
+00001111                           101  strAE:
+00001111= 43 6F 64 65 20 69 ...    102          dc.b 'Code is two', 0
+0000111D                           103  strAA:
+0000111D= 50 6F 69 6E 74 3A ...    104          dc.b 'Point: (', 0
+00001126                           105  strAD:
+00001126= 43 6F 64 65 20 69 ...    106          dc.b 'Code is one', 0
+00001132                           107  strAF:
+00001132= 55 6E 6B 6E 6F 77 ...    108          dc.b 'Unknown code', 0
+0000113F                           109          ; Array storage
+0000113F                           110          ; Loop variables
+0000113F                           111          ; Scalar variables
+00001140                           112  var_pt:    ds.l 1
+00001144                           113  var_val:    ds.l 1
+00001148                           114  var_fp:    ds.l 1
+0000114C                           115  var_printPoint:    ds.l 1
+00001150                           116          ; Array labels
+00001150                           117  
+00001150                           118  fp:
+00001150  2078 1148                119          move.l var_fp, A0
+00001154  4E90                     120          jsr (A0)
+00001156  4E75                     121          rts
+Line 122 ERROR: Symbol defined more than once
+00001158                           122  case_0_1:
+Line 123 ERROR: Symbol defined more than once
+00001158                           123  case_1_2:
+Line 124 ERROR: Symbol defined more than once
+00001158                           124  switch_end_0:
+Line 125 ERROR: Symbol defined more than once
+00001158                           125  case_2_3:
+Line 126 WARNING: Address expected
+00001158                           126          END
 
-No errors detected
+7 errors detected
 1 warning generated
 
 
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-MAIN                1006
-STRAA               10AF
-STRAB               10AC
-STRAC               10BB
-STRAD               10BD
-VAR_OTHER           10CA
-VAR_POS             10C6
+CASE_0_1            1070
+CASE_1_2            1084
+CASE_2_3            1098
+DESCRIBE            1050
+FP                  1150
+MAIN                10B2
+PRINTPOINT          1006
+STRAA               111D
+STRAB               110C
+STRAC               110F
+STRAD               1126
+STRAE               1111
+STRAF               1132
+SWITCH_END_0        10AC
+VAR_FP              1148
+VAR_PRINTPOINT      114C
+VAR_PT              1140
+VAR_VAL             1144

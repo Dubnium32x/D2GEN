@@ -267,6 +267,18 @@ ASTNode parseStatement() {
 		
 		return new IfStmt(cond, thenBody, elseBody);
 	}
+    else if (check(TokenType.Void) && peek().type == TokenType.Function) {
+        // Parse function pointer variable declaration: void function(Foo) fp;
+        string type = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
+        expect(TokenType.LParen);
+        string innerType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Identifier).lexeme;
+        expect(TokenType.RParen);
+        type ~= "(" ~ innerType ~ ")";
+        string name = expect(TokenType.Identifier).lexeme;
+        expect(TokenType.Semicolon);
+        // You may want to create a special AST node, but for now use VarDecl
+        return new VarDecl(type, name, null);
+    }
     else if (check(TokenType.Identifier) && peek().type == TokenType.PlusPlus) {
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.PlusPlus); // This must match your token type
@@ -544,12 +556,12 @@ ASTNode parseStatement() {
         string name = expect(TokenType.Identifier).lexeme;
 
         expect(TokenType.LParen);
-        string[] params;
+        ParamInfo[] params;
         if (!check(TokenType.RParen)) {
             do {
                 string paramType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool).lexeme;
                 string paramName = expect(TokenType.Identifier).lexeme;
-                params ~= paramName;
+                params ~= ParamInfo(paramType, paramName);
             } while (match(TokenType.Comma));
         }
         expect(TokenType.RParen);
@@ -707,17 +719,28 @@ ASTNode parseFunctionDecl() {
         string name = expect(TokenType.Identifier).lexeme;
 
         expect(TokenType.LParen);
-        string[] params;
+        ParamInfo[] params;
         if (!check(TokenType.RParen)) {
             do {
-                string paramType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool).lexeme;
-                bool isArray = false;
-                if (match(TokenType.LBracket)) {
-                    expect(TokenType.RBracket);
-                    paramType ~= "[]";
+                string paramType;
+                // Support function pointer types: e.g. "void function(Foo)"
+                if (check(TokenType.Void) && peek().type == TokenType.Function) {
+                    paramType = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
+                    expect(TokenType.LParen);
+                    string innerType = expectAny(TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Identifier).lexeme;
+                    expect(TokenType.RParen);
+                    paramType ~= "(" ~ innerType ~ ")";
+                } else if (checkAny(TokenType.Int, TokenType.String, TokenType.Bool) || isStructType()) {
+                    paramType = advance().lexeme;
+                    if (match(TokenType.LBracket)) {
+                        expect(TokenType.RBracket);
+                        paramType ~= "[]";
+                    }
+                } else {
+                    throw new Exception("Expected type in parameter list, got " ~ current().lexeme);
                 }
                 string paramName = expect(TokenType.Identifier).lexeme;
-                params ~= paramName; // (or store type/name pair if you track types)
+                params ~= ParamInfo(paramType, paramName);
             } while (match(TokenType.Comma));
         }
         expect(TokenType.RParen);

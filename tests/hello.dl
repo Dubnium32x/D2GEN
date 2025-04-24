@@ -1,19 +1,40 @@
 import std.stdio;
 
-struct Vec2 {
+struct Point {
     int x;
     int y;
 };
 
+void printPoint(Point p) {
+    writeln("Point: (", p.x, ", ", p.y, ")");
+}
+
+void describe(int code) {
+    switch (code) {
+        case 1:
+            writeln("Code is one");
+            break;
+        case 2:
+            writeln("Code is two");
+            break;
+        default:
+            writeln("Unknown code");
+            break;
+    }
+}
+
 void main() {
-    Vec2 pos;
-    pos.x = 12;
-    pos.y = 34;
+    Point pt;
+    pt.x = 7;
+    pt.y = 8;
 
-    writeln("Position: (", pos.x, ", ", pos.y, ")");
+    void function(Point) fp;
+    fp = &printPoint;
+    fp(pt);
 
-    // Struct assignment
-    Vec2 other;
-    other = pos;
-    writeln("Other: (", other.x, ", ", other.y, ")");
+    int val = 2;
+    describe(val);
+
+    val = 42;
+    describe(val);
 }
