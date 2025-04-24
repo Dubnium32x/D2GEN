@@ -1,41 +1,145 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/24/2025 9:11:14 AM
+Created On: 4/24/2025 1:46:50 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
-00001000  4EF9 00001006              3          JMP main
-00001006                             4  main:
+00001000  4EF9 00001026              3          JMP main
+00001006                             4  printPoint:
 00001006                             5          ; Function prologue
 00001006  2F0E                       6          move.l A6, -(SP)
 00001008  2C4F                       7          move.l SP, A6
-0000100A  727B                       8          move.l #123, D1
-0000100C  23C1 00001038              9          move.l D1, f+0
-00001012  222E 0008                 10          move.l 8(A6), D1
-00001016  2201                      11          move.l D1, D1
-00001018  103C 0001                 12          move.b #1, D0
-0000101C  4E4E                      13          trap #14
-0000101E  2039 00001048             14          move.l s, D0
-00001024  B0BC 00000000             15          cmp.l #0, D0
-0000102A  57C1                      16          seq D1
-0000102C  2201                      17          move.l D1, D1
-0000102E  103C 0001                 18          move.b #1, D0
-00001032  4E4E                      19          trap #14
-00001034                            20          ; Function epilogue
-00001034  2C5F                      21          move.l (SP)+, A6
-00001036  4E75                      22          rts
-00001038                            23  
-00001038                            24          ; String literals
-00001038                            25          ; Array storage
-00001038                            26          ; Loop variables
-00001038                            27          ; Scalar variables
-00001038                            28  f:    ds.l 4
-00001048                            29  s:    ds.l 1
-0000104C                            30          ; Array labels
-0000104C                            31  
-0000104C  FFFF FFFF                 32          SIMHALT
-Line 33 WARNING: Address expected
-00001050                            33          END
+0000100A  202E 0008                  8          move.l 8(A6), D0
+0000100E  222E 0008                  9          move.l 8(A6), D1
+00001012  2F01                      10          move.l D1, -(SP)
+00001014  588F                      11          add.l #4, SP
+00001016  2400                      12          move.l D0, D2
+00001018  222E 000C                 13          move.l 12(A6), D1
+0000101C  2F01                      14          move.l D1, -(SP)
+0000101E  588F                      15          add.l #4, SP
+00001020  2400                      16          move.l D0, D2
+00001022                            17          ; Function epilogue
+00001022  2C5F                      18          move.l (SP)+, A6
+00001024  4E75                      19          rts
+00001026                            20  main:
+00001026                            21          ; Function prologue
+00001026  2F0E                      22          move.l A6, -(SP)
+00001028  2C4F                      23          move.l SP, A6
+0000102A  7202                      24          move.l #2, D1
+0000102C  23C1 0000111E             25          move.l D1, arrArr_0
+00001032= 00000001                  26  arrArr_len:    dc.l 1
+00001036                            27          ; variable of type void function(Point) (unknown type, not implemented)
+00001036  43F8 1006                 28          lea printPoint, A1
+0000103A  23C9 0000114A             29          move.l A1, fp
+00001040  2239 00001106             30          move.l p, D1
+00001046  2F01                      31          move.l D1, -(SP)
+00001048  588F                      32          add.l #4, SP
+0000104A  2400                      33          move.l D0, D2
+0000104C  7201                      34          move.l #1, D1
+0000104E  2439 00001146             35          move.l arr_1, D2
+00001054  2202                      36          move.l D2, D1
+00001056  2F01                      37          move.l D1, -(SP)
+00001058  588F                      38          add.l #4, SP
+0000105A  2600                      39          move.l D0, D3
+0000105C  DFFC 00000000             40          add.l #0, SP
+00001062  2200                      41          move.l D0, D1
+00001064  2F01                      42          move.l D1, -(SP)
+00001066  588F                      43          add.l #4, SP
+00001068  2400                      44          move.l D0, D2
+0000106A  7200                      45          move.l #0, D1
+0000106C  23C1 0000111A             46          move.l D1, sum
+00001072  7200                      47          move.l #0, D1
+00001074  23C1 0000110E             48          move.l D1, i
+0000107A                            49  for_start_0:
+0000107A  2439 0000110E             50          move.l i, D2
+00001080  7602                      51          move.l #2, D3
+00001082  B883                      52          cmp.l D3, D4
+00001084  6D00 0008                 53          blt Ltrue_2
+00001088  7800                      54          move.l #0, D4
+0000108A  6000 0004                 55          bra Lend_3
+0000108E                            56  Ltrue_2:
+0000108E  7801                      57          move.l #1, D4
+00001090                            58  Lend_3:
+00001090  2004                      59          move.l D4, D0
+00001092  B8BC 00000000             60          cmp.l #0, D4
+00001098  6700 002A                 61          beq for_end_1
+0000109C  2239 0000111A             62          move.l sum, D1
+000010A2                            63  ; ERROR: Only constant indices supported for struct array field access
+000010A2  2401                      64          move.l D1, D2
+000010A4  0682 00000000             65          add.l #0, D2
+000010AA  23C2 0000111A             66          move.l D2, sum
+000010B0  2239 0000110E             67          move.l i, D1
+000010B6  7401                      68          move.l #1, D2
+000010B8  2601                      69          move.l D1, D3
+000010BA  D682                      70          add.l D2, D3
+000010BC  23C3 0000110E             71          move.l D3, i
+000010C2  60B6                      72          bra for_start_0
+000010C4                            73  for_end_1:
+000010C4  2239 0000111A             74          move.l sum, D1
+000010CA  2F01                      75          move.l D1, -(SP)
+000010CC  588F                      76          add.l #4, SP
+000010CE  2400                      77          move.l D0, D2
+000010D0  2239 0000111A             78          move.l sum, D1
+000010D6  7403                      79          move.l #3, D2
+000010D8  B682                      80          cmp.l D2, D3
+000010DA  6E00 0008                 81          bgt Ltrue_6
+000010DE  7600                      82          move.l #0, D3
+000010E0  6000 0004                 83          bra Lend_7
+000010E4                            84  Ltrue_6:
+000010E4  7601                      85          move.l #1, D3
+000010E6                            86  Lend_7:
+000010E6  2003                      87          move.l D3, D0
+000010E8  B3C3                      88          cmpa.l D3, A1
+000010EA  6700 000E                 89          beq else_4
+000010EE  722A                      90          move.l #42, D1
+000010F0  2F01                      91          move.l D1, -(SP)
+000010F2  588F                      92          add.l #4, SP
+000010F4  2400                      93          move.l D0, D2
+000010F6  6000 000A                 94          bra endif_5
+000010FA                            95  else_4:
+000010FA  7200                      96          move.l #0, D1
+000010FC  2F01                      97          move.l D1, -(SP)
+000010FE  588F                      98          add.l #4, SP
+00001100  2400                      99          move.l D0, D2
+00001102                           100  endif_5:
+00001102                           101          ; Function epilogue
+00001102  2C5F                     102          move.l (SP)+, A6
+00001104  4E75                     103          rts
+00001106                           104  
+00001106                           105          ; String literals
+00001106                           106          ; Scalar variables
+00001106                           107  p:    ds.l 2
+0000110E                           108  i:    ds.l 1
+00001112                           109  var_fp:    ds.l 1
+00001116                           110  s:    ds.l 1
+0000111A                           111  sum:    ds.l 1
+0000111E                           112          ; Array storage
+0000111E                           113  arrArr:
+0000111E                           114  arrArr_0:    ds.l 1
+00001122                           115  arrArr_1:    ds.l 1
+00001126                           116  arrArr_2:    ds.l 1
+0000112A                           117  arrArr_3:    ds.l 1
+0000112E                           118  arrArr_4:    ds.l 1
+00001132                           119  arrArr_5:    ds.l 1
+00001136                           120  arrArr_6:    ds.l 1
+0000113A                           121  arrArr_7:    ds.l 1
+0000113E                           122  arrArr_8:    ds.l 1
+00001142                           123  arrArr_9:    ds.l 1
+00001146                           124          ; Array labels
+00001146                           125  arr_1:    ds.l 1
+0000114A                           126  
+0000114A                           127  fp:
+0000114A  2078 1112                128          move.l var_fp, A0
+0000114E  4E90                     129          jsr (A0)
+00001150  4E75                     130          rts
+00001152                           131          ; Loop variables
+00001152                           132  
+00001152                           133  writeln:
+00001152  4E75                     134      rts
+00001154                           135  
+00001154  FFFF FFFF                136          SIMHALT
+Line 137 WARNING: Address expected
+00001158                           137          END
 
 No errors detected
 1 warning generated
@@ -44,6 +148,33 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-F                   1038
-MAIN                1006
-S                   1048
+ARRARR              111E
+ARRARR_0            111E
+ARRARR_1            1122
+ARRARR_2            1126
+ARRARR_3            112A
+ARRARR_4            112E
+ARRARR_5            1132
+ARRARR_6            1136
+ARRARR_7            113A
+ARRARR_8            113E
+ARRARR_9            1142
+ARRARR_LEN          1032
+ARR_1               1146
+ELSE_4              10FA
+ENDIF_5             1102
+FOR_END_1           10C4
+FOR_START_0         107A
+FP                  114A
+I                   110E
+LEND_3              1090
+LEND_7              10E6
+LTRUE_2             108E
+LTRUE_6             10E4
+MAIN                1026
+P                   1106
+PRINTPOINT          1006
+S                   1116
+SUM                 111A
+VAR_FP              1112
+WRITELN             1152

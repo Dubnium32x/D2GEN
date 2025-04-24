@@ -43,6 +43,8 @@ enum TokenType {
 	Switch, Case,
 	To, Step,
 
+	Enum,
+
 	Var,
 	Struct,
 	Function,
@@ -293,6 +295,9 @@ Token[] tokenize(string input) {
 				tokens ~= Token(TokenType.Return, lexeme);
 			else if (lexeme == "byte")
 				tokens ~= Token(TokenType.Byte, lexeme);
+			else if (lexeme == "enum")
+				tokens ~= Token(TokenType.Enum, lexeme);
+
 			else if (lexeme == "if")
 				tokens ~= Token(TokenType.If, lexeme);
 			else if (lexeme == "else")

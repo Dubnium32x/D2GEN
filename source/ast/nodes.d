@@ -361,3 +361,13 @@ struct ParamInfo {
     string type;
     string name;
 }
+
+class EnumDecl : ASTNode {
+    string name;
+    string[] values;
+
+    this(string name, string[] values) {
+        this.name = name;
+        this.values = values;
+    }
+}
