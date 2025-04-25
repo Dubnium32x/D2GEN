@@ -610,7 +610,7 @@ ASTNode parseStatement() {
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
         // --- PATCH: Pass visibility to FunctionDecl if needed ---
-        return new FunctionDecl(name, returnType, params, funcBody, visibility);
+        return new FunctionDecl(name, returnType, params, funcBody);
     }
     // Fallback for expression statements
     // Handles assignments to fields, arrays, and any complex lvalue
@@ -894,7 +894,7 @@ ASTNode parseFunctionDecl() {
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
         // --- PATCH: Pass visibility to FunctionDecl if needed ---
-        return new FunctionDecl(name, returnType, params, funcBody, visibility);
+        return new FunctionDecl(name, returnType, params, funcBody);
     }
     assert(0, "parseFunctionDecl called when current token is not a function declaration");
     return null;
