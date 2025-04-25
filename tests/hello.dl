@@ -1,47 +1,78 @@
-struct Vec2 {
+// Tests advanced struct and array features
+
+struct Vec3 {
     int x;
     int y;
+    int z;
 };
 
-struct Color {
-    int r;
-    int g;
-    int b;
+struct Material {
+    int type;
+    int shininess;
+    int colors[3]; // RGB
 };
 
-struct Sprite {
-    Vec2 pos;
-    Color tint;
+struct Model {
+    Vec3 position;
+    Vec3 rotation;
+    Vec3 scale;
+    Material material;
     int id;
 };
 
-public Sprite sprites[4];
-private Color palette[8];
-public auto score;
-private int debugFlag;
-public Vec2 checkpoints[2];
-private int hiddenValues[5];
+public Model models[5];
+public int matrix[4][4]; // 2D array
 
-void resetSprites() {
+void initMatrix() {
+    // Initialize identity matrix
     for (int i = 0; i < 4; i = i + 1) {
-        sprites[i].pos.x = 0;
-        sprites[i].pos.y = 0;
-        sprites[i].tint.r = 255;
-        sprites[i].tint.g = 255;
-        sprites[i].tint.b = 255;
-        sprites[i].id = i;
+        for (int j = 0; j < 4; j = j + 1) {
+            if (i == j) {
+                matrix[i][j] = 1;
+            } else {
+                matrix[i][j] = 0;
+            }
+        }
     }
 }
 
-void updateScore(int delta) {
-    // Test cast: forcibly cast score to int before assignment
-    score = cast(int)(score + delta);
-    debugFlag = score * 2;
-    hiddenValues[0] = cast(int)score;
+void setupModel(int index, int x, int y, int z) {
+    // Test dynamic indexing and compound expressions
+    models[index].position.x = x;
+    models[index].position.y = y;
+    models[index].position.z = z;
+    
+    // Test deeper nested struct access
+    models[index].material.type = 2;
+    models[index].material.shininess = index * 10;
+    
+    // Test array within struct
+    models[index].material.colors[0] = 255; // Red
+    models[index].material.colors[1] = 128; // Green
+    models[index].material.colors[2] = 0;   // Blue
+    
+    // Test copying one struct field to another
+    if (index > 0) {
+        models[index].scale = models[0].scale;
+    } else {
+        models[index].scale.x = 1;
+        models[index].scale.y = 1;
+        models[index].scale.z = 1;
+    }
+    
+    // Test complex expression to set ID
+    models[index].id = matrix[index % 4][index % 4] + 100;
 }
 
 void main() {
-    resetSprites();
-    updateScore(10);
-    palette[0].r = cast(int)128.0;
+    initMatrix();
+    
+    // Initialize models
+    for (int i = 0; i < 3; i = i + 1) {
+        setupModel(i, i * 10, i * 20, i * 30);
+    }
+    
+    // Test dynamic indexing using expressions
+    int idx = 1 + 1;  // Should be 2
+    models[idx].position.x = models[idx-1].position.x + models[0].position.x;
 }

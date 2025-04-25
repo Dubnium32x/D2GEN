@@ -120,10 +120,15 @@ ASTNode parseUnary() {
     if (check(TokenType.Cast)) {
         advance(); // consume 'cast'
         expect(TokenType.LParen);
-        string typeName = expect(TokenType.Identifier).lexeme;
+        string typeName;
+        if (checkAny(TokenType.Identifier, TokenType.Int, TokenType.String, TokenType.Bool, TokenType.Byte, TokenType.Short)) {
+            typeName = advance().lexeme;
+        } else {
+            throw new Exception(errorWithLine("Expected type name in cast, got " ~ current().lexeme));
+        }
         expect(TokenType.RParen);
         ASTNode expr = parseUnary();
-        return new UnaryExpr("cast:" ~ typeName, expr); // or define a CastExpr node
+        return new CastExpr(typeName, expr); // Use CastExpr node
     }
     return parsePrimary();
 }
@@ -558,10 +563,10 @@ ASTNode parseStatement() {
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.LParen);
         ParamInfo[] params;
+        VarParam[] varParams; // <-- Use VarParam[]
         if (!check(TokenType.RParen)) {
             do {
                 string paramType;
-                // Parse type (with possible [] after type or after name)
                 if (check(TokenType.Void) && peek().type == TokenType.Function) {
                     paramType = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
                     expect(TokenType.LParen);
@@ -600,6 +605,10 @@ ASTNode parseStatement() {
                     }
                     params ~= ParamInfo(paramType, paramName);
                     continue;
+                } else if (check(TokenType.Identifier)) {
+                    string varName = advance().lexeme;
+                    varParams ~= new VarParam(varName);
+                    continue;
                 } else {
                     throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                 }
@@ -609,8 +618,7 @@ ASTNode parseStatement() {
         }
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
-        // --- PATCH: Pass visibility to FunctionDecl if needed ---
-        return new FunctionDecl(name, returnType, params, funcBody);
+        return new FunctionDecl(name, returnType, params, funcBody, varParams);
     }
     // Fallback for expression statements
     // Handles assignments to fields, arrays, and any complex lvalue
@@ -841,11 +849,11 @@ ASTNode parseFunctionDecl() {
         string returnType = advance().lexeme;
         string name = expect(TokenType.Identifier).lexeme;
         expect(TokenType.LParen);
-        ParamInfo[] params;
+        ParamInfo[] params = [];
+        VarParam[] varParams; // <-- Use VarParam[]
         if (!check(TokenType.RParen)) {
             do {
                 string paramType;
-                // Parse type (with possible [] after type or after name)
                 if (check(TokenType.Void) && peek().type == TokenType.Function) {
                     paramType = expect(TokenType.Void).lexeme ~ " " ~ expect(TokenType.Function).lexeme;
                     expect(TokenType.LParen);
@@ -884,6 +892,10 @@ ASTNode parseFunctionDecl() {
                     }
                     params ~= ParamInfo(paramType, paramName);
                     continue;
+                } else if (check(TokenType.Identifier)) {
+                    string varName = advance().lexeme;
+                    varParams ~= new VarParam(varName);
+                    continue;
                 } else {
                     throw new Exception(errorWithLine("Expected type in parameter list, got " ~ current().lexeme));
                 }
@@ -893,7 +905,6 @@ ASTNode parseFunctionDecl() {
         }
         expect(TokenType.RParen);
         ASTNode[] funcBody = parseBlock();
-        // --- PATCH: Pass visibility to FunctionDecl if needed ---
         return new FunctionDecl(name, returnType, params, funcBody);
     }
     assert(0, "parseFunctionDecl called when current token is not a function declaration");

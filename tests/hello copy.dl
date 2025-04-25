@@ -15,12 +15,7 @@ struct Sprite {
     int id;
 };
 
-public Sprite sprites[4];
-private Color palette[8];
-public int score;
-private int debugFlag;
-public Vec2 checkpoints[2];
-private int hiddenValues[5];
+
 
 void resetSprites() {
     for (int i = 0; i < 4; i = i + 1) {

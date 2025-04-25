@@ -287,7 +287,20 @@ Token[] tokenize(string input) {
             size_t start = pos;
             while (pos < input.length && isDigit(input[pos]))
                 pos++;
-            tokens ~= Token(TokenType.Number, input[start .. pos]);
+            // Check for float (dot followed by digit)
+            if (pos < input.length && input[pos] == '.' && pos + 1 < input.length && isDigit(input[pos + 1])) {
+                // Skip the float and print an error
+                size_t floatStart = start;
+                pos++; // skip dot
+                while (pos < input.length && isDigit(input[pos]))
+                    pos++;
+                string lexeme = input[floatStart .. pos];
+                import std.stdio : writeln;
+                writeln("ERROR: Float literal '", lexeme, "' not supported on this platform.");
+                continue;
+            }
+            string lexeme = input[start .. pos];
+            tokens ~= Token(TokenType.Number, lexeme);
             continue;
         }
 
@@ -303,7 +316,7 @@ Token[] tokenize(string input) {
                 tokens ~= Token(TokenType.Int, lexeme);
             else if (lexeme == "return")
                 tokens ~= Token(TokenType.Return, lexeme);
-            else if (lexeme == "byte")
+            else if (lexeme == "byte") 	
                 tokens ~= Token(TokenType.Byte, lexeme);
             else if (lexeme == "enum")
                 tokens ~= Token(TokenType.Enum, lexeme);

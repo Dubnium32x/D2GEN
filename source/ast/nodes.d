@@ -293,17 +293,20 @@ class ArrayAccessExpr : ASTNode {
     }
 }
 
+
 class FunctionDecl : ASTNode {
     string name;
     string returnType;
     ParamInfo[] params;
     ASTNode[] funcBody;
+    VarParam[] varParams; // <-- Add this field
 
-    this(string name, string returnType, ParamInfo[] params, ASTNode[] funcBody) {
+    this(string name, string returnType, ParamInfo[] params, ASTNode[] funcBody, VarParam[] varParams = []) {
         this.name = name;
         this.returnType = returnType;
         this.params = params;
         this.funcBody = funcBody;
+        this.varParams = varParams;
     }
 }
 
@@ -372,4 +375,25 @@ class EnumDecl : ASTNode {
         this.name = name;
         this.values = values;
     }
+}
+
+class VarParam : ASTNode {
+    string name;
+    this(string name) {
+        this.name = name;
+    }
+}
+
+class CastExpr : ASTNode {
+    string typeName;
+    ASTNode expr;
+    this(string typeName, ASTNode expr) {
+        this.typeName = typeName;
+        this.expr = expr;
+    }
+}
+
+class FloatLiteral : ASTNode {
+    double value;
+    this(double v) { value = v; }
 }
