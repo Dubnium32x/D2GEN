@@ -266,21 +266,24 @@ ASTNode parseStatement() {
                 throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
             }
             string varName = expect(TokenType.Identifier).lexeme;
-            // --- PATCH: Support array declaration after public/private ---
+            // --- PATCH: Support multi-dimensional array declaration after public/private ---
             if (check(TokenType.LBracket)) {
-                advance();
-                ASTNode sizeExpr = null;
-                if (!check(TokenType.RBracket)) {
-                    sizeExpr = parseExpression();
+                ASTNode[] dimensions;
+                while (check(TokenType.LBracket)) {
+                    advance();
+                    ASTNode sizeExpr = null;
+                    if (!check(TokenType.RBracket)) {
+                        sizeExpr = parseExpression();
+                    }
+                    expect(TokenType.RBracket);
+                    dimensions ~= sizeExpr;
                 }
-                expect(TokenType.RBracket);
                 // Defensive: Only allow semicolon or comma after array declaration
                 if (check(TokenType.Comma)) {
                     writeln("ERROR: Comma after array declaration is not supported. Only one array variable per statement.");
                     throw new Exception(errorWithLine("Comma after array declaration is not supported. Only one array variable per statement."));
                 }
-                ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
-                decls ~= new ArrayDecl(typeToken.lexeme, varName, elements);
+                decls ~= new ArrayDecl(typeToken.lexeme, varName, dimensions);
                 break; // Only one array decl per statement
             } else {
                 ASTNode val;
@@ -474,20 +477,23 @@ ASTNode parseStatement() {
         expect(TokenType.CommentBlockEnd);
         return new CommentBlockStmt(comment);
     }
-    // Array declaration: type identifier [ size ];
+    // Array declaration: type identifier [ size ] [ size ] ... ;
     if ((isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto)
         && peek().type == TokenType.Identifier && tokens.length > index+2 && tokens[index+2].type == TokenType.LBracket) {
         string type = advance().lexeme;
         string name = expect(TokenType.Identifier).lexeme;
-        expect(TokenType.LBracket);
-        ASTNode sizeExpr = null;
-        if (!check(TokenType.RBracket)) {
-            sizeExpr = parseExpression(); // Accepts any expression, but usually a number
+        ASTNode[] dimensions;
+        while (check(TokenType.LBracket)) {
+            advance();
+            ASTNode sizeExpr = null;
+            if (!check(TokenType.RBracket)) {
+                sizeExpr = parseExpression();
+            }
+            expect(TokenType.RBracket);
+            dimensions ~= sizeExpr;
         }
-        expect(TokenType.RBracket);
         expect(TokenType.Semicolon);
-        ASTNode[] elements = sizeExpr is null ? [] : [sizeExpr];
-        return new ArrayDecl(type, name, elements);
+        return new ArrayDecl(type, name, dimensions);
     }
     // General variable declaration
     else if (isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto) {
@@ -704,6 +710,27 @@ ASTNode[] parse(Token[] inputTokens) {
     ASTNode[] nodes;
     index = 0;
     tokens = inputTokens;
+
+    // --- PATCH: Parse all struct/enum declarations first so structTypes is filled, skipping comments ---
+    while (!isAtEnd()) {
+        // Skip comments and blank lines
+        if (check(TokenType.Comment) || check(TokenType.CommentBlockStart)) {
+            advance();
+            continue;
+        }
+        if (check(TokenType.Struct)) {
+            nodes ~= parseStructDecl();
+            continue;
+        }
+        if (check(TokenType.Enum)) {
+            nodes ~= parseEnumDecl();
+            continue;
+        }
+        // Only break if it's not a struct/enum/comment
+        break;
+    }
+
+    // Now parse the rest of the file
     while (!isAtEnd()) {
         writeln("Parsing token: ", current().lexeme, " (", current().type, ")");
         if (check(TokenType.Import)) {
@@ -714,12 +741,13 @@ ASTNode[] parse(Token[] inputTokens) {
             expect(TokenType.Semicolon);
             continue;
         }
-        if (check(TokenType.Enum)) {
-            nodes ~= parseEnumDecl();
-            continue;
-        }
+        // Structs and enums already handled above
         if (check(TokenType.Struct)) {
             nodes ~= parseStructDecl();
+            continue;
+        }
+        if (check(TokenType.Enum)) {
+            nodes ~= parseEnumDecl();
             continue;
         }
         // Function declaration: type identifier '(' or structType identifier '(' or public/private

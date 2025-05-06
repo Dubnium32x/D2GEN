@@ -1,27 +1,27 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 4/24/2025 8:19:03 PM
+Created On: 5/6/2025 4:05:17 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          JSR __global_init
-00001006  4EF9 000010F6              4          JMP main
+00001006  4EF9 00001168              4          JMP main
 0000100C                             5  
 0000100C                             6  __global_init:
 0000100C  4E75                       7          rts
-0000100E                             8  initBoxes:
+0000100E                             8  initMatrix:
 0000100E                             9          ; Function prologue
 0000100E  2F0E                      10          move.l A6, -(SP)
 00001010  2C4F                      11          move.l SP, A6
 00001012                            12          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
 00001012  7200                      13          move.l #0, D1
-00001014  23C1 00001126             14          move.l D1, i
+00001014  23C1 0000123C             14          move.l D1, i
 0000101A                            15  for_start_0:
 0000101A                            16          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
 0000101A                            17          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000101A  2439 00001126             18          move.l i, D2
+0000101A  2439 0000123C             18          move.l i, D2
 00001020                            19          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001020  7603                      20          move.l #3, D3
+00001020  7604                      20          move.l #4, D3
 00001022  B883                      21          cmp.l D3, D4
 00001024  6D00 0008                 22          blt Ltrue_2
 00001028  7800                      23          move.l #0, D4
@@ -32,171 +32,359 @@ Created On: 4/24/2025 8:19:03 PM
 00001030  2004                      28          move.l D4, D0
 00001032  B8BC 00000000             29          cmp.l #0, D4
 00001038  6700 00A0                 30          beq for_end_1
-0000103C                            31          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000103C                            32          ; DEBUG: Field path: x.min, Base type: ArrayAccessExpr
-0000103C                            33          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000103C  2239 00001126             34          move.l i, D1
-00001042                            35          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001042                            36          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001042  2439 00001126             37          move.l i, D2
-00001048                            38          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001048  760A                      39          move.l #10, D3
-0000104A  2002                      40          move.l D2, D0
-0000104C  C1C3                      41          muls D3, D0
-0000104E                            42          ; DEBUG: Field: x, ElementSize: 0, Offset: 0
-0000104E                            43          ; Fallback/Error: Struct array assignment not fully handled for boxes
-0000104E  23C0 0000112A             44          move.l D0, boxes
-00001054                            45          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001054                            46          ; DEBUG: Field path: y.min, Base type: ArrayAccessExpr
-00001054                            47          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001054  2239 00001126             48          move.l i, D1
-0000105A                            49          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-0000105A                            50          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000105A  2439 00001126             51          move.l i, D2
-00001060                            52          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001060  7614                      53          move.l #20, D3
-00001062  2002                      54          move.l D2, D0
-00001064  C1C3                      55          muls D3, D0
-00001066                            56          ; DEBUG: Field: y, ElementSize: 0, Offset: 0
-00001066                            57          ; Fallback/Error: Struct array assignment not fully handled for boxes
-00001066  23C0 0000112A             58          move.l D0, boxes
-0000106C                            59          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000106C                            60          ; DEBUG: Field path: x.max, Base type: ArrayAccessExpr
-0000106C                            61          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000106C  2239 00001126             62          move.l i, D1
-00001072                            63          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001072                            64          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001072                            65          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001072  2439 00001126             66          move.l i, D2
-00001078                            67          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001078  760A                      68          move.l #10, D3
-0000107A  2002                      69          move.l D2, D0
-0000107C  C1C3                      70          muls D3, D0
-0000107E                            71          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000107E  7A05                      72          move.l #5, D5
-00001080  2C00                      73          move.l D0, D6
-00001082  DC85                      74          add.l D5, D6
-00001084                            75          ; DEBUG: Field: x, ElementSize: 0, Offset: 0
-00001084                            76          ; Fallback/Error: Struct array assignment not fully handled for boxes
-00001084  23C6 0000112A             77          move.l D6, boxes
-0000108A                            78          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000108A                            79          ; DEBUG: Field path: y.max, Base type: ArrayAccessExpr
-0000108A                            80          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000108A  2239 00001126             81          move.l i, D1
-00001090                            82          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001090                            83          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001090                            84          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001090  2439 00001126             85          move.l i, D2
-00001096                            86          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001096  7614                      87          move.l #20, D3
-00001098  2002                      88          move.l D2, D0
-0000109A  C1C3                      89          muls D3, D0
-0000109C                            90          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000109C  7A05                      91          move.l #5, D5
-0000109E  2C00                      92          move.l D0, D6
-000010A0  DC85                      93          add.l D5, D6
-000010A2                            94          ; DEBUG: Field: y, ElementSize: 0, Offset: 0
-000010A2                            95          ; Fallback/Error: Struct array assignment not fully handled for boxes
-000010A2  23C6 0000112A             96          move.l D6, boxes
-000010A8                            97          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-000010A8                            98          ; DEBUG: Field path: colorIndex, Base type: ArrayAccessExpr
-000010A8                            99          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010A8  2239 00001126            100          move.l i, D1
-000010AE                           101          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000010AE                           102          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010AE  2439 00001126            103          move.l i, D2
-000010B4                           104          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010B4  7610                     105          move.l #16, D3
-000010B6  2802                     106          move.l D2, D4
-000010B8  83C3                     107          divs D3, D1
-000010BA  C3C3                     108          muls D3, D1
-000010BC  9481                     109          sub.l D1, D2
-000010BE                           110          ; DEBUG: Field: colorIndex, ElementSize: 0, Offset: 0
-000010BE                           111          ; Fallback/Error: Struct array assignment not fully handled for boxes
-000010BE  23C4 0000112A            112          move.l D4, boxes
-000010C4                           113          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
-000010C4                           114          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000010C4                           115          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010C4  2239 00001126            116          move.l i, D1
-000010CA                           117          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010CA  7401                     118          move.l #1, D2
-000010CC  2601                     119          move.l D1, D3
-000010CE  D682                     120          add.l D2, D3
-000010D0  23C3 00001126            121          move.l D3, i
-000010D6  6000 FF42                122          bra for_start_0
-000010DA                           123  for_end_1:
-000010DA                           124          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-000010DA                           125          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010DA  722A                     126          move.l #42, D1
-000010DC  41F9 0000112E            127          lea colorTable, A0
-000010E2  2141 0000                128          move.l D1, 0(A0)
-000010E6                           129          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-000010E6                           130          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010E6  7263                     131          move.l #99, D1
-000010E8  41F9 0000112E            132          lea colorTable, A0
-000010EE  2141 0004                133          move.l D1, 4(A0)
-000010F2                           134          ; Function epilogue
-000010F2  2C5F                     135          move.l (SP)+, A6
-000010F4  4E75                     136          rts
-000010F6                           137  main:
-000010F6                           138          ; Function prologue
-000010F6  2F0E                     139          move.l A6, -(SP)
-000010F8  2C4F                     140          move.l SP, A6
-000010FA  6100 FF12                141          bsr initBoxes
-000010FE                           142          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-000010FE                           143          ; DEBUG: Field path: x.min, Base type: ArrayAccessExpr
-000010FE                           144          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010FE  7201                     145          move.l #1, D1
-00001100                           146          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001100  747B                     147          move.l #123, D2
-00001102                           148          ; DEBUG: Field: x, ElementSize: 0, Offset: 0
-00001102                           149          ; Fallback/Error: Struct array assignment not fully handled for boxes
-00001102  23C2 0000112A            150          move.l D2, boxes
-00001108                           151          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001108                           152          ; DEBUG: Field path: colorIndex, Base type: ArrayAccessExpr
-00001108                           153          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001108  7202                     154          move.l #2, D1
-0000110A                           155          ; DEBUG: generateExpr called with type: ast.nodes.ArrayAccessExpr
-0000110A                           156          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000110A  7401                     157          move.l #1, D2
-0000110C  41F9 0000112E            158          lea colorTable, A0
-00001112  2602                     159          move.l D2, D3
-00001114  C6FC 0004                160          mulu #4, D3
-00001118  D1C3                     161          add.l D3, A0
-0000111A  2610                     162          move.l (A0), D3
-0000111C                           163          ; DEBUG: Field: colorIndex, ElementSize: 0, Offset: 0
-0000111C                           164          ; Fallback/Error: Struct array assignment not fully handled for boxes
-0000111C  23C3 0000112A            165          move.l D3, boxes
-00001122                           166          ; Function epilogue
-00001122  2C5F                     167          move.l (SP)+, A6
-00001124  4E75                     168          rts
-00001126                           169  
-00001126                           170          ; String literals
-00001126                           171          ; Scalar and struct variables
-00001126                           172  i:    ds.l 1
-0000112A                           173  boxes:    ds.l 1
-0000112E                           174  colorTable:    ds.l 1
-00001132                           175          ; Array labels
-00001132                           176          ; Loop variables
-00001132                           177  
-00001132  FFFF FFFF                178          SIMHALT
-Line 179 WARNING: Address expected
-00001136                           179          END
+0000103C                            31          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000103C  7200                      32          move.l #0, D1
+0000103E  23C1 00001244             33          move.l D1, j
+00001044                            34  for_start_4:
+00001044                            35          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001044                            36          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001044  2439 00001244             37          move.l j, D2
+0000104A                            38          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000104A  7604                      39          move.l #4, D3
+0000104C  B883                      40          cmp.l D3, D4
+0000104E  6D00 0008                 41          blt Ltrue_6
+00001052  7800                      42          move.l #0, D4
+00001054  6000 0004                 43          bra Lend_7
+00001058                            44  Ltrue_6:
+00001058  7801                      45          move.l #1, D4
+0000105A                            46  Lend_7:
+0000105A  2004                      47          move.l D4, D0
+0000105C  B8BC 00000000             48          cmp.l #0, D4
+00001062  6700 0060                 49          beq for_end_5
+00001066                            50          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001066                            51          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001066  2239 0000123C             52          move.l i, D1
+0000106C                            53          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+0000106C  2439 00001244             54          move.l j, D2
+00001072  B682                      55          cmp.l D2, D3
+00001074  6700 0008                 56          beq Ltrue_10
+00001078  7600                      57          move.l #0, D3
+0000107A  6000 0004                 58          bra Lend_11
+0000107E                            59  Ltrue_10:
+0000107E  7601                      60          move.l #1, D3
+00001080                            61  Lend_11:
+00001080  2003                      62          move.l D3, D0
+00001082  B3C3                      63          cmpa.l D3, A1
+00001084  6700 0018                 64          beq else_8
+00001088                            65          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+00001088                            66          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001088  7201                      67          move.l #1, D1
+0000108A                            68          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+0000108A  2439 00001244             69          move.l j, D2
+00001090  2602                      70          move.l D2, D3
+00001092  C6FC 0004                 71          mulu #4, D3
+Line 72 ERROR: Invalid syntax
+00001096                            72          lea <complex>, A0
+00001096  2181 3800                 73          move.l D1, (A0, D3.l)
+0000109A  6000 0014                 74          bra endif_9
+0000109E                            75  else_8:
+0000109E                            76          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+0000109E                            77          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000109E  7200                      78          move.l #0, D1
+000010A0                            79          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010A0  2439 00001244             80          move.l j, D2
+000010A6  2602                      81          move.l D2, D3
+000010A8  C6FC 0004                 82          mulu #4, D3
+Line 83 ERROR: Invalid syntax
+000010AC                            83          lea <complex>, A0
+000010AC  2181 3800                 84          move.l D1, (A0, D3.l)
+000010B0                            85  endif_9:
+000010B0                            86          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
+000010B0                            87          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000010B0                            88          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010B0  2239 00001244             89          move.l j, D1
+000010B6                            90          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000010B6  7401                      91          move.l #1, D2
+000010B8  2601                      92          move.l D1, D3
+000010BA  D682                      93          add.l D2, D3
+000010BC  23C3 00001244             94          move.l D3, j
+000010C2  6080                      95          bra for_start_4
+000010C4                            96  for_end_5:
+000010C4                            97          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
+000010C4                            98          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000010C4                            99          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010C4  2239 0000123C            100          move.l i, D1
+000010CA                           101          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000010CA  7401                     102          move.l #1, D2
+000010CC  2601                     103          move.l D1, D3
+000010CE  D682                     104          add.l D2, D3
+000010D0  23C3 0000123C            105          move.l D3, i
+000010D6  6000 FF42                106          bra for_start_0
+000010DA                           107  for_end_1:
+000010DA                           108          ; Function epilogue
+000010DA  2C5F                     109          move.l (SP)+, A6
+000010DC  4E75                     110          rts
+000010DE                           111  setupModel:
+000010DE                           112          ; Function prologue
+000010DE  2F0E                     113          move.l A6, -(SP)
+000010E0  2C4F                     114          move.l SP, A6
+000010E2  202E 0008                115          move.l 8(A6), D0
+000010E6  222E 000C                116          move.l 12(A6), D1
+000010EA  242E 0010                117          move.l 16(A6), D2
+000010EE  262E 0014                118          move.l 20(A6), D3
+000010F2                           119          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000010F2                           120          ; DEBUG: Field path: x.position, Base type: ArrayAccessExpr
+000010F2                           121          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           122          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           123          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000010F2                           124          ; DEBUG: Field path: y.position, Base type: ArrayAccessExpr
+000010F2                           125          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           126          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           127          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000010F2                           128          ; DEBUG: Field path: z.position, Base type: ArrayAccessExpr
+000010F2                           129          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           130          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           131          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000010F2                           132          ; DEBUG: Field path: type.material, Base type: ArrayAccessExpr
+000010F2                           133          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F2                           134          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000010F2  7202                     135          move.l #2, D1
+000010F4                           136          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000010F4                           137          ; DEBUG: Field path: shininess.material, Base type: ArrayAccessExpr
+000010F4                           138          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F4                           139          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000010F4                           140          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000010F4                           141          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000010F4  720A                     142          move.l #10, D1
+000010F6  C1C1                     143          muls D1, D0
+000010F8                           144          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+000010F8                           145          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000010F8  223C 000000FF            146          move.l #255, D1
+Line 147 ERROR: Invalid syntax
+000010FE                           147          lea <complex>, A0
+000010FE  2141 0000                148          move.l D1, 0(A0)
+00001102                           149          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+00001102                           150          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001102  223C 00000080            151          move.l #128, D1
+Line 152 ERROR: Invalid syntax
+00001108                           152          lea <complex>, A0
+00001108  2141 0004                153          move.l D1, 4(A0)
+0000110C                           154          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+0000110C                           155          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000110C  7200                     156          move.l #0, D1
+Line 157 ERROR: Invalid syntax
+0000110E                           157          lea <complex>, A0
+0000110E  2141 0008                158          move.l D1, 8(A0)
+00001112                           159          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001112                           160          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001112                           161          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001112  7200                     162          move.l #0, D1
+00001114  B481                     163          cmp.l D1, D2
+00001116  6E00 0008                164          bgt Ltrue_14
+0000111A  7400                     165          move.l #0, D2
+0000111C  6000 0004                166          bra Lend_15
+00001120                           167  Ltrue_14:
+00001120  7401                     168          move.l #1, D2
+00001122                           169  Lend_15:
+00001122  2002                     170          move.l D2, D0
+00001124  B3C2                     171          cmpa.l D2, A1
+00001126  6700 001A                172          beq else_12
+0000112A                           173          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+0000112A                           174          ; DEBUG: Field path: scale, Base type: ArrayAccessExpr
+0000112A                           175          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+0000112A                           176          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
+0000112A  43F9 00001238            177          lea models, A1
+00001130                           178          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001130  7400                     179          move.l #0, D2
+00001132  2602                     180          move.l D2, D3
+00001134  C6FC 0004                181          mulu #4, D3
+00001138  D3C3                     182          add.l D3, A1
+0000113A  2229 0000                183          move.l 0(A1), D1
+0000113E  6000 0008                184          bra endif_13
+00001142                           185  else_12:
+00001142                           186          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+00001142                           187          ; DEBUG: Field path: x.scale, Base type: ArrayAccessExpr
+00001142                           188          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001142                           189          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001142  7201                     190          move.l #1, D1
+00001144                           191          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+00001144                           192          ; DEBUG: Field path: y.scale, Base type: ArrayAccessExpr
+00001144                           193          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001144                           194          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001144  7201                     195          move.l #1, D1
+00001146                           196          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+00001146                           197          ; DEBUG: Field path: z.scale, Base type: ArrayAccessExpr
+00001146                           198          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001146                           199          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001146  7201                     200          move.l #1, D1
+00001148                           201  endif_13:
+00001148                           202          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+00001148                           203          ; DEBUG: Field path: id, Base type: ArrayAccessExpr
+00001148                           204          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001148                           205          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001148                           206          ; DEBUG: generateExpr called with type: ast.nodes.ArrayAccessExpr
+Line 207 ERROR: Invalid syntax
+00001148                           207          lea <complex>, A1
+00001148                           208          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001148                           209          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001148                           210          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001148  7404                     211          move.l #4, D2
+0000114A  2600                     212          move.l D0, D3
+0000114C  83C2                     213          divs D2, D1
+0000114E  C3C2                     214          muls D2, D1
+00001150  9081                     215          sub.l D1, D0
+00001152  2403                     216          move.l D3, D2
+00001154  C4FC 0004                217          mulu #4, D2
+00001158  D3C2                     218          add.l D2, A1
+0000115A  2229 0000                219          move.l 0(A1), D1
+0000115E                           220          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000115E  7464                     221          move.l #100, D2
+00001160  2601                     222          move.l D1, D3
+00001162  D682                     223          add.l D2, D3
+00001164                           224          ; Function epilogue
+00001164  2C5F                     225          move.l (SP)+, A6
+00001166  4E75                     226          rts
+00001168                           227  main:
+00001168                           228          ; Function prologue
+00001168  2F0E                     229          move.l A6, -(SP)
+0000116A  2C4F                     230          move.l SP, A6
+0000116C  6100 FEA0                231          bsr initMatrix
+00001170                           232          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001170  7200                     233          move.l #0, D1
+00001172  23C1 0000123C            234          move.l D1, i
+00001178                           235  for_start_16:
+00001178                           236          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001178                           237          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001178  2439 0000123C            238          move.l i, D2
+0000117E                           239          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000117E  7603                     240          move.l #3, D3
+00001180  B883                     241          cmp.l D3, D4
+00001182  6D00 0008                242          blt Ltrue_18
+00001186  7800                     243          move.l #0, D4
+00001188  6000 0004                244          bra Lend_19
+0000118C                           245  Ltrue_18:
+0000118C  7801                     246          move.l #1, D4
+0000118E                           247  Lend_19:
+0000118E  2004                     248          move.l D4, D0
+00001190  B8BC 00000000            249          cmp.l #0, D4
+00001196  6700 0052                250          beq for_end_17
+0000119A                           251          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+0000119A                           252          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+0000119A  2239 0000123C            253          move.l i, D1
+000011A0                           254          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011A0  741E                     255          move.l #30, D2
+000011A2  2001                     256          move.l D1, D0
+000011A4  C1C2                     257          muls D2, D0
+000011A6  2F00                     258          move.l D0, -(SP)
+000011A8                           259          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000011A8                           260          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000011A8  2239 0000123C            261          move.l i, D1
+000011AE                           262          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011AE  7414                     263          move.l #20, D2
+000011B0  2001                     264          move.l D1, D0
+000011B2  C1C2                     265          muls D2, D0
+000011B4  2F00                     266          move.l D0, -(SP)
+000011B6                           267          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000011B6                           268          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000011B6  2239 0000123C            269          move.l i, D1
+000011BC                           270          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011BC  740A                     271          move.l #10, D2
+000011BE  2001                     272          move.l D1, D0
+000011C0  C1C2                     273          muls D2, D0
+000011C2  2F00                     274          move.l D0, -(SP)
+000011C4                           275          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000011C4  2239 0000123C            276          move.l i, D1
+000011CA  2F01                     277          move.l D1, -(SP)
+000011CC  6100 FF10                278          bsr setupModel
+000011D0  DFFC 00000010            279          add.l #16, SP
+000011D6                           280          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
+000011D6                           281          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000011D6                           282          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000011D6  2239 0000123C            283          move.l i, D1
+000011DC                           284          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011DC  7401                     285          move.l #1, D2
+000011DE  2601                     286          move.l D1, D3
+000011E0  D682                     287          add.l D2, D3
+000011E2  23C3 0000123C            288          move.l D3, i
+000011E8  608E                     289          bra for_start_16
+000011EA                           290  for_end_17:
+000011EA                           291          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000011EA                           292          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011EA  7201                     293          move.l #1, D1
+000011EC                           294          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+000011EC  7401                     295          move.l #1, D2
+000011EE  2601                     296          move.l D1, D3
+000011F0  D682                     297          add.l D2, D3
+000011F2  23C3 00001240            298          move.l D3, idx
+000011F8                           299          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+000011F8                           300          ; DEBUG: Field path: x.position, Base type: ArrayAccessExpr
+000011F8                           301          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+000011F8  2239 00001240            302          move.l idx, D1
+000011FE                           303          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+000011FE                           304          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
+000011FE  45F9 00001238            305          lea models, A2
+00001204                           306          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
+00001204                           307          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+00001204  2639 00001240            308          move.l idx, D3
+0000120A                           309          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+0000120A  7801                     310          move.l #1, D4
+0000120C  2A03                     311          move.l D3, D5
+0000120E  9A84                     312          sub.l D4, D5
+00001210  2605                     313          move.l D5, D3
+00001212  C6FC 0004                314          mulu #4, D3
+00001216  D5C3                     315          add.l D3, A2
+00001218  242A 0000                316          move.l 0(A2), D2
+0000121C                           317          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
+0000121C  47F9 00001238            318          lea models, A3
+00001222                           319          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+00001222  7800                     320          move.l #0, D4
+00001224  2A04                     321          move.l D4, D5
+00001226  CAFC 0004                322          mulu #4, D5
+0000122A  D7C5                     323          add.l D5, A3
+0000122C  262B 0000                324          move.l 0(A3), D3
+00001230  2802                     325          move.l D2, D4
+00001232  D883                     326          add.l D3, D4
+00001234                           327          ; Function epilogue
+00001234  2C5F                     328          move.l (SP)+, A6
+00001236  4E75                     329          rts
+00001238                           330  
+00001238                           331          ; String literals
+00001238                           332          ; Scalar and struct variables
+00001238                           333  models:    ds.l 1
+0000123C                           334  i:    ds.l 1
+Line 335 ERROR: Illegal symbol
+00001240                           335  <complex>:    ds.l 1
+00001240                           336  idx:    ds.l 1
+00001244                           337  j:    ds.l 1
+00001248                           338          ; Array labels
+00001248                           339          ; Loop variables
+00001248                           340  
+00001248  FFFF FFFF                341          SIMHALT
+Line 342 WARNING: Address expected
+0000124C                           342          END
 
-No errors detected
+7 errors detected
 1 warning generated
 
 
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-BOXES               112A
-COLORTABLE          112E
+ELSE_12             1142
+ELSE_8              109E
+ENDIF_13            1148
+ENDIF_9             10B0
 FOR_END_1           10DA
+FOR_END_17          11EA
+FOR_END_5           10C4
 FOR_START_0         101A
-I                   1126
-INITBOXES           100E
+FOR_START_16        1178
+FOR_START_4         1044
+I                   123C
+IDX                 1240
+INITMATRIX          100E
+J                   1244
+LEND_11             1080
+LEND_15             1122
+LEND_19             118E
 LEND_3              1030
+LEND_7              105A
+LTRUE_10            107E
+LTRUE_14            1120
+LTRUE_18            118C
 LTRUE_2             102E
-MAIN                10F6
+LTRUE_6             1058
+MAIN                1168
+MODELS              1238
+SETUPMODEL          10DE
 __GLOBAL_INIT       100C

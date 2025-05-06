@@ -1,5 +1,7 @@
 module backend.codegen;
 
+import std.typecons : Tuple, tuple;
+
 import std.stdio;
 import std.string;
 import std.array;
@@ -936,6 +938,160 @@ string resolveNestedStructFieldName(ASTNode node) {
     return "";
 }
 
+
+// Helper: Recursively compute address and offset for any lvalue (VarExpr, ArrayAccessExpr, StructFieldAccess, nested)
+// Returns: tuple (addrReg, offset)
+Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[string] varAddrs) {
+    import std.typecons : tuple, Tuple;
+    // Helper to resolve the type of an ASTNode
+    string resolveNodeType(ASTNode node) {
+        if (auto var = cast(VarExpr) node) {
+            if (var.name in varTypes) return varTypes[var.name];
+            return "";
+        } else if (auto access = cast(ArrayAccessExpr) node) {
+            // Get element type from arrayElementTypes or varTypes
+            string arrName = access.arrayName;
+            if (arrName in arrayElementTypes) return arrayElementTypes[arrName];
+            if (arrName in varTypes) {
+                string t = varTypes[arrName];
+                // e.g. "int[]" or "Sprite[]" -> "int" or "Sprite"
+                auto idx = t.indexOf("[");
+                if (idx != -1) return t[0 .. idx];
+                return t;
+            }
+            return "";
+        } else if (auto field = cast(StructFieldAccess) node) {
+            // No type info available in structFieldOffsets, only offset. Return empty string.
+            return "";
+        }
+        return "";
+    }
+
+    // Base case: variable
+    if (auto var = cast(VarExpr) expr) {
+        string addrReg = "A" ~ to!string(regIndex++);
+        string addr = getOrCreateVarAddr(var.name, varAddrs);
+        lines ~= "        lea " ~ addr ~ ", " ~ addrReg;
+        regIndex--; // Free the register after use
+        return tuple(addrReg, 0);
+    }
+    // Array access: arr[idx] or nested (multi-dim)
+    if (auto access = cast(ArrayAccessExpr) expr) {
+        // Support both simple and nested array base
+        string baseReg;
+        int baseOffset = 0;
+        ASTNode baseNode = null;
+        static if (__traits(hasMember, typeof(access), "baseExpr")) {
+            baseNode = access.baseExpr;
+        }
+        int regIndexStart = regIndex;
+        if (baseNode is null) {
+            // Try to treat arrayName as a variable name
+            string arrName = access.arrayName;
+            baseReg = "A" ~ to!string(regIndex++);
+            string baseAddr = getOrCreateVarAddr(arrName, varAddrs);
+            lines ~= "        lea " ~ baseAddr ~ ", " ~ baseReg;
+        } else {
+            // Recursively compute base address
+            auto baseResult = generateAddressExpr(baseNode, lines, regIndex, varAddrs);
+            baseReg = baseResult[0];
+            baseOffset = baseResult[1];
+        }
+        int indexStart = regIndex;
+        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+        int indexEnd = regIndex;
+        string offsetReg = nextReg(regIndex);
+        // Determine element size
+        string elemType = resolveNodeType(expr); // type of element
+        int elemSize = 4;
+        if (elemType in structSizes) elemSize = structSizes[elemType];
+        lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+        lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg;
+        if (baseOffset != 0)
+            lines ~= "        add.l #" ~ to!string(baseOffset) ~ ", " ~ offsetReg;
+        lines ~= "        add.l " ~ offsetReg ~ ", " ~ baseReg;
+        // Free temporaries used for indexReg and offsetReg, and for baseReg if it was a temporary
+        regIndex = regIndexStart;
+        return tuple(baseReg, 0);
+    }
+    // Struct field access: base.field
+    if (auto field = cast(StructFieldAccess) expr) {
+        int regIndexStart = regIndex;
+        auto baseResult = generateAddressExpr(field.baseExpr, lines, regIndex, varAddrs);
+        string baseReg = baseResult[0];
+        int baseOffset = baseResult[1];
+        // Determine struct type
+        string structType = resolveNodeType(field.baseExpr);
+        int fieldOffset = 0;
+        if (structType.length && structType in structFieldOffsets && field.field in structFieldOffsets[structType]) {
+            fieldOffset = structFieldOffsets[structType][field.field];
+        }
+        regIndex = regIndexStart; // Free temporaries used in this call
+        return tuple(baseReg, baseOffset + fieldOffset);
+    }
+    // --- PATCH: Recursively handle wrappers and all common lvalue AST node types ---
+    // Handle ParenExpr: just recurse into .expr
+    if (expr.classinfo.name == "ParenExpr") {
+        static if (__traits(hasMember, typeof(expr), "expr")) {
+            auto inner = mixin("expr.expr");
+            if (inner !is null && inner !is expr) {
+                lines ~= "; DEBUG: Recursing into ParenExpr";
+                return generateAddressExpr(inner, lines, regIndex, varAddrs);
+            }
+        }
+    }
+    // Handle CastExpr: just recurse into .expr
+    if (expr.classinfo.name == "CastExpr") {
+        static if (__traits(hasMember, typeof(expr), "expr")) {
+            auto inner = mixin("expr.expr");
+            if (inner !is null && inner !is expr) {
+                lines ~= "; DEBUG: Recursing into CastExpr";
+                return generateAddressExpr(inner, lines, regIndex, varAddrs);
+            }
+        }
+    }
+    // Handle UnaryExpr: address-of operator (&)
+    if (expr.classinfo.name == "UnaryExpr") {
+        static if (__traits(hasMember, typeof(expr), "op") && __traits(hasMember, typeof(expr), "expr")) {
+            auto op = mixin("expr.op");
+            auto inner = mixin("expr.expr");
+            if (op == "&" && inner !is null && inner !is expr) {
+                lines ~= "; DEBUG: Recursing into UnaryExpr &";
+                return generateAddressExpr(inner, lines, regIndex, varAddrs);
+            }
+        }
+    }
+    // Handle generic wrappers with .expr field (defensive, for any other wrappers)
+    static if (__traits(hasMember, typeof(expr), "expr")) {
+        auto inner = mixin("expr.expr");
+        if (inner !is null && inner !is expr) {
+            lines ~= "; DEBUG: Recursing into .expr of " ~ expr.classinfo.name;
+            return generateAddressExpr(inner, lines, regIndex, varAddrs);
+        }
+    }
+    // Handle wrappers with .baseExpr (e.g., for custom AST wrappers)
+    static if (__traits(hasMember, typeof(expr), "baseExpr")) {
+        auto inner = mixin("expr.baseExpr");
+        if (inner !is null && inner !is expr) {
+            lines ~= "; DEBUG: Recursing into .baseExpr of " ~ expr.classinfo.name;
+            return generateAddressExpr(inner, lines, regIndex, varAddrs);
+        }
+    }
+    // Handle wrappers with .target (e.g., for PostfixExpr, etc.)
+    static if (__traits(hasMember, typeof(expr), "target")) {
+        auto inner = mixin("expr.target");
+        if (inner !is null && inner !is expr) {
+            lines ~= "; DEBUG: Recursing into .target of " ~ expr.classinfo.name;
+            return generateAddressExpr(inner, lines, regIndex, varAddrs);
+        }
+    }
+    // Fallback: emit error, do NOT emit any lea or invalid address computation
+    lines ~= "; ERROR: generateAddressExpr fallback for expr type " ~ expr.classinfo.name;
+    lines ~= "        ; Unable to compute address for this lvalue at compile time. No address emitted.";
+    // Return a known register, but do not emit any lea or address computation
+    return tuple("A0", 0); // Use A0 as a dummy, but do not emit any lea
+}
+
 string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[string] varAddrs) {
     // --- NEW TOP-LEVEL DEBUG ---
     lines ~= "        ; DEBUG: generateExpr called with type: " ~ expr.classinfo.name;
@@ -975,134 +1131,13 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     // --- END PATCH ---
 
     if (auto field = cast(StructFieldAccess) expr) {
-        // --- REVISED LOGIC for reading struct fields ---
-        // Check if the ultimate base is an array access, handling nesting
-        ASTNode base = field.baseExpr;
-        ArrayAccessExpr arrAccess = null;
-        string[] nestedFields = [field.field]; // Store field names bottom-up (e.g., [x, pos])
-
-        // --- FIX: Correct while loop syntax ---
-        StructFieldAccess nestedField;
-        while ((nestedField = cast(StructFieldAccess) base) !is null) {
-            nestedFields ~= nestedField.field; // Prepend field name
-            base = nestedField.baseExpr;
-        }
-        // --- END FIX ---
-
-        // --- Debugging --- 
-        lines ~= "        ; DEBUG: StructFieldAccess handler. Base type: " ~ base.classinfo.name;
-        if (auto aae = cast(ArrayAccessExpr) base) {
-            lines ~= "        ; DEBUG: Base is ArrayAccessExpr. Array name: " ~ aae.arrayName;
-            lines ~= "        ; DEBUG: Index type: " ~ aae.index.classinfo.name;
-        } else if (auto ve = cast(VarExpr) base) {
-            lines ~= "        ; DEBUG: Base is VarExpr. Name: " ~ ve.name;
-        }
-        // --- End Debugging ---
-
-        arrAccess = cast(ArrayAccessExpr) base; // Check if the final base is array access
-
-        if (arrAccess !is null) {
-            // Base is an array access (e.g., arr[idx].field1.field2)
-            string arrName = arrAccess.arrayName;
-            string arrBaseAddr = getOrCreateVarAddr(arrName, varAddrs);
-            string indexReg = generateExpr(arrAccess.index, lines, regIndex, varAddrs); // Handles dynamic index
-            string addrReg = "A0"; // Use A0 for base address calculation
-            string offsetReg = nextReg(regIndex); // Use data reg for offset calculation
-
-            // Calculate base element address
-            // TODO: Replace placeholders with actual lookup from struct info (e.g., structSizes)
-            string elementTypeName = ""; // Need type of array elements
-            int elementSize = 0; // Placeholder: Lookup struct size
-
-            // Example lookup for hello.dl
-            if (arrName == "sprites") { elementTypeName = "Sprite"; elementSize = 28; }
-            else if (arrName == "palette") { elementTypeName = "Color"; elementSize = 12; }
-            // Add more else if for other struct arrays based on their definitions
-
-            if (elementSize == 0 && (arrName == "sprites" || arrName == "palette")) { // Only error if known struct array fails lookup
-                 lines ~= "        ; ERROR: Could not determine element size for struct array read " ~ arrName;
-                 string valReg = nextReg(regIndex); // Return a dummy register
-                 lines ~= "        moveq #0, " ~ valReg; // Put 0 in it
-                 return valReg;
-            }
-            else if (elementSize > 0) {
-                lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg; // Copy index to data register
-                lines ~= "        mulu #" ~ to!string(elementSize) ~ ", " ~ offsetReg; // Calculate byte offset: index * elementSize
-                lines ~= "        lea " ~ arrBaseAddr ~ ", " ~ addrReg; // Load array base address into A0
-                lines ~= "        add.l " ~ offsetReg ~ ", " ~ addrReg; // Add element offset -> addrReg points to start of struct element
-
-                // Calculate final field offset by summing nested field offsets
-                // TODO: Replace placeholders with actual lookup from struct info (e.g., structFieldOffsets)
-                int totalFieldOffset = 0;
-                string currentStructType = elementTypeName; // Start with element type
-
-                // Iterate through nested fields from base struct outwards (reverse order of nestedFields)
-                foreach_reverse(fldName; nestedFields) {
-                     int fieldOffset = 0; // Lookup offset of fldName within currentStructType
-                     string nextStructType = ""; // Lookup type of fldName within currentStructType
-
-                     // Example lookup for hello.dl
-                     if (currentStructType == "Sprite") {
-                         if (fldName == "pos") { fieldOffset = 0; nextStructType = "Vec2"; }
-                         else if (fldName == "vel") { fieldOffset = 8; nextStructType = "Vec2"; }
-                         else if (fldName == "tint") { fieldOffset = 16; nextStructType = "Color"; }
-                     } else if (currentStructType == "Vec2") {
-                         if (fldName == "x") { fieldOffset = 0; nextStructType = "int"; }
-                         else if (fldName == "y") { fieldOffset = 4; nextStructType = "int"; }
-                     } else if (currentStructType == "Color") {
-                         if (fldName == "r") { fieldOffset = 0; nextStructType = "int"; }
-                         else if (fldName == "g") { fieldOffset = 4; nextStructType = "int"; }
-                         else if (fldName == "b") { fieldOffset = 8; nextStructType = "int"; }
-                     }
-                     // Add more else if for other structs
-
-                     if (nextStructType == "") { // Error if field not found in struct
-                         lines ~= "        ; ERROR: Field '" ~ fldName ~ "' not found in struct type '" ~ currentStructType ~ "' during read.";
-                         totalFieldOffset = -1; // Mark error
-                         break;
-                     }
-
-                     totalFieldOffset += fieldOffset;
-                     currentStructType = nextStructType; // Update for next level (if nested further)
-                }
-
-                if (totalFieldOffset != -1) {
-                    // Load value from final calculated address: totalFieldOffset(addrReg)
-                    string valReg = nextReg(regIndex);
-                    lines ~= "        move.l " ~ to!string(totalFieldOffset) ~ "(" ~ addrReg ~ "), " ~ valReg;
-                    return valReg;
-                } else {
-                    // Error occurred during offset calculation
-                    string valReg = nextReg(regIndex);
-                    lines ~= "        moveq #0, " ~ valReg; // Return 0
-                    return valReg;
-                }
-            } else {
-                 // Fallback/Error if elementSize was 0 for an unknown array type
-                 lines ~= "        ; Fallback/Error: Struct array read not fully handled for " ~ arrName;
-                 string valReg = nextReg(regIndex); // Return a dummy register
-                 lines ~= "        moveq #0, " ~ valReg; // Put 0 in it
-                 return valReg;
-            }
-        } else {
-            // Base is NOT array access (e.g., structVar.field1.field2)
-            // --- Remove Safeguard & Trust Initial Check ---
-            // If arrAccess is null, assume it's safe to call resolveNestedStructFieldName
-            lines ~= "        ; DEBUG: Entering ELSE block in generateExpr for StructFieldAccess.";
-            // --- Add more detailed debug info about the expression ---
-            if (auto sf = cast(StructFieldAccess) expr) {
-                 lines ~= "        ; DEBUG: Expr is StructFieldAccess. Field: " ~ sf.field ~ ", Base type: " ~ sf.baseExpr.classinfo.name;
-            } else {
-                 lines ~= "        ; DEBUG: Expr is NOT StructFieldAccess? Type: " ~ expr.classinfo.name;
-            }
-            // --- End detailed debug info ---
-            string elemField = resolveNestedStructFieldName(expr); // Gets flattened name like structVar_field1_field2
-            string reg = nextReg(regIndex);
-            string addr = getOrCreateVarAddr(elemField, varAddrs);
-            lines ~= "        move.l " ~ addr ~ ", " ~ reg; // Read from the flattened variable's memory location
-            return reg;
-            // --- End Simplification ---
-        }
+        // Use new recursive address generator
+        auto addrResult = generateAddressExpr(expr, lines, regIndex, varAddrs);
+        string addrReg = addrResult[0];
+        int offset = addrResult[1];
+        string valReg = nextReg(regIndex);
+        lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ valReg;
+        return valReg;
     }
 
     if (auto var = cast(VarExpr) expr) {
@@ -1117,9 +1152,19 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     }
 
     if (auto bin = cast(BinaryExpr) expr) {
+        int leftStart = regIndex;
         string leftReg = generateExpr(bin.left, lines, regIndex, varAddrs);
+        int leftEnd = regIndex;
+
+        int rightStart = regIndex;
         string rightReg = generateExpr(bin.right, lines, regIndex, varAddrs);
+        int rightEnd = regIndex;
+
         string dest = nextReg(regIndex);
+
+        // Free registers used by right and left expressions
+        regIndex = rightStart; // Free all rightReg temporaries
+        regIndex = leftStart;  // Free all leftReg temporaries
 
         final switch (bin.op) {
             case "=":
@@ -1307,43 +1352,17 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     }
 
     if (auto call = cast(CallExpr) expr) {
+        int argCount = 0;
+        foreach_reverse (arg; call.args) {
+            generateExpr(arg, lines, regIndex, varAddrs);
+            argCount++;
+        }
+        // Now generate code for each argument, in reverse order (right-to-left)
         int argAReg = 1; // Start from A1 for address registers
         int argDReg = 1; // Start from D1 for data registers
         string[] argRegs;
-
-        // Track library calls
-        if (call.name == "readf" ||
-        call.name == "write" ||
-        call.name == "writeln" ||
-        call.name == "readln" ||
-        call.name == "writef" ||
-        call.name == "import" ||
-        call.name == "importf" ||
-        call.name == "importln" ||
-        call.name == "std." ||
-        call.name == "stdout" ||
-        call.name == "stdin" ||
-        call.name == "stderr" ||
-        call.name == "malloc" ||
-        call.name == "free" ||
-        call.name == "memcpy" ||
-        call.name == "memset" ||
-        call.name == "memmove" ||
-        call.name == "strlen" ||
-        call.name == "strcpy" ||
-        call.name == "strcat" ||
-        call.name == "strcmp" ||
-        call.name == "strchr" ||
-        call.name == "strstr" ||
-        call.name == "strdup" ||
-        call.name == "stdio") {
-            usedLibCalls[call.name] = "1";
-        }
-
-        // Collect argument registers/types
         foreach_reverse (arg; call.args) {
             string reg;
-            // StringLiteral or address-of (&x) => address register
             if (cast(StringLiteral) arg || (cast(UnaryExpr) arg && (cast(UnaryExpr)arg).op == "&")) {
                 reg = "A" ~ to!string(argAReg++);
             } else {
@@ -1351,16 +1370,12 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             }
             argRegs ~= reg;
         }
-
-        // Now generate code for each argument, in reverse order (right-to-left)
         foreach_reverse (i, arg; call.args) {
             string reg = argRegs[$ - i - 1];
-            // StringLiteral
             if (auto str = cast(StringLiteral) arg) {
                 string label = getOrCreateStringLabel(str.value);
                 lines ~= "        lea " ~ label ~ ", " ~ reg;
             }
-            // Address-of
             else if (auto unary = cast(UnaryExpr) arg) {
                 if (unary.op == "&") {
                     auto var = cast(VarExpr) unary.expr;
@@ -1368,7 +1383,6 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                     lines ~= "        lea " ~ addr ~ ", " ~ reg;
                 }
             }
-            // Everything else (int, var, etc.)
             else {
                 string valReg = generateExpr(arg, lines, regIndex, varAddrs);
                 if (valReg != reg)
@@ -1379,29 +1393,19 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP";
         string dest = nextReg(regIndex);
         lines ~= "        move.l D0, " ~ dest;
+        // Free all argument registers
+        regIndex -= argCount;
         return dest;
     }
-    // --- PATCH: Handle ArrayAccessExpr ---
     if (auto access = cast(ArrayAccessExpr) expr) {
-        string arrName = access.arrayName;
-        string arrBaseAddr = getOrCreateVarAddr(arrName, varAddrs); // Get base address/label
-        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs); // Evaluate index expression
-        string addrReg = "A0"; // Use A0 for address calculation
-        string valReg = nextReg(regIndex); // Register to hold the element value
-        string offsetReg = nextReg(regIndex); // Temporary register for offset calculation
-
-        // Calculate element address: base + index * 4 (assuming 4-byte elements)
-        lines ~= "        lea " ~ arrBaseAddr ~ ", " ~ addrReg; // Load base address into A0
-        lines ~= "        move.l " ~ indexReg ~ ", " ~ valReg; // Copy index to a data register for multiplication
-        lines ~= "        mulu #4, " ~ valReg; // Multiply index by element size (4)
-        lines ~= "        add.l " ~ valReg ~ ", " ~ addrReg; // Add offset to base address in A0
-
-        // Load element value from calculated address
-        lines ~= "        move.l (" ~ addrReg ~ "), " ~ valReg; // Load value from (A0) into valReg
-
+        // Use new recursive address generator
+        auto addrResult = generateAddressExpr(expr, lines, regIndex, varAddrs);
+        string addrReg = addrResult[0];
+        int offset = addrResult[1];
+        string valReg = nextReg(regIndex);
+        lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ valReg;
         return valReg;
     }
-    // --- END PATCH ---
 
     // --- PATCH: Handle StringLiteral as expression (load address) ---
     if (auto str = cast(StringLiteral) expr) {
