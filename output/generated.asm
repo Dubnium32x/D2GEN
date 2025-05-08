@@ -63,25 +63,29 @@ Lend_11:
         cmpa.l D3, A1
         beq else_8
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+        ; DEBUG: Array access with arrayName = complex_expr
+        ; WARNING: Complex array expression detected. Using dynamic array approach.
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #1, D1
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         move.l j, D2
         move.l D2, D3
         mulu #4, D3
-        lea <complex>, A0
-        move.l D1, (A0, D3.l)
+        lea complex_array, A0
+        move.l D1, (A0,D3.l)
         bra endif_9
 else_8:
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+        ; DEBUG: Array access with arrayName = complex_expr
+        ; WARNING: Complex array expression detected. Using dynamic array approach.
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #0, D1
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         move.l j, D2
         move.l D2, D3
         mulu #4, D3
-        lea <complex>, A0
-        move.l D1, (A0, D3.l)
+        lea complex_array, A0
+        move.l D1, (A0,D3.l)
 endif_9:
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
@@ -142,20 +146,38 @@ setupModel:
         move.l #10, D1
         muls D1, D0
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+        ; DEBUG: Array access with arrayName = complex_expr
+        ; WARNING: Complex array expression detected. Using dynamic array approach.
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #255, D1
-        lea <complex>, A0
-        move.l D1, 0(A0)
+        ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+        move.l #0, D2
+        move.l D2, D3
+        mulu #4, D3
+        lea complex_array, A0
+        move.l D1, (A0,D3.l)
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+        ; DEBUG: Array access with arrayName = complex_expr
+        ; WARNING: Complex array expression detected. Using dynamic array approach.
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #128, D1
-        lea <complex>, A0
-        move.l D1, 4(A0)
+        ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+        move.l #1, D2
+        move.l D2, D3
+        mulu #4, D3
+        lea complex_array, A0
+        move.l D1, (A0,D3.l)
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
+        ; DEBUG: Array access with arrayName = complex_expr
+        ; WARNING: Complex array expression detected. Using dynamic array approach.
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #0, D1
-        lea <complex>, A0
-        move.l D1, 8(A0)
+        ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
+        move.l #2, D2
+        move.l D2, D3
+        mulu #4, D3
+        lea complex_array, A0
+        move.l D1, (A0,D3.l)
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
@@ -204,23 +226,23 @@ endif_13:
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
         ; DEBUG: generateExpr called with type: ast.nodes.ArrayAccessExpr
-        lea <complex>, A1
+        ; Handling complex array expression
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-        move.l #4, D2
-        move.l D0, D3
-        divs D2, D1
-        muls D2, D1
+        move.l #4, D1
+        move.l D0, D2
+        divs D1, D1
+        muls D1, D1
         sub.l D1, D0
-        move.l D3, D2
-        mulu #4, D2
-        add.l D2, A1
-        move.l 0(A1), D1
+        move.l D2, D1
+        mulu #4, D1
+        lea complex_array, A0
+        move.l (A0,D1.l), D2
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-        move.l #100, D2
-        move.l D1, D3
-        add.l D2, D3
+        move.l #100, D3
+        move.l D2, D4
+        add.l D3, D4
         ; Function epilogue
         move.l (SP)+, A6
         rts
@@ -331,8 +353,8 @@ for_end_17:
         ; String literals
         ; Scalar and struct variables
 models:    ds.l 1
+complex_array:    ds.l 100
 i:    ds.l 1
-<complex>:    ds.l 1
 idx:    ds.l 1
 j:    ds.l 1
         ; Array labels

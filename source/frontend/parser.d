@@ -213,7 +213,7 @@ ASTNode parsePrimary() {
                 expr = new ArrayAccessExpr(var.name, indexExpr);
             } else {
                 // For more complex bases, you may want to extend ArrayAccessExpr
-                expr = new ArrayAccessExpr("<complex>", indexExpr); // fallback
+                expr = new ArrayAccessExpr("complex_expr", indexExpr); // fallback
             }
         } else if (check(TokenType.LParen)) {
             advance();
@@ -229,7 +229,7 @@ ASTNode parsePrimary() {
                 expr = new CallExpr(var.name, args);
             } else {
                 // For more complex bases, you may want to extend CallExpr
-                expr = new CallExpr("<complex>", args); // fallback
+                expr = new CallExpr("complex_expr", args); // fallback
             }
         } else if (check(TokenType.Dot)) {
             advance();

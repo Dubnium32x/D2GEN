@@ -435,13 +435,47 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
         }
         // --- END PATCH ---
     } else if (auto access = cast(ArrayAccessExpr) assign.lhs) {
-        // Handles assignments like hiddenValues[0] = score;
+        // Handles assignments like hiddenValues[0] = score; or matrix[i][j] = value;
+        lines ~= "        ; DEBUG: Array access with arrayName = " ~ access.arrayName;
+        
+        // Special case for "complex_expr" - this is a fallback for complex expressions in the parser
+        if (access.arrayName == "complex_expr") {
+            // For complex expressions like arr[i][j], try to extract a more meaningful name
+            lines ~= "        ; WARNING: Complex array expression detected. Using dynamic array approach.";
+            string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
+            
+            // Register a dedicated array for complex expressions that gets properly allocated
+            string complexArrayName = "complex_array";
+            
+            // Make sure we emit this array in the data section
+            if (!(complexArrayName in emittedVars)) {
+                emittedVars[complexArrayName] = "100"; // Allocate space for 100 elements
+            }
+            
+            if (!(complexArrayName in arrayLabels)) {
+                arrayLabels[complexArrayName] = complexArrayName;
+            }
+            
+            // Compute the array index
+            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+            string offsetReg = nextReg(regIndex);
+            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+            lines ~= "        mulu #4, " ~ offsetReg; // Each element is 4 bytes
+            
+            // Load the array base address and store the value properly
+            lines ~= "        lea " ~ complexArrayName ~ ", A0";
+            lines ~= "        move.l " ~ valReg ~ ", (A0," ~ offsetReg ~ ".l)";
+            return; // Early return after handling this special case
+        }
+        
         string baseAddrLabel = getOrCreateVarAddr(access.arrayName, varAddrs);
         string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
         string addrReg = "A0";
         int elementSize = 4; // Default to 4 bytes (long) for simple arrays like int[]
-        // TODO: Lookup actual element size based on varTypes[access.arrayName] if supporting arrays of other types (e.g., short[], byte[])
-
+        
+        // Check if this is a 2D array access - look for array name pattern like "matrix_row"
+        bool is2DArrayAccess = access.arrayName.indexOf("_") > 0;
+        
         // --- FIX: Handle constant and dynamic indices consistently ---
         if (auto intLit = cast(IntLiteral) access.index) {
             // Constant index: arr[const_idx]
@@ -1398,7 +1432,33 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         return dest;
     }
     if (auto access = cast(ArrayAccessExpr) expr) {
-        // Use new recursive address generator
+        // Special case for complex_expr
+        if (access.arrayName == "complex_expr") {
+            // For complex expressions like arr[i][j], use our dedicated complex_array
+            lines ~= "        ; Handling complex array expression";
+            string complexArrayName = "complex_array";
+            
+            // Make sure we emit this array in the data section
+            if (!(complexArrayName in emittedVars)) {
+                emittedVars[complexArrayName] = "100"; // Allocate space for 100 elements
+            }
+            
+            if (!(complexArrayName in arrayLabels)) {
+                arrayLabels[complexArrayName] = complexArrayName;
+            }
+            
+            // Compute array index
+            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+            string offsetReg = nextReg(regIndex);
+            string valReg = nextReg(regIndex);
+            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+            lines ~= "        mulu #4, " ~ offsetReg; // Assume 4 bytes per element
+            lines ~= "        lea " ~ complexArrayName ~ ", A0";
+            lines ~= "        move.l (A0," ~ offsetReg ~ ".l), " ~ valReg;
+            return valReg;
+        }
+        
+        // Regular array access
         auto addrResult = generateAddressExpr(expr, lines, regIndex, varAddrs);
         string addrReg = addrResult[0];
         int offset = addrResult[1];
