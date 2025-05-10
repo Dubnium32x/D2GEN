@@ -27,6 +27,7 @@ string[string] loopVarsUsed;
 string[string] usedLibCalls; // acts as a set
 string[string] varTypes; 
 string[string] switchLabels;
+bool enableDebugOutput = false; // Set to false to disable debug output in assembly
 
 string[string] arrayElementTypes; // Maps array names to their element types
 int[string] structSizes;         // Maps struct types to their sizes in bytes
@@ -89,6 +90,7 @@ string generateCode(ASTNode[] nodes) {
 
     // --- PATCH: Emit __global_init function for global assignments ---
     lines ~= "";
+    lines ~= "; ===== FUNCTION DEFINITIONS =====";
     lines ~= "__global_init:";
     foreach (node; globalAssignments) {
         if (auto decl = cast(VarDecl)node) {
@@ -115,13 +117,14 @@ string generateCode(ASTNode[] nodes) {
 
     // --- EMIT ALL DATA LABELS AT THE BOTTOM, ONCE ---
     lines ~= "";
-    lines ~= "        ; String literals";
+    lines ~= "; ===== DATA SECTION =====";
+    lines ~= "; String literals";
     foreach (val, label; strLabels) {
         lines ~= label ~ ":";
         lines ~= format("        dc.b '%s', 0", val);
     }
 
-    lines ~= "        ; Scalar and struct variables";
+    lines ~= "; Scalar and struct variables";
     // --- PATCH: Emit all public global variables (VarDecl) as ds.l 1 if not already emitted ---
     foreach (node; globalAssignments) {
         if (auto decl = cast(VarDecl)node) {
@@ -195,7 +198,7 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
-    lines ~= "        ; Array labels";
+    lines ~= "; Array labels";
     foreach (name, label; arrayLabels) {
         // Only emit arrayLabels for primitive/function pointer arrays, not struct arrays
         bool isStructArray = false;
@@ -225,7 +228,7 @@ string generateCode(ASTNode[] nodes) {
         }
     }
 
-    lines ~= "        ; Loop variables";
+    lines ~= "; Loop variables";
     foreach (name, _; loopVarsUsed) {
         if (!(name in emittedSymbols)) {
             lines ~= name ~ ":    ds.l 1";
@@ -266,17 +269,12 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
     }
 
     lines ~= "        ; Function epilogue";
-    // lines ~= "        move.l A6, SP";
     lines ~= "        move.l (SP)+, A6";
     lines ~= "        rts";
 }
 
 void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
-    // --- VERY TOP LEVEL DEBUG ---
-    lines ~= "        ; DEBUG: Entered handleAssignStmt. LHS type: " ~ assign.lhs.classinfo.name;
-    // --- END DEBUG ---
-
-    // --- REVISED LOGIC for handling LHS of assignment ---
+    // Handle LHS of assignment
     ASTNode lhs = assign.lhs;
     // Handle struct field and array element assignments
     if (auto field = cast(StructFieldAccess) lhs) {
@@ -300,11 +298,8 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
                 break;
             }
         }
-        
-        lines ~= "        ; DEBUG: Field path: " ~ fieldPath.join(".") ~ ", Base type: " ~ 
-            (arrAccess !is null ? "ArrayAccessExpr" : (baseExpr !is null ? baseExpr.classinfo.name : "null"));
             
-        // --- PATCH: Handle assignment to struct field within an array element ---
+        // Handle assignment to struct field within an array element
         if (arrAccess !is null) {
             string arrName = arrAccess.arrayName;
             string arrBaseLabel = getOrCreateVarAddr(arrName, varAddrs);
@@ -364,9 +359,6 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             
             // Calculate field offset based on field path and struct type
             if (structType != "") {
-                // Add debug info for fieldPath
-                lines ~= "        ; DEBUG: Calculating offsets for " ~ structType ~ " fields: " ~ fieldPath.join(".");
-                
                 // Calculate field offset based on the field path - now paths are stored in correct order (outermost to innermost)
                 int baseOffset = 0;
                 string currentType = structType;
@@ -507,13 +499,12 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
                     }
                 }
                 
-                // Debug output for diagnostic purposes
-                lines ~= "        ; DEBUG: Field: " ~ field.field ~ ", ElementSize: " ~ to!string(elementSize) 
-                         ~ ", Offset: " ~ to!string(fieldOffset);
+
+                //         ~ ", Offset: " ~ to!string(fieldOffset);
                 // Add more else if for other struct arrays based on their definitions
 
                 if (elementSize == 0 && (arrName == "sprites" || arrName == "palette")) { // Only error if known struct array fails lookup
-                    lines ~= "        ; ERROR: Could not determine element size/offset for struct array " ~ arrName ~ "." ~ field.field;
+                    lines ~= "        ; ERROR: Could not determine element size/offset for " ~ arrName ~ "." ~ field.field;
                 } else if (elementSize > 0) {
                     // Calculate element offset: index * element_size
                     lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
@@ -541,24 +532,22 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
         // --- END PATCH ---
     } else if (auto access = cast(ArrayAccessExpr) assign.lhs) {
         // Handles assignments like hiddenValues[0] = score; or matrix[i][j] = value;
-        lines ~= "        ; DEBUG: Array access with arrayName = " ~ access.arrayName;
         
         // Special case for "complex_expr" - this is a fallback for complex expressions in the parser
         if (access.arrayName == "complex_expr") {
-            // For complex expressions like arr[i][j], try to extract a more meaningful name
-            lines ~= "        ; WARNING: Complex array expression detected. Using dynamic array approach.";
+            // For complex expressions like arr[i][j]
             string valReg = generateExpr(assign.value, lines, regIndex, varAddrs);
             
             // Register a dedicated array for complex expressions that gets properly allocated
-            string complexArrayName = "complex_array";
+            string matrixArrayName = "matrix_array";
             
             // Make sure we emit this array in the data section
-            if (!(complexArrayName in emittedVars)) {
-                emittedVars[complexArrayName] = "100"; // Allocate space for 100 elements
+            if (!(matrixArrayName in emittedVars)) {
+                emittedVars[matrixArrayName] = "100"; // Allocate space for 100 elements
             }
             
-            if (!(complexArrayName in arrayLabels)) {
-                arrayLabels[complexArrayName] = complexArrayName;
+            if (!(matrixArrayName in arrayLabels)) {
+                arrayLabels[matrixArrayName] = matrixArrayName;
             }
             
             // Compute the array index
@@ -568,7 +557,7 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             lines ~= "        mulu #4, " ~ offsetReg; // Each element is 4 bytes
             
             // Load the array base address and store the value properly
-            lines ~= "        lea " ~ complexArrayName ~ ", A0";
+            lines ~= "        lea " ~ matrixArrayName ~ ", A0";
             lines ~= "        move.l " ~ valReg ~ ", (A0," ~ offsetReg ~ ".l)";
             return; // Early return after handling this special case
         }
@@ -601,7 +590,6 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             string elemType = arrayElementTypes[access.arrayName];
             if (elemType in structSizes) {
                 elemSize = structSizes[elemType];
-                lines ~= "        ; Using element size " ~ to!string(elemSize) ~ " for " ~ elemType ~ " array";
             }
         }
         
@@ -803,27 +791,37 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         }
     }
     else if (auto ifstmt = cast(IfStmt) node) {
+        // Generate unique labels for if-else control flow
         string labelElse = genLabel("else");
         string labelEnd = genLabel("endif");
 
+        // Generate code for the condition expression
         string condReg = generateExpr(ifstmt.condition, lines, regIndex, varAddrs);
         if (condReg != "D0")
-            lines ~= "        move.l " ~ condReg ~ ", D0";
-        lines ~= "        cmpa.l " ~ condReg ~ ", A1";
-        lines ~= "        beq " ~ labelElse;
+            lines ~= "        move.l " ~ condReg ~ ", D0  ; Move condition result to D0";
+        
+        // Compare with A1 (null) to check if condition is false
+        lines ~= "        cmpa.l " ~ condReg ~ ", A1  ; Check if condition is false";
+        lines ~= "        beq " ~ labelElse ~ "       ; Branch to else if condition is false";
 
+        // Generate code for the 'then' body
         foreach (s; ifstmt.thenBody) {
             generateStmt(s, lines, regIndex, varAddrs);
         }
 
-        lines ~= "        bra " ~ labelEnd;
-        lines ~= labelElse ~ ":";
+        // After executing the 'then' body, skip over the 'else' section
+        lines ~= "        bra " ~ labelEnd ~ "        ; Skip over else section when then section completes";
+        
+        // Begin the 'else' section
+        lines ~= labelElse ~ ":             ; Else section starts here";
 
+        // Generate code for the 'else' body
         foreach (s; ifstmt.elseBody) {
             generateStmt(s, lines, regIndex, varAddrs);
         }
 
-        lines ~= labelEnd ~ ":";
+        // End of the if-else statement
+        lines ~= labelEnd ~ ":             ; End of if-else statement";
     }
     else if (auto postfix = cast(PostfixExpr) node) {
         // Handle postfix increment/decrement
@@ -845,45 +843,66 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
         }
     }
     else if (auto whilestmt = cast(WhileStmt) node) {
+        // Generate labels for loop control
         string labelStart = genLabel("while");
         string labelEnd = genLabel("end_loop");
 
-        lines ~= labelStart ~ ":";
+        // Start of while loop
+        lines ~= labelStart ~ ":             ; Start of while loop";
 
+        // Generate code for the loop condition
         string condReg = generateExpr(whilestmt.condition, lines, regIndex, varAddrs);
         if (condReg != "D0")
-            lines ~= "        move.l " ~ condReg ~ ", D0";
-        lines ~= "        cmp.l #0, " ~ condReg;
-        lines ~= "        beq " ~ labelEnd;
+            lines ~= "        move.l " ~ condReg ~ ", D0  ; Move condition result to D0";
+        
+        // Check if condition is false (0), and exit loop if so
+        lines ~= "        cmp.l #0, " ~ condReg ~ "   ; Check if condition is false";
+        lines ~= "        beq " ~ labelEnd ~ "        ; Exit loop if condition is false";
 
+        // Generate code for the loop body
         foreach (s; whilestmt.loopBody) {
             generateStmt(s, lines, regIndex, varAddrs);
         }
 
-        lines ~= "        bra " ~ labelStart;
-        lines ~= labelEnd ~ ":";
+        // Jump back to the start of the loop
+        lines ~= "        bra " ~ labelStart ~ "      ; Jump back to start of loop";
+        
+        // End of while loop
+        lines ~= labelEnd ~ ":             ; End of while loop";
     }
     else if (auto forLoop = cast(CStyleForStmt) node) {
+        // Generate initialization code (e.g., int i = 0)
         generateStmt(forLoop.init, lines, regIndex, varAddrs);
 
+        // Generate labels for loop control
         string startLabel = genLabel("for_start");
         string endLabel = genLabel("for_end");
 
-        lines ~= startLabel ~ ":";
+        // Start of for loop
+        lines ~= startLabel ~ ":             ; Start of for loop";
 
+        // Generate condition check code (e.g., i < 10)
         string condReg = generateExpr(forLoop.condition, lines, regIndex, varAddrs);
         if (condReg != "D0")
-            lines ~= "        move.l " ~ condReg ~ ", D0";
-        lines ~= "        cmp.l #0, " ~ condReg;
-        lines ~= "        beq " ~ endLabel;
+            lines ~= "        move.l " ~ condReg ~ ", D0  ; Move condition result to D0";
+        
+        // Check if condition is false (0), and exit loop if so
+        lines ~= "        cmp.l #0, " ~ condReg ~ "   ; Check if condition is false";
+        lines ~= "        beq " ~ endLabel ~ "        ; Exit loop if condition is false";
 
+        // Generate code for the loop body
         foreach (stmt; forLoop.forBody) {
-            generateStmt(stmt, lines, regIndex, varAddrs);
+            generateStmt(stmt, lines, regIndex, varAddrs, endLabel, startLabel);
         }
 
+        // Generate increment code (e.g., i++)
         generateStmt(forLoop.increment, lines, regIndex, varAddrs);
-        lines ~= "        bra " ~ startLabel;
-        lines ~= endLabel ~ ":";
+        
+        // Jump back to the start of the loop (condition check)
+        lines ~= "        bra " ~ startLabel ~ "      ; Jump back to start of loop";
+        
+        // End of for loop
+        lines ~= endLabel ~ ":             ; End of for loop";
     }
     else if (auto foreachStmt = cast(ForeachStmt) node) {
         generateForeachStmt(foreachStmt, lines, regIndex, varAddrs);
@@ -1029,12 +1048,7 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
             // Generate call instruction (bsr for known, jsr (A0) for function pointer)
             // TODO: Check if function pointer logic is needed/correct
-            // if (varTypes.get(call.name, "").startsWith("void function(")) {
-            //     lines ~= format("        move.l var_%s, A0", call.name); // Load function pointer address
-            //     lines ~= "        jsr (A0)";
-            // } else {
-                lines ~= "        bsr " ~ call.name; // Direct call
-            // }
+            lines ~= "        bsr " ~ call.name; // Direct call
 
             // Clean up stack
             if (call.args.length > 0) {
@@ -1276,8 +1290,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
             // colors array would be at offset 8
         }
         
-        lines ~= format("        ; DEBUG: Field access %s in %s, offset: %s", field.field, structType, to!string(fieldOffset));
-        
         regIndex = regIndexStart; // Free temporaries used in this call
         return tuple(baseReg, baseOffset + fieldOffset);
     }
@@ -1287,7 +1299,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
         static if (__traits(hasMember, typeof(expr), "expr")) {
             auto inner = mixin("expr.expr");
             if (inner !is null && inner !is expr) {
-                lines ~= "; DEBUG: Recursing into ParenExpr";
                 return generateAddressExpr(inner, lines, regIndex, varAddrs);
             }
         }
@@ -1297,7 +1308,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
         static if (__traits(hasMember, typeof(expr), "expr")) {
             auto inner = mixin("expr.expr");
             if (inner !is null && inner !is expr) {
-                lines ~= "; DEBUG: Recursing into CastExpr";
                 return generateAddressExpr(inner, lines, regIndex, varAddrs);
             }
         }
@@ -1308,7 +1318,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
             auto op = mixin("expr.op");
             auto inner = mixin("expr.expr");
             if (op == "&" && inner !is null && inner !is expr) {
-                lines ~= "; DEBUG: Recursing into UnaryExpr &";
                 return generateAddressExpr(inner, lines, regIndex, varAddrs);
             }
         }
@@ -1317,7 +1326,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
     static if (__traits(hasMember, typeof(expr), "expr")) {
         auto inner = mixin("expr.expr");
         if (inner !is null && inner !is expr) {
-            lines ~= "; DEBUG: Recursing into .expr of " ~ expr.classinfo.name;
             return generateAddressExpr(inner, lines, regIndex, varAddrs);
         }
     }
@@ -1325,7 +1333,6 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
     static if (__traits(hasMember, typeof(expr), "baseExpr")) {
         auto inner = mixin("expr.baseExpr");
         if (inner !is null && inner !is expr) {
-            lines ~= "; DEBUG: Recursing into .baseExpr of " ~ expr.classinfo.name;
             return generateAddressExpr(inner, lines, regIndex, varAddrs);
         }
     }
@@ -1333,23 +1340,16 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
     static if (__traits(hasMember, typeof(expr), "target")) {
         auto inner = mixin("expr.target");
         if (inner !is null && inner !is expr) {
-            lines ~= "; DEBUG: Recursing into .target of " ~ expr.classinfo.name;
             return generateAddressExpr(inner, lines, regIndex, varAddrs);
         }
     }
-    // Fallback: emit error, do NOT emit any lea or invalid address computation
-    lines ~= "; ERROR: generateAddressExpr fallback for expr type " ~ expr.classinfo.name;
-    lines ~= "        ; Unable to compute address for this lvalue at compile time. No address emitted.";
+    // Fallback: emit error
+    lines ~= "; ERROR: Cannot compute address for expr type " ~ expr.classinfo.name;
     // Return a known register, but do not emit any lea or address computation
     return tuple("A0", 0); // Use A0 as a dummy, but do not emit any lea
 }
 
 string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[string] varAddrs) {
-    // --- NEW TOP-LEVEL DEBUG ---
-    lines ~= "        ; DEBUG: generateExpr called with type: " ~ expr.classinfo.name;
-    // Optionally add more detail, e.g., expr.toString() if available and safe
-    // --- END NEW DEBUG ---
-
     if (auto lit = cast(IntLiteral) expr) {
         string reg = nextReg(regIndex);
         lines ~= "        move.l #" ~ to!string(lit.value) ~ ", " ~ reg;
@@ -1372,15 +1372,11 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         }
     }
 
-    // --- PATCH: Handle CastExpr ---
+    // Handle CastExpr
     if (auto castExpr = cast(CastExpr) expr) {
         // For now, assume casts between numeric types are no-ops in assembly.
-        // Generate the inner expression. More complex casts would need specific code.
-        // --- FIX: Changed targetType to typeName ---
-        lines ~= "        ; Handling cast to " ~ castExpr.typeName;
         return generateExpr(castExpr.expr, lines, regIndex, varAddrs);
     }
-    // --- END PATCH ---
 
     if (auto field = cast(StructFieldAccess) expr) {
         // Use new recursive address generator
@@ -1444,7 +1440,7 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             }
             if (rightReg == "D0") {
                 lines ~= format("        muls %s, D0", leftReg);
-                    return "D0";
+                return "D0";
             }
             // Otherwise, move leftReg to D0 and muls rightReg, D0
             lines ~= format("        move.l %s, D0", leftReg);
@@ -1648,32 +1644,30 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         // Free all argument registers
         regIndex -= argCount;
         return dest;
-    }
-    if (auto access = cast(ArrayAccessExpr) expr) {
+    }        if (auto access = cast(ArrayAccessExpr) expr) {
         // Special case for complex_expr
         if (access.arrayName == "complex_expr") {
-            // For complex expressions like arr[i][j], use our dedicated complex_array
-            lines ~= "        ; Handling complex array expression";
-            string complexArrayName = "complex_array";
+        // For complex expressions like arr[i][j], use more descriptive array names
+        string complexArrayName = "matrix_data"; // More descriptive name than "complex_array"
+        
+        // Make sure we emit this array in the data section
+        if (!(complexArrayName in emittedVars)) {
+            emittedVars[complexArrayName] = "100"; // Allocate space for 100 elements
+        }
             
-            // Make sure we emit this array in the data section
-            if (!(complexArrayName in emittedVars)) {
-                emittedVars[complexArrayName] = "100"; // Allocate space for 100 elements
-            }
-            
-            if (!(complexArrayName in arrayLabels)) {
-                arrayLabels[complexArrayName] = complexArrayName;
-            }
-            
-            // Compute array index
-            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
-            string offsetReg = nextReg(regIndex);
-            string valReg = nextReg(regIndex);
-            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
-            lines ~= "        mulu #4, " ~ offsetReg; // Assume 4 bytes per element
-            lines ~= "        lea " ~ complexArrayName ~ ", A0";
-            lines ~= "        move.l (A0," ~ offsetReg ~ ".l), " ~ valReg;
-            return valReg;
+        if (!(complexArrayName in arrayLabels)) {
+            arrayLabels[complexArrayName] = complexArrayName;
+        }
+        
+        // Compute array index
+        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+        string offsetReg = nextReg(regIndex);
+        string valReg = nextReg(regIndex);
+        lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
+        lines ~= "        mulu #4, " ~ offsetReg; // 4 bytes per int/pointer element
+        lines ~= "        lea " ~ complexArrayName ~ ", A0  ; Load matrix data base address";
+        lines ~= "        move.l (A0," ~ offsetReg ~ ".l), " ~ valReg ~ "  ; Get matrix element at computed offset";
+        return valReg;
         }
         
         // Regular array access
@@ -1685,24 +1679,22 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         return valReg;
     }
 
-    // --- PATCH: Handle StringLiteral as expression (load address) ---
+    // Handle StringLiteral as expression (load address)
     if (auto str = cast(StringLiteral) expr) {
         string label = getOrCreateStringLabel(str.value);
         string reg = "A" ~ to!string(regIndex++); // Use an address register
-        if (regIndex > 3) regIndex = 1; // Cycle through A1, A2, A3 for strings? Adjust as needed.
+        if (regIndex > 3) regIndex = 1; // Cycle through A1, A2, A3 for strings
         lines ~= "        lea " ~ label ~ ", " ~ reg;
         return reg; // Return the address register
     }
-    // --- END PATCH ---
 
     // If we reach here, the expression type is still unhandled.
     // Log an error message instead of asserting.
-    lines ~= format("; ERROR: Unhandled expression type '%s' in generateExpr", expr.classinfo.name);
+    lines ~= format("; ERROR: Unhandled expression type '%s'", expr.classinfo.name);
     // Return a dummy register (e.g., D0 with value 0) to allow compilation to proceed somewhat.
     string dummyReg = nextReg(regIndex);
     lines ~= "        move.l #0, " ~ dummyReg;
     return dummyReg;
-    // assert(0); // Removed assertion
 }
 
 // --- PATCH: Added missing foreachStmt code generation ---
@@ -1764,7 +1756,69 @@ string nextReg(ref int regIndex) {
 }
 
 string genLabel(string base) {
-    return "" ~ base ~ "_" ~ to!string(labelCounter++);
+    // Create more descriptive labels by using specific prefixes
+    // for different code constructs
+    string prefix = "";
+    
+    // Control flow labels
+    if (base.startsWith("Ltrue")) {
+        prefix = ".true";
+    }
+    else if (base.startsWith("Lend")) {
+        prefix = ".end";
+    }
+    else if (base.startsWith("else")) {
+        prefix = ".else";
+    }
+    else if (base.startsWith("endif")) {
+        prefix = ".endif";
+    }
+    
+    // Loop labels
+    else if (base.startsWith("for_start")) {
+        prefix = ".for_start";
+    }
+    else if (base.startsWith("for_end")) {
+        prefix = ".for_end";
+    }
+    else if (base.startsWith("while")) {
+        prefix = ".while";
+    }
+    else if (base.startsWith("end_loop")) {
+        prefix = ".end_loop";
+    }
+    else if (base.startsWith("break")) {
+        prefix = ".break";
+    }
+    else if (base.startsWith("continue")) {
+        prefix = ".continue";
+    }
+    
+    // Conditionals
+    else if (base.startsWith("if_")) {
+        prefix = ".if";
+    }
+    
+    // Switch/case labels
+    else if (base.startsWith("switch_")) {
+        prefix = ".switch";
+    }
+    else if (base.startsWith("case_")) {
+        prefix = ".case";
+    }
+    else if (base.startsWith("switch_end")) {
+        prefix = ".switch_end";
+    }
+    else if (base.startsWith("switch_continue")) {
+        prefix = ".switch_continue";
+    }
+    
+    // If this is a generic label, just use as is
+    else {
+        prefix = base;
+    }
+    
+    return prefix ~ "_" ~ to!string(labelCounter++);
 }
 
 string getOrCreateVarAddr(string name, ref string[string] map) {

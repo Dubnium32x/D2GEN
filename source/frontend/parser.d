@@ -26,7 +26,6 @@ Token expect(TokenType kind) {
     Token t = current();
     if (t.type != kind) {
         hasErrors = true;
-        writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
         throw new Exception(errorWithLine("Expected " ~ kind.stringof ~ ", got " ~ t.type.stringof ~ " at token '" ~ current().lexeme ~ "'"));
     }
     index++;
@@ -52,7 +51,6 @@ ASTNode parseExpression(int prec = 0) {
         if (cast(VarExpr) left || cast(ArrayAccessExpr) left || cast(StructFieldAccess) left) {
             return new AssignStmt(left, right);
         } else {
-            writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
             throw new Exception(errorWithLine("Left-hand side of assignment must be a variable, array element, or struct field"));
         }
     }
@@ -198,7 +196,6 @@ ASTNode parsePrimary() {
     else {
         // If we get here, it's an error
         hasErrors = true;
-        writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
         throw new Exception(errorWithLine("Unexpected token in expression: " ~ current().lexeme ~ " (" ~ current().type.stringof ~ ")"));
     }
 
@@ -367,7 +364,6 @@ ASTNode parseStatement() {
             innerType = advance().lexeme;
         } else {
             hasErrors = true;
-            writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
             throw new Exception(errorWithLine("Expected type in function pointer declaration, got " ~ current().lexeme));
         }
         expect(TokenType.RParen);
@@ -427,7 +423,6 @@ ASTNode parseStatement() {
             }
             else {
                 hasErrors = true;
-                writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
                 throw new Exception(errorWithLine("Unexpected token in switch: " ~ current().lexeme));
             }
         }
@@ -641,8 +636,6 @@ ASTNode parseStatement() {
         advance();
         return new BoolLiteral(false);
     }
-    writeln("Current token at statement level: ", current().type);
-    writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
     throw new Exception(errorWithLine("Unknown statement at token: " ~ tokens[index].lexeme));
 }
 
@@ -732,7 +725,6 @@ ASTNode[] parse(Token[] inputTokens) {
 
     // Now parse the rest of the file
     while (!isAtEnd()) {
-        writeln("Parsing token: ", current().lexeme, " (", current().type, ")");
         if (check(TokenType.Import)) {
             advance();
             while (!check(TokenType.Semicolon) && !isAtEnd()) {
@@ -797,10 +789,7 @@ ASTNode parseStructDecl() {
         expect(TokenType.Semicolon);
         import std.array : array;
         import std.stdio : writeln;
-        // Debug: print all member node types
-        foreach (m; members) {
-            writeln("[DEBUG] Struct member node type: ", m.classinfo.name);
-        }
+        
         // Only include VarDecls to avoid null dereference, and flatten BlockStmt
         string[] fieldNames = members
             .map!(m => cast(BlockStmt) m ? (cast(BlockStmt) m).blockBody : [m])
@@ -811,7 +800,7 @@ ASTNode parseStructDecl() {
         // If any member is not VarDecl or BlockStmt, print a warning
         foreach (m; members) {
             if (cast(VarDecl) m is null && cast(BlockStmt) m is null) {
-                writeln("[WARNING] Unexpected struct member node type: ", m.classinfo.name);
+                // Ignore unexpected struct members
             }
         }
 
@@ -823,7 +812,6 @@ ASTNode parseStructDecl() {
         }
         structFieldOffsets[name] = fieldOffsets;
         structTypes ~= name;
-        writeln("Struct type added: ", name);
 
         return new StructDecl(name, fieldNames);
     }
@@ -969,7 +957,6 @@ Token expectAny(TokenType[] types...) {
     Token t = current();
     if (!checkAny(types)) {
         hasErrors = true;
-        writeln("DEBUG: At token ", current().lexeme, " (", current().type, ")");
         throw new Exception(errorWithLine("Expected one of " ~ types.stringof ~ ", got " ~ t.type.stringof ~ " at '" ~ current().lexeme ~ "'"));
     }
     index++;

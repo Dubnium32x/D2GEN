@@ -1,380 +1,248 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/9/2025 6:48:24 PM
+Created On: 5/9/2025 8:56:42 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          JSR __global_init
 00001006  4EF9 000011A4              4          JMP main
 0000100C                             5  
-0000100C                             6  __global_init:
-0000100C  4E75                       7          rts
-0000100E                             8  initMatrix:
-0000100E                             9          ; Function prologue
-0000100E  2F0E                      10          move.l A6, -(SP)
-00001010  2C4F                      11          move.l SP, A6
-00001012                            12          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001012  7200                      13          move.l #0, D1
-00001014  23C1 00001408             14          move.l D1, i
-0000101A                            15  for_start_0:
-0000101A                            16          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-0000101A                            17          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000101A  2439 00001408             18          move.l i, D2
-00001020                            19          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001020  7604                      20          move.l #4, D3
-00001022  B883                      21          cmp.l D3, D4
-00001024  6D00 0008                 22          blt Ltrue_2
-00001028  7800                      23          move.l #0, D4
-0000102A  6000 0004                 24          bra Lend_3
-0000102E                            25  Ltrue_2:
-0000102E  7801                      26          move.l #1, D4
-00001030                            27  Lend_3:
-00001030  2004                      28          move.l D4, D0
-00001032  B8BC 00000000             29          cmp.l #0, D4
-00001038  6700 00AE                 30          beq for_end_1
-0000103C                            31          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000103C  7200                      32          move.l #0, D1
-0000103E  23C1 00001410             33          move.l D1, j
-00001044                            34  for_start_4:
-00001044                            35          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001044                            36          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001044  2439 00001410             37          move.l j, D2
-0000104A                            38          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000104A  7604                      39          move.l #4, D3
-0000104C  B883                      40          cmp.l D3, D4
-0000104E  6D00 0008                 41          blt Ltrue_6
-00001052  7800                      42          move.l #0, D4
-00001054  6000 0004                 43          bra Lend_7
-00001058                            44  Ltrue_6:
-00001058  7801                      45          move.l #1, D4
-0000105A                            46  Lend_7:
-0000105A  2004                      47          move.l D4, D0
-0000105C  B8BC 00000000             48          cmp.l #0, D4
-00001062  6700 006E                 49          beq for_end_5
-00001066                            50          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001066                            51          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001066  2239 00001408             52          move.l i, D1
-0000106C                            53          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000106C  2439 00001410             54          move.l j, D2
-00001072  B682                      55          cmp.l D2, D3
-00001074  6700 0008                 56          beq Ltrue_10
-00001078  7600                      57          move.l #0, D3
-0000107A  6000 0004                 58          bra Lend_11
-0000107E                            59  Ltrue_10:
-0000107E  7601                      60          move.l #1, D3
-00001080                            61  Lend_11:
-00001080  2003                      62          move.l D3, D0
-00001082  B3C3                      63          cmpa.l D3, A1
-00001084  6700 001E                 64          beq else_8
-00001088                            65          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-00001088                            66          ; DEBUG: Array access with arrayName = complex_expr
-00001088                            67          ; WARNING: Complex array expression detected. Using dynamic array approach.
-00001088                            68          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001088  7201                      69          move.l #1, D1
-0000108A                            70          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000108A  2439 00001410             71          move.l j, D2
-00001090  2602                      72          move.l D2, D3
-00001092  C6FC 0004                 73          mulu #4, D3
-00001096  41F9 00001278             74          lea complex_array, A0
-0000109C  2181 3800                 75          move.l D1, (A0,D3.l)
-000010A0  6000 001A                 76          bra endif_9
-000010A4                            77  else_8:
-000010A4                            78          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-000010A4                            79          ; DEBUG: Array access with arrayName = complex_expr
-000010A4                            80          ; WARNING: Complex array expression detected. Using dynamic array approach.
-000010A4                            81          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010A4  7200                      82          move.l #0, D1
-000010A6                            83          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010A6  2439 00001410             84          move.l j, D2
-000010AC  2602                      85          move.l D2, D3
-000010AE  C6FC 0004                 86          mulu #4, D3
-000010B2  41F9 00001278             87          lea complex_array, A0
-000010B8  2181 3800                 88          move.l D1, (A0,D3.l)
-000010BC                            89  endif_9:
-000010BC                            90          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
-000010BC                            91          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000010BC                            92          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010BC  2239 00001410             93          move.l j, D1
-000010C2                            94          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010C2  7401                      95          move.l #1, D2
-000010C4  2601                      96          move.l D1, D3
-000010C6  D682                      97          add.l D2, D3
-000010C8  23C3 00001410             98          move.l D3, j
-000010CE  6000 FF74                 99          bra for_start_4
-000010D2                           100  for_end_5:
-000010D2                           101          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
-000010D2                           102          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000010D2                           103          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000010D2  2239 00001408            104          move.l i, D1
-000010D8                           105          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000010D8  7401                     106          move.l #1, D2
-000010DA  2601                     107          move.l D1, D3
-000010DC  D682                     108          add.l D2, D3
-000010DE  23C3 00001408            109          move.l D3, i
-000010E4  6000 FF34                110          bra for_start_0
-000010E8                           111  for_end_1:
-000010E8                           112          ; Function epilogue
-000010E8  2C5F                     113          move.l (SP)+, A6
-000010EA  4E75                     114          rts
-000010EC                           115  setupModel:
-000010EC                           116          ; Function prologue
-000010EC  2F0E                     117          move.l A6, -(SP)
-000010EE  2C4F                     118          move.l SP, A6
-000010F0  202E 0008                119          move.l 8(A6), D0
-000010F4  222E 000C                120          move.l 12(A6), D1
-000010F8  242E 0010                121          move.l 16(A6), D2
-000010FC  262E 0014                122          move.l 20(A6), D3
-00001100                           123          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001100                           124          ; DEBUG: Field path: position.x, Base type: ArrayAccessExpr
-00001100                           125          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           126          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           127          ; WARNING: Using default size of 16 bytes for unknown struct 
-00001100                           128          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001100                           129          ; DEBUG: Field path: position.y, Base type: ArrayAccessExpr
-00001100                           130          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           131          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           132          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001100                           133          ; DEBUG: Field path: position.z, Base type: ArrayAccessExpr
-00001100                           134          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           135          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           136          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001100                           137          ; DEBUG: Field path: material.type, Base type: ArrayAccessExpr
-00001100                           138          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001100                           139          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001100  7202                     140          move.l #2, D1
-00001102                           141          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001102                           142          ; DEBUG: Field path: material.shininess, Base type: ArrayAccessExpr
-00001102                           143          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001102                           144          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001102                           145          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001102                           146          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001102  720A                     147          move.l #10, D1
-00001104  C1C1                     148          muls D1, D0
-00001106                           149          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-00001106                           150          ; DEBUG: Array access with arrayName = complex_expr
-00001106                           151          ; WARNING: Complex array expression detected. Using dynamic array approach.
-00001106                           152          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001106  223C 000000FF            153          move.l #255, D1
-0000110C                           154          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000110C  7400                     155          move.l #0, D2
-0000110E  2602                     156          move.l D2, D3
-00001110  C6FC 0004                157          mulu #4, D3
-00001114  41F9 00001278            158          lea complex_array, A0
-0000111A  2181 3800                159          move.l D1, (A0,D3.l)
-0000111E                           160          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-0000111E                           161          ; DEBUG: Array access with arrayName = complex_expr
-0000111E                           162          ; WARNING: Complex array expression detected. Using dynamic array approach.
-0000111E                           163          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000111E  223C 00000080            164          move.l #128, D1
-00001124                           165          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001124  7401                     166          move.l #1, D2
-00001126  2602                     167          move.l D2, D3
-00001128  C6FC 0004                168          mulu #4, D3
-0000112C  41F9 00001278            169          lea complex_array, A0
-00001132  2181 3800                170          move.l D1, (A0,D3.l)
-00001136                           171          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.ArrayAccessExpr
-00001136                           172          ; DEBUG: Array access with arrayName = complex_expr
-00001136                           173          ; WARNING: Complex array expression detected. Using dynamic array approach.
-00001136                           174          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001136  7200                     175          move.l #0, D1
-00001138                           176          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001138  7402                     177          move.l #2, D2
-0000113A  2602                     178          move.l D2, D3
-0000113C  C6FC 0004                179          mulu #4, D3
-00001140  41F9 00001278            180          lea complex_array, A0
-00001146  2181 3800                181          move.l D1, (A0,D3.l)
-0000114A                           182          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-0000114A                           183          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000114A                           184          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000114A  7200                     185          move.l #0, D1
-0000114C  B481                     186          cmp.l D1, D2
-0000114E  6E00 0008                187          bgt Ltrue_14
-00001152  7400                     188          move.l #0, D2
-00001154  6000 0004                189          bra Lend_15
-00001158                           190  Ltrue_14:
-00001158  7401                     191          move.l #1, D2
-0000115A                           192  Lend_15:
-0000115A  2002                     193          move.l D2, D0
-0000115C  B3C2                     194          cmpa.l D2, A1
-0000115E  6700 001A                195          beq else_12
-00001162                           196          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001162                           197          ; DEBUG: Field path: scale, Base type: ArrayAccessExpr
-00001162                           198          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001162                           199          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
-00001162  43F9 00001274            200          lea models, A1
-00001168                           201          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001168  7400                     202          move.l #0, D2
-0000116A  2602                     203          move.l D2, D3
-0000116C  C6FC 0010                204          mulu #16, D3
-00001170  D3C3                     205          add.l D3, A1
-00001172                           206          ; DEBUG: Field access scale in , offset: 0
-00001172  2229 0000                207          move.l 0(A1), D1
-00001176  6000 0008                208          bra endif_13
-0000117A                           209  else_12:
-0000117A                           210          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000117A                           211          ; DEBUG: Field path: scale.x, Base type: ArrayAccessExpr
-0000117A                           212          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000117A                           213          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000117A  7201                     214          move.l #1, D1
-0000117C                           215          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000117C                           216          ; DEBUG: Field path: scale.y, Base type: ArrayAccessExpr
-0000117C                           217          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000117C                           218          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000117C  7201                     219          move.l #1, D1
-0000117E                           220          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-0000117E                           221          ; DEBUG: Field path: scale.z, Base type: ArrayAccessExpr
-0000117E                           222          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-0000117E                           223          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000117E  7201                     224          move.l #1, D1
-00001180                           225  endif_13:
-00001180                           226          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001180                           227          ; DEBUG: Field path: id, Base type: ArrayAccessExpr
-00001180                           228          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001180                           229          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001180                           230          ; DEBUG: generateExpr called with type: ast.nodes.ArrayAccessExpr
-00001180                           231          ; Handling complex array expression
-00001180                           232          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001180                           233          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001180                           234          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001180  7204                     235          move.l #4, D1
-00001182  2400                     236          move.l D0, D2
-00001184  83C1                     237          divs D1, D1
-00001186  C3C1                     238          muls D1, D1
-00001188  9081                     239          sub.l D1, D0
-0000118A  2202                     240          move.l D2, D1
-0000118C  C2FC 0004                241          mulu #4, D1
-00001190  41F9 00001278            242          lea complex_array, A0
-00001196  2430 1800                243          move.l (A0,D1.l), D2
-0000119A                           244          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000119A  7664                     245          move.l #100, D3
-0000119C  2802                     246          move.l D2, D4
-0000119E  D883                     247          add.l D3, D4
-000011A0                           248          ; Function epilogue
-000011A0  2C5F                     249          move.l (SP)+, A6
-000011A2  4E75                     250          rts
-000011A4                           251  main:
-000011A4                           252          ; Function prologue
-000011A4  2F0E                     253          move.l A6, -(SP)
-000011A6  2C4F                     254          move.l SP, A6
-000011A8  6100 FE64                255          bsr initMatrix
-000011AC                           256          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000011AC  7200                     257          move.l #0, D1
-000011AE  23C1 00001408            258          move.l D1, i
-000011B4                           259  for_start_16:
-000011B4                           260          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000011B4                           261          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000011B4  2439 00001408            262          move.l i, D2
-000011BA                           263          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000011BA  7603                     264          move.l #3, D3
-000011BC  B883                     265          cmp.l D3, D4
-000011BE  6D00 0008                266          blt Ltrue_18
-000011C2  7800                     267          move.l #0, D4
-000011C4  6000 0004                268          bra Lend_19
-000011C8                           269  Ltrue_18:
-000011C8  7801                     270          move.l #1, D4
-000011CA                           271  Lend_19:
-000011CA  2004                     272          move.l D4, D0
-000011CC  B8BC 00000000            273          cmp.l #0, D4
-000011D2  6700 0052                274          beq for_end_17
-000011D6                           275          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000011D6                           276          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000011D6  2239 00001408            277          move.l i, D1
-000011DC                           278          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000011DC  741E                     279          move.l #30, D2
-000011DE  2001                     280          move.l D1, D0
-000011E0  C1C2                     281          muls D2, D0
-000011E2  2F00                     282          move.l D0, -(SP)
-000011E4                           283          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000011E4                           284          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000011E4  2239 00001408            285          move.l i, D1
-000011EA                           286          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000011EA  7414                     287          move.l #20, D2
-000011EC  2001                     288          move.l D1, D0
-000011EE  C1C2                     289          muls D2, D0
-000011F0  2F00                     290          move.l D0, -(SP)
-000011F2                           291          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-000011F2                           292          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-000011F2  2239 00001408            293          move.l i, D1
-000011F8                           294          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-000011F8  740A                     295          move.l #10, D2
-000011FA  2001                     296          move.l D1, D0
-000011FC  C1C2                     297          muls D2, D0
-000011FE  2F00                     298          move.l D0, -(SP)
-00001200                           299          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001200  2239 00001408            300          move.l i, D1
-00001206  2F01                     301          move.l D1, -(SP)
-00001208  6100 FEE2                302          bsr setupModel
-0000120C  DFFC 00000010            303          add.l #16, SP
-00001212                           304          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.VarExpr
-00001212                           305          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001212                           306          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001212  2239 00001408            307          move.l i, D1
-00001218                           308          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001218  7401                     309          move.l #1, D2
-0000121A  2601                     310          move.l D1, D3
-0000121C  D682                     311          add.l D2, D3
-0000121E  23C3 00001408            312          move.l D3, i
-00001224  608E                     313          bra for_start_16
-00001226                           314  for_end_17:
-00001226                           315          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001226                           316          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001226  7201                     317          move.l #1, D1
-00001228                           318          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001228  7401                     319          move.l #1, D2
-0000122A  2601                     320          move.l D1, D3
-0000122C  D682                     321          add.l D2, D3
-0000122E  23C3 0000140C            322          move.l D3, idx
-00001234                           323          ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-00001234                           324          ; DEBUG: Field path: position.x, Base type: ArrayAccessExpr
-00001234                           325          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001234  2239 0000140C            326          move.l idx, D1
-0000123A                           327          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-0000123A                           328          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
-0000123A  45F9 00001274            329          lea models, A2
-00001240                           330          ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
-00001240                           331          ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-00001240  2639 0000140C            332          move.l idx, D3
-00001246                           333          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-00001246  7801                     334          move.l #1, D4
-00001248  2A03                     335          move.l D3, D5
-0000124A  9A84                     336          sub.l D4, D5
-0000124C  2605                     337          move.l D5, D3
-0000124E  C6FC 0010                338          mulu #16, D3
-00001252  D5C3                     339          add.l D3, A2
-00001254                           340          ; DEBUG: Field access position in , offset: 0
-00001254                           341          ; WARNING: Could not determine type of field position in struct 
-00001254                           342          ; DEBUG: Field access x in , offset: 0
-00001254  242A 0000                343          move.l 0(A2), D2
-00001258                           344          ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
-00001258  47F9 00001274            345          lea models, A3
-0000125E                           346          ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
-0000125E  7800                     347          move.l #0, D4
-00001260  2A04                     348          move.l D4, D5
-00001262  CAFC 0010                349          mulu #16, D5
-00001266  D7C5                     350          add.l D5, A3
-00001268                           351          ; DEBUG: Field access position in , offset: 0
-00001268                           352          ; WARNING: Could not determine type of field position in struct 
-00001268                           353          ; DEBUG: Field access x in , offset: 0
-00001268  262B 0000                354          move.l 0(A3), D3
-0000126C  2802                     355          move.l D2, D4
-0000126E  D883                     356          add.l D3, D4
-00001270                           357          ; Function epilogue
-00001270  2C5F                     358          move.l (SP)+, A6
-00001272  4E75                     359          rts
-00001274                           360  
-00001274                           361          ; String literals
-00001274                           362          ; Scalar and struct variables
-00001274                           363  models:    ds.l 1
-00001278                           364  complex_array:    ds.l 100
-00001408                           365  i:    ds.l 1
-0000140C                           366  idx:    ds.l 1
-00001410                           367  j:    ds.l 1
-00001414                           368          ; Array labels
-00001414                           369          ; Loop variables
-00001414                           370  
-00001414  FFFF FFFF                371          SIMHALT
-Line 372 WARNING: Address expected
-00001418                           372          END
+0000100C                             6  ; ===== FUNCTION DEFINITIONS =====
+0000100C                             7  __global_init:
+0000100C  4E75                       8          rts
+0000100E                             9  initMatrix:
+0000100E                            10          ; Function prologue
+0000100E  2F0E                      11          move.l A6, -(SP)
+00001010  2C4F                      12          move.l SP, A6
+00001012  7200                      13          move.l #0, D1  ; Initialize constant
+00001014  23C1 0000127C             14          move.l D1, i
+0000101A                            15  .for_start_0:             ; Start of for loop
+0000101A  2439 0000127C             16          move.l i, D2
+00001020  7604                      17          move.l #4, D3  ; Initialize constant
+00001022  B883                      18          cmp.l D3, D4
+00001024  6D00 0008                 19          blt .true_2
+00001028  7800                      20          move.l #0, D4
+0000102A  6000 0004                 21          bra .end_3
+0000102E                            22  .true_2:
+0000102E  7801                      23          move.l #1, D4
+00001030                            24  .end_3:
+00001030  2004                      25          move.l D4, D0  ; Move condition result to D0
+00001032  B8BC 00000000             26          cmp.l #0, D4   ; Check if condition is false
+00001038  6700 00AE                 27          beq .for_end_1        ; Exit loop if condition is false
+0000103C  7200                      28          move.l #0, D1
+0000103E  23C1 000015A0             29          move.l D1, j
+00001044                            30  .for_start_4:             ; Start of for loop
+00001044  2439 000015A0             31          move.l j, D2
+0000104A  7604                      32          move.l #4, D3  ; Initialize constant
+0000104C  B883                      33          cmp.l D3, D4
+0000104E  6D00 0008                 34          blt .true_6
+00001052  7800                      35          move.l #0, D4
+00001054  6000 0004                 36          bra .end_7
+00001058                            37  .true_6:
+00001058  7801                      38          move.l #1, D4
+0000105A                            39  .end_7:
+0000105A  2004                      40          move.l D4, D0  ; Move condition result to D0
+0000105C  B8BC 00000000             41          cmp.l #0, D4   ; Check if condition is false
+00001062  6700 006E                 42          beq .for_end_5        ; Exit loop if condition is false
+00001066  2239 0000127C             43          move.l i, D1
+0000106C  2439 000015A0             44          move.l j, D2
+00001072  B682                      45          cmp.l D2, D3
+00001074  6700 0008                 46          beq .true_10
+00001078  7600                      47          move.l #0, D3
+0000107A  6000 0004                 48          bra .end_11
+0000107E                            49  .true_10:
+0000107E  7601                      50          move.l #1, D3
+00001080                            51  .end_11:
+00001080  2003                      52          move.l D3, D0  ; Move condition result to D0
+00001082  B3C3                      53          cmpa.l D3, A1  ; Check if condition is false
+00001084  6700 001E                 54          beq .else_8       ; Branch to else if condition is false
+00001088  7201                      55          move.l #1, D1
+0000108A  2439 000015A0             56          move.l j, D2
+00001090  2602                      57          move.l D2, D3
+00001092  C6FC 0004                 58          mulu #4, D3  ; Compute array offset
+00001096  41F9 00001410             59          lea matrix_array, A0  ; Load effective address
+0000109C  2181 3800                 60          move.l D1, (A0,D3.l)
+000010A0  6000 001A                 61          bra .endif_9        ; Skip over else section when then section completes
+000010A4                            62  .else_8:             ; Else section starts here
+000010A4  7200                      63          move.l #0, D1
+000010A6  2439 000015A0             64          move.l j, D2
+000010AC  2602                      65          move.l D2, D3
+000010AE  C6FC 0004                 66          mulu #4, D3  ; Compute array offset
+000010B2  41F9 00001410             67          lea matrix_array, A0  ; Load effective address
+000010B8  2181 3800                 68          move.l D1, (A0,D3.l)
+000010BC                            69  .endif_9:             ; End of if-else statement
+000010BC  2239 000015A0             70          move.l j, D1
+000010C2  7401                      71          move.l #1, D2  ; Initialize constant
+000010C4  2601                      72          move.l D1, D3
+000010C6  D682                      73          add.l D2, D3
+000010C8  23C3 000015A0             74          move.l D3, j
+000010CE  6000 FF74                 75          bra .for_start_4      ; Jump back to start of loop
+000010D2                            76  .for_end_5:             ; End of for loop
+000010D2  2239 0000127C             77          move.l i, D1
+000010D8  7401                      78          move.l #1, D2  ; Initialize constant
+000010DA  2601                      79          move.l D1, D3
+000010DC  D682                      80          add.l D2, D3
+000010DE  23C3 0000127C             81          move.l D3, i
+000010E4  6000 FF34                 82          bra .for_start_0      ; Jump back to start of loop
+000010E8                            83  .for_end_1:             ; End of for loop
+000010E8                            84          ; Function epilogue
+000010E8  2C5F                      85          move.l (SP)+, A6
+000010EA  4E75                      86          rts
+000010EC                            87  setupModel:
+000010EC                            88          ; Function prologue
+000010EC  2F0E                      89          move.l A6, -(SP)
+000010EE  2C4F                      90          move.l SP, A6
+000010F0  202E 0008                 91          move.l 8(A6), D0
+000010F4  222E 000C                 92          move.l 12(A6), D1
+000010F8  242E 0010                 93          move.l 16(A6), D2
+000010FC  262E 0014                 94          move.l 20(A6), D3
+00001100  7202                      95          move.l #2, D1  ; Initialize constant
+00001102  720A                      96          move.l #10, D1
+00001104  C1C1                      97          muls D1, D0
+00001106  223C 000000FF             98          move.l #255, D1
+0000110C  7400                      99          move.l #0, D2  ; Initialize constant
+0000110E  2602                     100          move.l D2, D3
+00001110  C6FC 0004                101          mulu #4, D3  ; Compute array offset
+00001114  41F9 00001410            102          lea matrix_array, A0  ; Load effective address
+0000111A  2181 3800                103          move.l D1, (A0,D3.l)
+0000111E  223C 00000080            104          move.l #128, D1  ; Initialize constant
+00001124  7401                     105          move.l #1, D2
+00001126  2602                     106          move.l D2, D3
+00001128  C6FC 0004                107          mulu #4, D3  ; Compute array offset
+0000112C  41F9 00001410            108          lea matrix_array, A0  ; Load effective address
+00001132  2181 3800                109          move.l D1, (A0,D3.l)
+00001136  7200                     110          move.l #0, D1  ; Initialize constant
+00001138  7402                     111          move.l #2, D2
+0000113A  2602                     112          move.l D2, D3
+0000113C  C6FC 0004                113          mulu #4, D3  ; Compute array offset
+00001140  41F9 00001410            114          lea matrix_array, A0  ; Load effective address
+00001146  2181 3800                115          move.l D1, (A0,D3.l)
+0000114A  7200                     116          move.l #0, D1  ; Initialize constant
+0000114C  B481                     117          cmp.l D1, D2
+0000114E  6E00 0008                118          bgt .true_14
+00001152  7400                     119          move.l #0, D2
+00001154  6000 0004                120          bra .end_15
+00001158                           121  .true_14:
+00001158  7401                     122          move.l #1, D2
+0000115A                           123  .end_15:
+0000115A  2002                     124          move.l D2, D0  ; Move condition result to D0
+0000115C  B3C2                     125          cmpa.l D2, A1  ; Check if condition is false
+0000115E  6700 001A                126          beq .else_12       ; Branch to else if condition is false
+00001162  43F9 00001274            127          lea models, A1  ; Load effective address
+00001168  7400                     128          move.l #0, D2
+0000116A  2602                     129          move.l D2, D3
+0000116C  C6FC 0010                130          mulu #16, D3  ; Compute array offset
+00001170  D3C3                     131          add.l D3, A1
+00001172  2229 0000                132          move.l 0(A1), D1
+00001176  6000 0008                133          bra .endif_13        ; Skip over else section when then section completes
+0000117A                           134  .else_12:             ; Else section starts here
+0000117A  7201                     135          move.l #1, D1
+0000117C  7201                     136          move.l #1, D1  ; Initialize constant
+0000117E  7201                     137          move.l #1, D1
+00001180                           138  .endif_13:             ; End of if-else statement
+00001180  7204                     139          move.l #4, D1
+00001182  2400                     140          move.l D0, D2
+00001184  83C1                     141          divs D1, D1
+00001186  C3C1                     142          muls D1, D1
+00001188  9081                     143          sub.l D1, D0
+0000118A  2202                     144          move.l D2, D1
+0000118C  C2FC 0004                145          mulu #4, D1  ; Compute array offset
+00001190  41F9 00001280            146          lea matrix_data, A0  ; Load matrix data base address
+00001196  2430 1800                147          move.l (A0,D1.l), D2  ; Get matrix element at computed offset
+0000119A  7664                     148          move.l #100, D3
+0000119C  2802                     149          move.l D2, D4
+0000119E  D883                     150          add.l D3, D4
+000011A0                           151          ; Function epilogue
+000011A0  2C5F                     152          move.l (SP)+, A6
+000011A2  4E75                     153          rts
+000011A4                           154  main:
+000011A4                           155          ; Function prologue
+000011A4  2F0E                     156          move.l A6, -(SP)
+000011A6  2C4F                     157          move.l SP, A6
+000011A8  6100 FE64                158          bsr initMatrix
+000011AC  7200                     159          move.l #0, D1
+000011AE  23C1 0000127C            160          move.l D1, i
+000011B4                           161  .for_start_16:             ; Start of for loop
+000011B4  2439 0000127C            162          move.l i, D2
+000011BA  7603                     163          move.l #3, D3  ; Initialize constant
+000011BC  B883                     164          cmp.l D3, D4
+000011BE  6D00 0008                165          blt .true_18
+000011C2  7800                     166          move.l #0, D4
+000011C4  6000 0004                167          bra .end_19
+000011C8                           168  .true_18:
+000011C8  7801                     169          move.l #1, D4
+000011CA                           170  .end_19:
+000011CA  2004                     171          move.l D4, D0  ; Move condition result to D0
+000011CC  B8BC 00000000            172          cmp.l #0, D4   ; Check if condition is false
+000011D2  6700 0052                173          beq .for_end_17        ; Exit loop if condition is false
+000011D6  2239 0000127C            174          move.l i, D1
+000011DC  741E                     175          move.l #30, D2  ; Initialize constant
+000011DE  2001                     176          move.l D1, D0
+000011E0  C1C2                     177          muls D2, D0
+000011E2  2F00                     178          move.l D0, -(SP)
+000011E4  2239 0000127C            179          move.l i, D1
+000011EA  7414                     180          move.l #20, D2  ; Initialize constant
+000011EC  2001                     181          move.l D1, D0
+000011EE  C1C2                     182          muls D2, D0
+000011F0  2F00                     183          move.l D0, -(SP)
+000011F2  2239 0000127C            184          move.l i, D1
+000011F8  740A                     185          move.l #10, D2  ; Initialize constant
+000011FA  2001                     186          move.l D1, D0
+000011FC  C1C2                     187          muls D2, D0
+000011FE  2F00                     188          move.l D0, -(SP)
+00001200  2239 0000127C            189          move.l i, D1
+00001206  2F01                     190          move.l D1, -(SP)
+00001208  6100 FEE2                191          bsr setupModel
+0000120C  DFFC 00000010            192          add.l #16, SP
+00001212  2239 0000127C            193          move.l i, D1
+00001218  7401                     194          move.l #1, D2  ; Initialize constant
+0000121A  2601                     195          move.l D1, D3
+0000121C  D682                     196          add.l D2, D3
+0000121E  23C3 0000127C            197          move.l D3, i
+00001224  608E                     198          bra .for_start_16      ; Jump back to start of loop
+00001226                           199  .for_end_17:             ; End of for loop
+00001226  7201                     200          move.l #1, D1
+00001228  7401                     201          move.l #1, D2  ; Initialize constant
+0000122A  2601                     202          move.l D1, D3
+0000122C  D682                     203          add.l D2, D3
+0000122E  23C3 00001278            204          move.l D3, idx
+00001234  2239 00001278            205          move.l idx, D1
+0000123A  45F9 00001274            206          lea models, A2  ; Load effective address
+00001240  2639 00001278            207          move.l idx, D3
+00001246  7801                     208          move.l #1, D4  ; Initialize constant
+00001248  2A03                     209          move.l D3, D5
+0000124A  9A84                     210          sub.l D4, D5
+0000124C  2605                     211          move.l D5, D3
+0000124E  C6FC 0010                212          mulu #16, D3  ; Compute array offset
+00001252  D5C3                     213          add.l D3, A2
+00001254  242A 0000                214          move.l 0(A2), D2
+00001258  47F9 00001274            215          lea models, A3  ; Load effective address
+0000125E  7800                     216          move.l #0, D4
+00001260  2A04                     217          move.l D4, D5
+00001262  CAFC 0010                218          mulu #16, D5  ; Compute array offset
+00001266  D7C5                     219          add.l D5, A3
+00001268  262B 0000                220          move.l 0(A3), D3
+0000126C  2802                     221          move.l D2, D4
+0000126E  D883                     222          add.l D3, D4
+00001270                           223          ; Function epilogue
+00001270  2C5F                     224          move.l (SP)+, A6
+00001272  4E75                     225          rts
+00001274                           226  
+00001274                           227  ; ===== DATA SECTION =====
+00001274                           228  ; String literals
+00001274                           229  ; Scalar and struct variables
+00001274                           230  models:    ds.l 1
+00001278                           231  idx:    ds.l 1
+0000127C                           232  i:    ds.l 1
+00001280                           233  matrix_data:    ds.l 100
+00001410                           234  matrix_array:    ds.l 100
+000015A0                           235  j:    ds.l 1
+000015A4                           236  ; Array labels
+000015A4                           237  ; Loop variables
+000015A4                           238  
+000015A4  FFFF FFFF                239          SIMHALT
+Line 240 WARNING: Address expected
+000015A8                           240          END
 
 No errors detected
 1 warning generated
@@ -383,32 +251,33 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-COMPLEX_ARRAY       1278
-ELSE_12             117A
-ELSE_8              10A4
-ENDIF_13            1180
-ENDIF_9             10BC
-FOR_END_1           10E8
-FOR_END_17          1226
-FOR_END_5           10D2
-FOR_START_0         101A
-FOR_START_16        11B4
-FOR_START_4         1044
-I                   1408
-IDX                 140C
+I                   127C
+IDX                 1278
 INITMATRIX          100E
-J                   1410
-LEND_11             1080
-LEND_15             115A
-LEND_19             11CA
-LEND_3              1030
-LEND_7              105A
-LTRUE_10            107E
-LTRUE_14            1158
-LTRUE_18            11C8
-LTRUE_2             102E
-LTRUE_6             1058
+INITMATRIX:ELSE_8   10A4
+INITMATRIX:ENDIF_9  10BC
+INITMATRIX:END_11   1080
+INITMATRIX:END_3    1030
+INITMATRIX:END_7    105A
+INITMATRIX:FOR_END_1  10E8
+INITMATRIX:FOR_END_5  10D2
+INITMATRIX:FOR_START_0  101A
+INITMATRIX:FOR_START_4  1044
+INITMATRIX:TRUE_10  107E
+INITMATRIX:TRUE_2   102E
+INITMATRIX:TRUE_6   1058
+J                   15A0
 MAIN                11A4
+MAIN:END_19         11CA
+MAIN:FOR_END_17     1226
+MAIN:FOR_START_16   11B4
+MAIN:TRUE_18        11C8
+MATRIX_ARRAY        1410
+MATRIX_DATA         1280
 MODELS              1274
 SETUPMODEL          10EC
+SETUPMODEL:ELSE_12  117A
+SETUPMODEL:ENDIF_13  1180
+SETUPMODEL:END_15   115A
+SETUPMODEL:TRUE_14  1158
 __GLOBAL_INIT       100C
