@@ -20,12 +20,14 @@ class VarDecl : ASTNode {
     string type;
     ASTNode value;
     string visibility;
+    bool isConst;  // New field to indicate if this is a constant
 
-    this(string t, string n, ASTNode v, string vis = "public") {
+    this(string t, string n, ASTNode v, string vis = "public", bool isConst = false) {
         type = t;
         name = n;
         value = v;
         visibility = vis;
+        this.isConst = isConst;
     }
 }
 

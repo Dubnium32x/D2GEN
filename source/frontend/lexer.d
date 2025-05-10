@@ -14,6 +14,8 @@ enum TokenType {
 	// For the sake of simplicity, we can use the same token for both
 	// `+` and `+=`, `-` and `-=`, etc.
     Plus, Minus, Star, Slash,
+    
+    Const, // For const keyword
 
 	Dot,
 	DotDot,
@@ -384,6 +386,8 @@ Token[] tokenize(string input) {
                 tokens ~= Token(TokenType.Protected, lexeme);
             else if (lexeme == "static")
                 tokens ~= Token(TokenType.Static, lexeme);
+            else if (lexeme == "const")
+                tokens ~= Token(TokenType.Const, lexeme);
             else 
                 tokens ~= Token(TokenType.Identifier, lexeme);
             continue;

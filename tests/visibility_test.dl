@@ -1,0 +1,11 @@
+// Test public/private variables
+void main() {
+    // Public variable (accessible from other modules)
+    public int publicVar = 42;
+    
+    // Private variable (only accessible within this module)
+    private int privateVar = 100;
+    
+    // Access both variables in the current module
+    int sum = publicVar + privateVar;
+}

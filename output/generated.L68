@@ -1,11 +1,11 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/10/2025 1:10:46 PM
+Created On: 5/10/2025 3:02:36 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
-00001000  4EB9 0000100C              3          JSR __global_init
-00001006  4EF9 0000100E              4          JMP main
+00001000  4EB9 0000100C              3          jsr __global_init
+00001006  4EF9 0000100E              4          jmp main
 0000100C                             5  
 0000100C                             6  ; ===== FUNCTION DEFINITIONS =====
 0000100C                             7  __global_init:
@@ -13,179 +13,31 @@ Created On: 5/10/2025 1:10:46 PM
 0000100E                             9  main:
 0000100E                            10          ; Function prologue
 0000100E  4E56 0000                 11          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
-00001012  7205                      12          moveq #5, D1  ; Optimized small constant
-00001014  23C1 00001206             13          move.l D1, a
-0000101A  720A                      14          moveq #10, D1  ; Optimized small constant
-0000101C  23C1 00001296             15          move.l D1, b
-00001022  2239 00001206             16          move.l a, D1
-00001028  2439 00001296             17          move.l b, D2
-0000102E  7600                      18          moveq #0, D3  ; Clear result register
-00001030  B282                      19          cmp.l D2, D1  ; Compare values
-00001032  57C3                      20          seq.b D3      ; Set dest to FF if equal, 00 if not equal
-00001034  C6BC 00000001             21          and.l #1, D3  ; Mask to boolean value (1 if equal)
-0000103A  23C3 000011FA             22          move.l D3, eq
-00001040  2239 00001206             23          move.l a, D1
-00001046  2439 00001296             24          move.l b, D2
-0000104C  7600                      25          moveq #0, D3  ; Clear result register
-0000104E  B282                      26          cmp.l D2, D1  ; Compare values
-00001050  56C3                      27          sne.b D3      ; Set dest to FF if not equal, 00 if equal
-00001052  C6BC 00000001             28          and.l #1, D3  ; Mask to boolean value (1 if not equal)
-00001058  23C3 0000128E             29          move.l D3, neq
-0000105E  2239 00001206             30          move.l a, D1
-00001064  2439 00001296             31          move.l b, D2
-0000106A  7600                      32          moveq #0, D3  ; Clear result register
-0000106C  B282                      33          cmp.l D2, D1  ; Compare values
-0000106E  5DC3                      34          slt.b D3      ; Set dest to FF if less than, 00 otherwise
-00001070  C6BC 00000001             35          and.l #1, D3  ; Mask to boolean value (1 if less than)
-00001076  23C3 000011FE             36          move.l D3, lt
-0000107C  2239 00001206             37          move.l a, D1
-00001082  2439 00001296             38          move.l b, D2
-00001088  7600                      39          moveq #0, D3  ; Clear result register
-0000108A  B282                      40          cmp.l D2, D1  ; Compare values
-0000108C  5FC3                      41          sle.b D3      ; Set dest to FF if less or equal, 00 otherwise
-0000108E  C6BC 00000001             42          and.l #1, D3  ; Mask to boolean value (1 if less or equal)
-00001094  23C3 0000121A             43          move.l D3, lte
-0000109A  2239 00001206             44          move.l a, D1
-000010A0  2439 00001296             45          move.l b, D2
-000010A6  7600                      46          moveq #0, D3  ; Clear result register
-000010A8  B282                      47          cmp.l D2, D1  ; Compare values
-000010AA  5EC3                      48          sgt.b D3      ; Set dest to FF if greater than, 00 otherwise
-000010AC  C6BC 00000001             49          and.l #1, D3  ; Mask to boolean value (1 if greater than)
-000010B2  23C3 0000129A             50          move.l D3, gt
-000010B8  2239 00001206             51          move.l a, D1
-000010BE  2439 00001296             52          move.l b, D2
-000010C4  7600                      53          moveq #0, D3  ; Clear result register
-000010C6  B282                      54          cmp.l D2, D1  ; Compare values
-000010C8  5CC3                      55          sge.b D3      ; Set dest to FF if greater or equal, 00 otherwise
-000010CA  C6BC 00000001             56          and.l #1, D3  ; Mask to boolean value (1 if greater or equal)
-000010D0  23C3 00001216             57          move.l D3, gte
-000010D6  722A                      58          moveq #42, D1  ; Optimized small constant
-000010D8  7403                      59          moveq #3, D2  ; Optimized small constant
-000010DA  7602                      60          moveq #2, D3  ; Optimized small constant
-000010DC  7801                      61          moveq #1, D4  ; Optimized small constant
-000010DE                            62          ; Computing multi-dimensional array offset for assignment to arr
-000010DE  2A04                      63          move.l D4, D5
-000010E0  7C0C                      64          move.l #12, D6  ; Size of dimension 1  ; Initialize constant
-000010E2  CBC6                      65          muls D6, D5  ; Multiply previous index by dimension
-000010E4  DA83                      66          add.l D3, D5  ; Add current dimension index
-000010E6  7C04                      67          move.l #4, D6  ; Size of dimension 2
-000010E8  CBC6                      68          muls D6, D5  ; Multiply previous index by dimension
-000010EA  DA82                      69          add.l D2, D5  ; Add current dimension index
-000010EC  CAFC 0004                 70          mulu #4, D5  ; Multiply by element size (4 bytes)
-000010F0  41F9 0000122E             71          lea arr, A0  ; Load array base address
-000010F6  2181 5800                 72          move.l D1, (A0,D5.l)  ; Store value to array element
-000010FA  7203                      73          moveq #3, D1  ; Optimized small constant
-000010FC  7402                      74          moveq #2, D2  ; Optimized small constant
-000010FE  7601                      75          moveq #1, D3  ; Optimized small constant
-00001100                            76          ; Computing multi-dimensional array offset for arr
-00001100  2803                      77          move.l D3, D4
-00001102  7A0C                      78          move.l #12, D5  ; Size of dimension 1  ; Initialize constant
-00001104  C9C5                      79          muls D5, D4  ; Multiply previous index by dimension
-00001106  D882                      80          add.l D2, D4  ; Add current dimension index
-00001108  7A04                      81          move.l #4, D5  ; Size of dimension 2
-0000110A  C9C5                      82          muls D5, D4  ; Multiply previous index by dimension
-0000110C  D881                      83          add.l D1, D4  ; Add current dimension index
-0000110E  C8FC 0004                 84          mulu #4, D4  ; Multiply by element size (4 bytes)
-00001112  41F9 0000122E             85          lea arr, A0  ; Load array base address
-00001118  2C30 4800                 86          move.l (A0,D4.l), D6  ; Load element value
-0000111C  23C6 0000120A             87          move.l D6, x
-00001122  7200                      88          moveq #0, D1  ; Optimized small constant
-00001124  23C1 00001212             89          move.l D1, i
-0000112A                            90  .for_start_0:             ; Start of for loop
-0000112A  2439 00001212             91          move.l i, D2
-00001130  7602                      92          moveq #2, D3  ; Optimized small constant
-00001132  7800                      93          moveq #0, D4  ; Clear result register
-00001134  B483                      94          cmp.l D3, D2  ; Compare values
-00001136  5DC4                      95          slt.b D4      ; Set dest to FF if less than, 00 otherwise
-00001138  C8BC 00000001             96          and.l #1, D4  ; Mask to boolean value (1 if less than)
-0000113E  2004                      97          move.l D4, D0  ; Move condition result to D0
-00001140  4A84                      98          tst.l D4   ; Check if condition is false/zero
-00001142  6700 00B2                 99          beq .for_end_1        ; Exit loop if condition is false
-00001146  7200                     100          moveq #0, D1  ; Optimized small constant
-00001148  23C1 0000120E            101          move.l D1, j
-0000114E                           102  .for_start_2:             ; Start of for loop
-0000114E  2439 0000120E            103          move.l j, D2
-00001154  7603                     104          moveq #3, D3  ; Optimized small constant
-00001156  7800                     105          moveq #0, D4  ; Clear result register
-00001158  B483                     106          cmp.l D3, D2  ; Compare values
-0000115A  5DC4                     107          slt.b D4      ; Set dest to FF if less than, 00 otherwise
-0000115C  C8BC 00000001            108          and.l #1, D4  ; Mask to boolean value (1 if less than)
-00001162  2004                     109          move.l D4, D0  ; Move condition result to D0
-00001164  4A84                     110          tst.l D4   ; Check if condition is false/zero
-00001166  6700 007C                111          beq .for_end_3        ; Exit loop if condition is false
-0000116A  7200                     112          moveq #0, D1  ; Optimized small constant
-0000116C  23C1 0000129E            113          move.l D1, k
-00001172                           114  .for_start_4:             ; Start of for loop
-00001172  2439 0000129E            115          move.l k, D2
-00001178  7604                     116          moveq #4, D3  ; Optimized small constant
-0000117A  7800                     117          moveq #0, D4  ; Clear result register
-0000117C  B483                     118          cmp.l D3, D2  ; Compare values
-0000117E  5DC4                     119          slt.b D4      ; Set dest to FF if less than, 00 otherwise
-00001180  C8BC 00000001            120          and.l #1, D4  ; Mask to boolean value (1 if less than)
-00001186  2004                     121          move.l D4, D0  ; Move condition result to D0
-00001188  4A84                     122          tst.l D4   ; Check if condition is false/zero
-0000118A  6700 0046                123          beq .for_end_5        ; Exit loop if condition is false
-0000118E  2239 0000120E            124          move.l j, D1
-00001194  2439 0000129E            125          move.l k, D2
-0000119A  2639 0000120E            126          move.l j, D3
-000011A0  2839 00001212            127          move.l i, D4
-000011A6                           128          ; Computing multi-dimensional array offset for assignment to arr
-000011A6  2A04                     129          move.l D4, D5
-000011A8  7C0C                     130          move.l #12, D6  ; Size of dimension 1  ; Initialize constant
-000011AA  CBC6                     131          muls D6, D5  ; Multiply previous index by dimension
-000011AC  DA83                     132          add.l D3, D5  ; Add current dimension index
-000011AE  7C04                     133          move.l #4, D6  ; Size of dimension 2
-000011B0  CBC6                     134          muls D6, D5  ; Multiply previous index by dimension
-000011B2  DA82                     135          add.l D2, D5  ; Add current dimension index
-000011B4  CAFC 0004                136          mulu #4, D5  ; Multiply by element size (4 bytes)
-000011B8  41F9 0000122E            137          lea arr, A0  ; Load array base address
-000011BE  2181 5800                138          move.l D1, (A0,D5.l)  ; Store value to array element
-000011C2  2239 0000129E            139          move.l k, D1
-000011C8  5281                     140          addq.l #1, D1  ; Increment loop counter
-000011CA  23C1 0000129E            141          move.l D1, k
-000011D0  60A0                     142          bra .for_start_4      ; Jump back to start of loop
-000011D2                           143  .for_end_5:             ; End of for loop
-000011D2  2239 0000120E            144          move.l j, D1
-000011D8  5281                     145          addq.l #1, D1  ; Increment loop counter
-000011DA  23C1 0000120E            146          move.l D1, j
-000011E0  6000 FF6C                147          bra .for_start_2      ; Jump back to start of loop
-000011E4                           148  .for_end_3:             ; End of for loop
-000011E4  2239 00001212            149          move.l i, D1
-000011EA  5281                     150          addq.l #1, D1  ; Increment loop counter
-000011EC  23C1 00001212            151          move.l D1, i
-000011F2  6000 FF36                152          bra .for_start_0      ; Jump back to start of loop
-000011F6                           153  .for_end_1:             ; End of for loop
-000011F6                           154          ; Function epilogue
-000011F6  4E5E                     155          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
-000011F8  4E75                     156          rts           ; Return from subroutine
-000011FA                           157  
-000011FA                           158  ; ===== DATA SECTION =====
-000011FA                           159  ; String literals
-000011FA                           160  ; Scalar and struct variables
-000011FA                           161  eq:    ds.l 1
-000011FE                           162  lt:    ds.l 1
-00001202                           163  arr_0:    ds.l 1
-00001206                           164  a:    ds.l 1
-0000120A                           165  x:    ds.l 1
-0000120E                           166  j:    ds.l 1
-00001212                           167  i:    ds.l 1
-00001216                           168  gte:    ds.l 1
-0000121A                           169  lte:    ds.l 1
-0000121E                           170  arrArr_len:    ds.l 3
-0000122A                           171  arr_1:    ds.l 1
-0000122E                           172  arr:    ds.l 24
-0000128E                           173  neq:    ds.l 1
-00001292                           174  arr_2:    ds.l 1
-00001296                           175  b:    ds.l 1
-0000129A                           176  gt:    ds.l 1
-0000129E                           177  k:    ds.l 1
-000012A2                           178  ; Array labels
-000012A2                           179  arrArr:    ds.l 1
-000012A6                           180  ; Loop variables
-000012A6                           181  
-000012A6  FFFF FFFF                182          SIMHALT
-Line 183 WARNING: Address expected
-000012AA                           183          END
+00001012  722A                      12          moveq #42, D1  ; Optimized small constant
+00001014  23C1 00001040             13          move.l D1, publicVar
+0000101A  7264                      14          moveq #100, D1  ; Optimized small constant
+0000101C  23C1 00001044             15          move.l D1, privateVar
+00001022  2239 00001040             16          move.l publicVar, D1
+00001028  2439 00001044             17          move.l privateVar, D2
+0000102E  2601                      18          move.l D1, D3
+00001030  D682                      19          add.l D2, D3
+00001032  23C3 0000103C             20          move.l D3, sum
+00001038                            21          ; Function epilogue
+00001038  4E5E                      22          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+0000103A  4E75                      23          rts           ; Return from subroutine
+0000103C                            24  
+0000103C                            25  ; ===== DATA SECTION =====
+0000103C                            26  ; String literals
+0000103C                            27  ; Scalar and struct variables
+0000103C                            28  sum:    ds.l 1
+00001040                            29  publicVar:    ds.l 1
+00001044                            30  privateVar:    ds.l 1
+00001048                            31  ; Array labels
+00001048                            32  ; Loop variables
+00001048                            33  
+00001048  FFFF FFFF                 34          SIMHALT
+Line 35 WARNING: Address expected
+0000104C                            35          END
 
 No errors detected
 1 warning generated
@@ -194,29 +46,8 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-A                   1206
-ARR                 122E
-ARRARR              12A2
-ARRARR_LEN          121E
-ARR_0               1202
-ARR_1               122A
-ARR_2               1292
-B                   1296
-EQ                  11FA
-GT                  129A
-GTE                 1216
-I                   1212
-J                   120E
-K                   129E
-LT                  11FE
-LTE                 121A
 MAIN                100E
-MAIN:FOR_END_1      11F6
-MAIN:FOR_END_3      11E4
-MAIN:FOR_END_5      11D2
-MAIN:FOR_START_0    112A
-MAIN:FOR_START_2    114E
-MAIN:FOR_START_4    1172
-NEQ                 128E
-X                   120A
+PRIVATEVAR          1044
+PUBLICVAR           1040
+SUM                 103C
 __GLOBAL_INIT       100C

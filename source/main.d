@@ -17,7 +17,7 @@ bool contains(string haystack, string needle) {
 }
 
 void main() {
-    string code = readText("tests/hello.dl");
+    string code = readText("tests/visibility_test.dl");
     
     auto tokens = tokenize(code);
     auto ast = parse(tokens);

@@ -265,12 +265,21 @@ byte parseByteValue(string lexeme) {
 }
 
 ASTNode parseStatement() {
-    // Handle public/private variable declarations at top level and in blocks
-    // --- PATCH: allow struct types and arrays after public/private ---
-    if ((check(TokenType.Public) || check(TokenType.Private)) &&
+    // Handle public/private/const variable declarations at top level and in blocks
+    // --- PATCH: allow struct types and arrays after public/private/const ---
+    if ((check(TokenType.Public) || check(TokenType.Private) || check(TokenType.Const)) &&
         (isTypeToken(peek().type) || peek().type == TokenType.Auto ||
          (peek().type == TokenType.Identifier && structTypes.canFind(peek().lexeme)))) {
-        string visibility = advance().type == TokenType.Public ? "public" : "private";
+        bool isConst = false;
+        string visibility = "public"; // Default visibility
+        
+        if (check(TokenType.Const)) {
+            isConst = true;
+            advance();
+        } else {
+            visibility = advance().type == TokenType.Public ? "public" : "private";
+        }
+        
         Token typeToken = advance();
         ASTNode[] decls;
         do {
@@ -303,9 +312,12 @@ ASTNode parseStatement() {
                 if (match(TokenType.Assign)) {
                     val = parseExpression();
                 } else {
+                    if (isConst) {
+                        throw new Exception(errorWithLine("Const variables must be initialized"));
+                    }
                     val = null;
                 }
-                decls ~= new VarDecl(typeToken.lexeme, varName, val, visibility);
+                decls ~= new VarDecl(typeToken.lexeme, varName, val, visibility, isConst);
             }
             // Defensive: If next token is not comma or semicolon, error
             if (!(check(TokenType.Comma) || check(TokenType.Semicolon))) {
@@ -316,11 +328,16 @@ ASTNode parseStatement() {
         expect(TokenType.Semicolon);
         return decls.length == 1 ? decls[0] : new BlockStmt(decls);
     }
-    // --- PATCH: Error if public/private is not followed by a valid declaration ---
-    if (check(TokenType.Public) || check(TokenType.Private)) {
-        string vis = advance().type == TokenType.Public ? "public" : "private";
-        writeln("ERROR: '" ~ vis ~ "' must be followed by a type, struct, or 'auto', but got '", current().lexeme, "' (", current().type, ")");
-        throw new Exception(errorWithLine("'" ~ vis ~ "' must be followed by a type, struct, or 'auto', but got '" ~ current().lexeme ~ "' (" ~ current().type.stringof ~ ")"));
+    // --- PATCH: Error if public/private/const is not followed by a valid declaration ---
+    if (check(TokenType.Public) || check(TokenType.Private) || check(TokenType.Const)) {
+        string modifier = "";
+        if (check(TokenType.Public)) modifier = "public";
+        else if (check(TokenType.Private)) modifier = "private";
+        else if (check(TokenType.Const)) modifier = "const";
+        
+        advance();
+        writeln("ERROR: '" ~ modifier ~ "' must be followed by a type, struct, or 'auto', but got '", current().lexeme, "' (", current().type, ")");
+        throw new Exception(errorWithLine("'" ~ modifier ~ "' must be followed by a type, struct, or 'auto', but got '" ~ current().lexeme ~ "' (" ~ current().type.stringof ~ ")"));
     }
     // Prefix increment/decrement (e.g., ++x;)
     if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) {
@@ -505,6 +522,30 @@ ASTNode parseStatement() {
         }
         expect(TokenType.Semicolon);
         return new ArrayDecl(type, name, dimensions);
+    }
+    // Handle variable declarations starting with const
+    else if (check(TokenType.Const) && 
+             (isTypeToken(peek().type) || peek().type == TokenType.Auto ||
+              (peek().type == TokenType.Identifier && structTypes.canFind(peek().lexeme)))) {
+        advance(); // Consume 'const'
+        Token typeToken = advance();
+        ASTNode[] decls;
+        do {
+            if (!check(TokenType.Identifier)) {
+                writeln("ERROR: Expected variable name after const " ~ typeToken.lexeme ~ ", but got ", current().lexeme, " (", current().type, ")");
+                throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
+            }
+            string varName = expect(TokenType.Identifier).lexeme;
+            ASTNode val;
+            if (match(TokenType.Assign)) {
+                val = parseExpression();
+            } else {
+                throw new Exception(errorWithLine("Const variables must be initialized"));
+            }
+            decls ~= new VarDecl(typeToken.lexeme, varName, val, "public", true); // Constants are public by default
+        } while (match(TokenType.Comma));
+        expect(TokenType.Semicolon);
+        return decls.length == 1 ? decls[0] : new BlockStmt(decls);
     }
     // General variable declaration
     else if (isTypeToken(current().type) || isStructType() || current().type == TokenType.Auto) {

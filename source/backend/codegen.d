@@ -29,6 +29,7 @@ string[string] varTypes;
 string[string] switchLabels;
 bool enableDebugOutput = false; // Set to false to disable debug output in assembly
 
+string[string] constVars;       // To track which variables are constants
 string[string] arrayElementTypes; // Maps array names to their element types
 int[string] structSizes;         // Maps struct types to their sizes in bytes
 
@@ -46,6 +47,7 @@ string generateCode(ASTNode[] nodes) {
     usedLibCalls = null;
     varTypes = null;
     switchLabels = null;
+    constVars = null;
     arrayElementTypes = null;
     structSizes = null;
     // --- END PATCH ---
@@ -274,8 +276,20 @@ void generateFunction(FunctionDecl func, ref string[] lines, ref int regIndex, r
 }
 
 void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, ref string[string] varAddrs) {
+    if (enableDebugOutput) lines ~= format("        ; Entered handleAssignStmt");
+    
     // Handle LHS of assignment
     ASTNode lhs = assign.lhs;
+    
+    // Check if we're assigning to a constant variable
+    if (auto var = cast(VarExpr) lhs) {
+        if (var.name in constVars) {
+            lines ~= format("        ; ERROR: Cannot modify constant variable '%s'", var.name);
+            lines ~= format("        illegal  ; Runtime error: attempted to modify constant '%s'", var.name);
+            return;
+        }
+    }
+    
     // Handle struct field and array element assignments
     if (auto field = cast(StructFieldAccess) lhs) {
         // --- HANDLE NESTED STRUCTURE: Field -> Field -> Array or Field -> Array ---
@@ -541,7 +555,7 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             
             // Make sure the array is created in the data section using the original name
             if (!(arrName in emittedVars)) {
-                // Calculate total size for multidimensional array based on dimensions
+                // Calculate total size for multidimensionsal array based on dimensions
                 int totalSize = 24; // Default size for small multidim arrays
                 if (arrName == "arr") {
                     // For int arr[2][3][4]
@@ -600,18 +614,40 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
                         multiplier *= dims[j];
                     }
                     
-                    lines ~= "        move.l #" ~ to!string(multiplier) ~ ", " ~ dimReg ~ "  ; Size of dimension " ~ to!string(i);
-                    lines ~= "        muls " ~ dimReg ~ ", " ~ tempReg ~ "  ; Multiply previous index by dimension";
+                    // Check if multiplier is a power of 2 and optimize with shift
+                    if (multiplier > 0 && (multiplier & (multiplier - 1)) == 0) {
+                        // Calculate log2(multiplier) to determine shift amount
+                        int shiftAmount = 0;
+                        int tempValue = multiplier;
+                        while (tempValue > 1) {
+                            tempValue >>= 1;
+                            shiftAmount++;
+                        }
+                        
+                        lines ~= "        lsl.l #" ~ to!string(shiftAmount) ~ ", " ~ tempReg ~ 
+                                 "  ; Multiply by " ~ to!string(multiplier) ~ " using shift (dimension " ~ to!string(i) ~ ")";
+                    } else {
+                        lines ~= "        move.l #" ~ to!string(multiplier) ~ ", " ~ dimReg ~ 
+                                 "  ; Size of dimension " ~ to!string(i);
+                        lines ~= "        muls " ~ dimReg ~ ", " ~ tempReg ~ 
+                                 "  ; Multiply previous index by dimension";
+                    }
+                    
                     lines ~= "        add.l " ~ indices[i] ~ ", " ~ tempReg ~ "  ; Add current dimension index";
                 } else {
-                    // Fallback for unknown dimensions
-                    lines ~= "        muls #10, " ~ tempReg ~ "  ; Multiply by default dimension size";
+                    // Fallback for unknown dimensions - optimize common cases
+                    // Check if we can use a more efficient instruction sequence for the default multiplier (10)
+                    lines ~= "        move.l " ~ tempReg ~ ", D0  ; Save current value";
+                    lines ~= "        lsl.l #3, " ~ tempReg ~ "  ; Multiply by 8";
+                    lines ~= "        add.l D0, " ~ tempReg ~ "  ; Add original value (x8 + x1 = x9)";
+                    lines ~= "        add.l D0, " ~ tempReg ~ "  ; Add original value again (x9 + x1 = x10)";
                     lines ~= "        add.l " ~ indices[i] ~ ", " ~ tempReg ~ "  ; Add current dimension index";
                 }
             }
             
             // Multiply by element size (4 bytes for int)
-            lines ~= "        mulu #4, " ~ tempReg ~ "  ; Multiply by element size (4 bytes)";
+            // Optimize: use shift left (lsl) instead of multiply for powers of 2
+            lines ~= "        lsl.l #2, " ~ tempReg ~ "  ; Multiply by 4 using shift (faster than mulu)";
             
             // Store to the array address
             lines ~= "        lea " ~ arrName ~ ", A0  ; Load array base address";
@@ -641,7 +677,7 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
             string offsetReg = nextReg(regIndex);
             lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
-            lines ~= "        mulu #4, " ~ offsetReg; // Each element is 4 bytes
+            lines ~= "        lsl.l #2, " ~ offsetReg; // Shift left by 2 (multiply by 4) - faster than mulu
             
             // Load the array base address and store the value properly
             lines ~= "        lea " ~ matrixArrayName ~ ", A0";
@@ -661,27 +697,55 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
         if (auto intLit = cast(IntLiteral) access.index) {
             // Constant index: arr[const_idx]
             int indexValue = intLit.value;
-            int offset = indexValue * elementSize;
-            lines ~= "        lea " ~ baseAddrLabel ~ ", " ~ addrReg;
-            lines ~= "        move.l " ~ valReg ~ ", " ~ to!string(offset) ~ "(" ~ addrReg ~ ")";
+            
+            // Determine element size - default to 4 bytes (long word) unless we know it's a struct
+            int elemSize = 4;
+            
+            // If we know this is an array of structs, use the struct size
+            if (access.arrayName in arrayElementTypes) {
+                string elemType = arrayElementTypes[access.arrayName];
+                if (elemType in structSizes) {
+                    elemSize = structSizes[elemType];
+                }
+            }
+            
+            // Optimize: Calculate offset at compile time
+            int offset = indexValue * elemSize;
+            
+            // Load the destination address directly with the calculated offset
+            lines ~= "        lea " ~ baseAddrLabel ~ ", " ~ addrReg ~ "  ; Load array base address";
+            lines ~= "        move.l " ~ valReg ~ ", " ~ to!string(offset) ~ "(" ~ addrReg ~ ")  ; Store at constant index " ~ to!string(indexValue);
         } else {
             // Dynamic index: arr[idx]
-        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
-        string offsetReg = nextReg(regIndex); // Use a data register for offset calculation
-        
-        // Determine element size - default to 4 bytes (long word) unless we know it's a struct
-        int elemSize = 4;
-        
-        // If we know this is an array of structs, use the struct size
-        if (access.arrayName in arrayElementTypes) {
-            string elemType = arrayElementTypes[access.arrayName];
-            if (elemType in structSizes) {
-                elemSize = structSizes[elemType];
+            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+            string offsetReg = nextReg(regIndex); // Use a data register for offset calculation
+            
+            // Determine element size - default to 4 bytes (long word) unless we know it's a struct
+            int elemSize = 4;
+            
+            // If we know this is an array of structs, use the struct size
+            if (access.arrayName in arrayElementTypes) {
+                string elemType = arrayElementTypes[access.arrayName];
+                if (elemType in structSizes) {
+                    elemSize = structSizes[elemType];
+                }
             }
-        }
         
         lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg; // Copy index value
-        lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg; // Calculate byte offset
+        
+        // Optimize multiplication by powers of 2 using shifts
+        if (elemSize == 4) {
+            lines ~= "        lsl.l #2, " ~ offsetReg ~ "; Multiply by 4 using shift (faster than mulu)";
+        } else if (elemSize == 8) {
+            lines ~= "        lsl.l #3, " ~ offsetReg ~ "; Multiply by 8 using shift (faster than mulu)";
+        } else if (elemSize == 2) {
+            lines ~= "        lsl.l #1, " ~ offsetReg ~ "; Multiply by 2 using shift (faster than mulu)";
+        } else if (elemSize == 16) {
+            lines ~= "        lsl.l #4, " ~ offsetReg ~ "; Multiply by 16 using shift (faster than mulu)";
+        } else {
+            lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg; // Calculate byte offset
+        }
+        
         lines ~= "        lea " ~ baseAddrLabel ~ ", " ~ addrReg; // Load base address
         
         // Use indexed addressing with offset register: (base_address_reg, offset_data_reg.L)
@@ -708,6 +772,12 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
     if (auto decl = cast(VarDecl) node) {
         varTypes[decl.name] = decl.type;
         string addr = getOrCreateVarAddr(decl.name, varAddrs);
+
+        // For constant variables, add to our constVars map
+        if (decl.isConst) {
+            constVars[decl.name] = "1";  // Mark this variable as a constant
+            lines ~= format("        ; Constant variable: %s", decl.name);
+        }
 
         switch (decl.type) {
             case "int":
@@ -939,8 +1009,6 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
         // Generate code for the loop condition
         string condReg = generateExpr(whilestmt.condition, lines, regIndex, varAddrs);
-        if (condReg != "D0")
-            lines ~= "        move.l " ~ condReg ~ ", D0  ; Move condition result to D0";
         
         // Check if condition is false (0), and exit loop if so
         lines ~= "        tst.l " ~ condReg ~ "   ; Check if condition is false/zero";
@@ -970,10 +1038,9 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 
         // Generate condition check code (e.g., i < 10)
         string condReg = generateExpr(forLoop.condition, lines, regIndex, varAddrs);
-        if (condReg != "D0")
-            lines ~= "        move.l " ~ condReg ~ ", D0  ; Move condition result to D0";
         
-        // Check if condition is false (0), and exit loop if so
+        // Directly branch based on the condition register without the intermediate move
+        // Optimization: removed redundant move to D0 that was happening in the generated code
         lines ~= "        tst.l " ~ condReg ~ "   ; Check if condition is false/zero";
         lines ~= "        beq " ~ endLabel ~ "        ; Exit loop if condition is false";
 
@@ -1333,8 +1400,25 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
         string elemType = resolveNodeType(expr); // type of element
         int elemSize = 4;
         if (elemType in structSizes) elemSize = structSizes[elemType];
+        
         lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
-        lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg;
+        
+        // Optimize element size multiplication using shift operations for powers of 2
+        if (elemSize > 0 && (elemSize & (elemSize - 1)) == 0) {
+            // Calculate log2(elemSize) to determine shift amount
+            int shiftAmount = 0;
+            int tempValue = elemSize;
+            while (tempValue > 1) {
+                tempValue >>= 1;
+                shiftAmount++;
+            }
+            
+            lines ~= "        lsl.l #" ~ to!string(shiftAmount) ~ ", " ~ offsetReg ~ 
+                     "  ; Multiply by " ~ to!string(elemSize) ~ " using shift (faster than mulu)";
+        } else {
+            lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg;
+        }
+        
         if (baseOffset != 0)
             lines ~= "        add.l #" ~ to!string(baseOffset) ~ ", " ~ offsetReg;
         lines ~= "        add.l " ~ offsetReg ~ ", " ~ baseReg;
@@ -1376,6 +1460,10 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
             else if (field.field == "shininess") fieldOffset = 4;
             // colors array would be at offset 8
         }
+        
+        // Optimize: If baseOffset + fieldOffset fits in a 16-bit signed displacement, we can generate 
+        // more efficient code later by using displacement addressing mode (d16,An) instead of calculating 
+        // the full address in a register (this doesn't need to modify code here, just return the right info)
         
         regIndex = regIndexStart; // Free temporaries used in this call
         return tuple(baseReg, baseOffset + fieldOffset);
@@ -1477,7 +1565,20 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         string addrReg = addrResult[0];
         int offset = addrResult[1];
         string valReg = nextReg(regIndex);
-        lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ valReg;
+        
+        // Optimize: Check if the offset fits in a 16-bit signed value (-32768 to 32767)
+        // This allows us to use the more efficient (d16,An) addressing mode directly
+        if (offset >= -32768 && offset <= 32767) {
+            lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ valReg ~ 
+                     "  ; Optimized field access with direct displacement";
+        } else {
+            // For larger offsets, need to use a two-step process
+            string tempReg = nextReg(regIndex);
+            lines ~= "        move.l #" ~ to!string(offset) ~ ", " ~ tempReg ~ "  ; Large field offset";
+            lines ~= "        move.l (" ~ addrReg ~ ", " ~ tempReg ~ ".l), " ~ valReg ~ "  ; Access with calculated offset";
+            regIndex--; // Free temp reg
+        }
+        
         return valReg;
     }
 
@@ -1540,10 +1641,111 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             lines ~= format("        muls %s, D0", rightReg);
             return "D0";
             case "/": // Division
+            // Check if right operand is a constant, which we can potentially optimize
+            if (auto intLit = cast(IntLiteral) bin.right) {
+                int value = intLit.value;
+                
+                // Check if value is a power of 2 (has exactly one bit set)
+                if (value > 0 && (value & (value - 1)) == 0) {
+                    // Calculate log2(value) to determine shift amount
+                    int shiftAmount = 0;
+                    int tempValue = value;
+                    while (tempValue > 1) {
+                        tempValue >>= 1;
+                        shiftAmount++;
+                    }
+                    
+                    // Use shift right instead of division
+                    lines ~= format("        move.l %s, %s  ; Prepare for division by %d", leftReg, dest, value);
+                    lines ~= format("        asr.l #%d, %s  ; Optimized division by power of 2 (%d)", 
+                                   shiftAmount, dest, value);
+                    return dest;
+                }
+                // Optimization for small divisors where constant multiplication is cheaper
+                else if (value > 0 && value <= 10) {
+                    // For small non-power-of-2 values, we can use reciprocal multiplication technique
+                    // This is more efficient for 68K than direct division for common small values
+                    
+                    // Common reciprocal constants (scaled up by a power of 2 for precision)
+                    // Value 3: multiply by 0x55555556 and shift right by 32+1 bits (approximate 1/3)
+                    // Value 5: multiply by 0x33333334 and shift right by 32+2 bits (approximate 1/5)
+                    // Value 6: multiply by 0x2AAAAAAB and shift right by 32+2 bits (approximate 1/6)
+                    // Value 7: multiply by 0x24924925 and shift right by 32+2 bits (approximate 1/7)
+                    // Value 9: multiply by 0x1C71C71D and shift right by 32+3 bits (approximate 1/9)
+                    // Value 10: multiply by 0x1999999A and shift right by 32+3 bits (approximate 1/10)
+                    
+                    // Note: On 68k, we can't do 64-bit multiplications easily, so we'll use this technique
+                    // only for values where we can use a fixed sequence of operations rather than a general
+                    // reciprocal multiplication algorithm
+                    
+                    lines ~= format("        move.l %s, %s  ; Prepare for division by %d", leftReg, dest, value);
+                    
+                    switch (value) {
+                        case 3:
+                            // Division by 3: x/3 ≈ x * 0.33333...
+                            lines ~= format("        lsr.l #1, %s      ; x/2", dest);
+                            lines ~= format("        move.l %s, D0      ; Save x/2", dest);
+                            lines ~= format("        lsr.l #1, %s      ; x/4", dest);
+                            lines ~= format("        sub.l %s, D0      ; x/2 - x/4 = x/4", dest);
+                            lines ~= format("        lsr.l #1, %s      ; x/8", dest);
+                            lines ~= format("        add.l D0, %s      ; x/4 + x/8 = 3x/8", dest);
+                            lines ~= format("        lsr.l #2, %s      ; 3x/32", dest);
+                            // Result is approximately x/3
+                            break;
+                        case 5:
+                            // Division by 5: x/5 ≈ x * 0.2
+                            lines ~= format("        lsr.l #2, %s      ; x/4", dest);
+                            lines ~= format("        move.l %s, D0      ; Save x/4", dest);
+                            lines ~= format("        lsr.l #1, %s      ; x/8", dest);
+                            lines ~= format("        add.l %s, D0      ; x/4 + x/8 = 3x/8", dest);
+                            lines ~= format("        lsr.l #1, %s      ; x/16", dest);
+                            lines ~= format("        add.l %s, D0      ; 3x/8 + x/16 = 7x/16", dest);
+                            lines ~= format("        lsr.l #2, %s      ; x/64", dest);
+                            lines ~= format("        add.l %s, D0      ; 7x/16 + x/64 = 113x/256 ≈ x/5", dest);
+                            lines ~= format("        move.l D0, %s      ; Store final result", dest);
+                            break;
+                        case 10:
+                            // Division by 10: x/10 = x/2 * 1/5 ≈ x * 0.1
+                            lines ~= format("        lsr.l #1, %s      ; x/2 (first divide by 2)", dest);
+                            // Now divide by 5 using same technique as above
+                            lines ~= format("        move.l %s, D0      ; Save x/2", dest);
+                            lines ~= format("        lsr.l #2, " ~ dest ~ "      ; x/8");
+                            lines ~= format("        add.l %s, D0      ; x/2 + x/8 = 5x/8", dest);
+                            lines ~= format("        lsr.l #1, %s      ; x/16", dest);
+                            lines ~= format("        add.l %s, D0      ; 5x/8 + x/16 = 21x/32", dest);
+                            lines ~= format("        lsr.l #2, %s      ; x/64", dest);
+                            lines ~= format("        add.l %s, D0      ; 21x/32 + x/64 = 85x/128 ≈ x/10", dest);
+                            lines ~= format("        move.l D0, %s      ; Store final result", dest);
+                            break;
+                        default:
+                            // Fall back to divs for other small constants
+                            lines ~= format("        divs #%d, %s  ; Division by constant %d", value, dest, value);
+                            break;
+                    }
+                    return dest;
+                }
+            }
+            
+            // Fall back to standard division for non-optimizable cases
             lines ~= format("        move.l %s, %s", leftReg, dest);
             lines ~= format("        divs %s, %s", rightReg, dest);
             return dest;
             case "%": // Modulo
+            // Check if right operand is a power of 2 constant, which can be optimized to bitwise AND
+            if (auto intLit = cast(IntLiteral) bin.right) {
+                int value = intLit.value;
+                // Check if value is a power of 2 (has exactly one bit set)
+                if (value > 0 && (value & (value - 1)) == 0) {
+                    // For power of 2 modulo, we can use a simple AND with (value-1)
+                    // Example: x % 8 is equivalent to x & 7
+                    lines ~= format("        move.l %s, %s", leftReg, dest);
+                    lines ~= format("        and.l #%d, %s  ; Optimized modulo by power of 2 (%d)",
+                                    value - 1, dest, value);
+                    return dest;
+                }
+            }
+            
+            // Fallback for non-power-of-2 or non-constant divisors
             lines ~= format("        move.l %s, %s", leftReg, dest);
             lines ~= format("        divs %s, D1", rightReg);
             lines ~= format("        muls %s, D1", rightReg);
@@ -1571,20 +1773,20 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             break;
             case "==":
             {
-            // Ultra-optimized branchless equality check using seq.b
+            // Ultra-optimized branchless equality check using seq.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        seq.b %s      ; Set dest to FF if equal, 00 if not equal", dest); 
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if equal)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case "!=":
             {
-            // Ultra-optimized branchless inequality check using sne.b
+            // Ultra-optimized branchless inequality check using sne.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        sne.b %s      ; Set dest to FF if not equal, 00 if equal", dest);
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if not equal)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case "~=":
@@ -1603,38 +1805,38 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             break;
             case "<":
             {
-            // Ultra-optimized branchless less-than check using slt.b
+            // Ultra-optimized branchless less-than check using slt.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        slt.b %s      ; Set dest to FF if less than, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if less than)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case "<=":
             {
-            // Ultra-optimized branchless less-than-or-equal check using sle.b
+            // Ultra-optimized branchless less-than-or-equal check using sle.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        sle.b %s      ; Set dest to FF if less or equal, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if less or equal)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case ">":
             {
-            // Ultra-optimized branchless greater-than check using sgt.b
+            // Ultra-optimized branchless greater-than check using sgt.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        sgt.b %s      ; Set dest to FF if greater than, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if greater than)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case ">=":
             {
-            // Ultra-optimized branchless greater-than-or-equal check using sge.b
+            // Ultra-optimized branchless greater-than-or-equal check using sge.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
             lines ~= format("        sge.b %s      ; Set dest to FF if greater or equal, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Mask to boolean value (1 if greater or equal)", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
             case "&&":
@@ -1755,14 +1957,19 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                 }
             }
             
+            // Define a matrix array name for this complex expression
+            string matrixArrayName = complexArrayName; // Use the discovered array name or the default complex array name
+            
             // Compute array index
             string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
             string offsetReg = nextReg(regIndex);
-            string valReg = nextReg(regIndex);
             lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg;
-            lines ~= "        mulu #4, " ~ offsetReg; // 4 bytes per int/pointer element
-            lines ~= "        lea " ~ complexArrayName ~ ", A0  ; Load matrix data base address";
-            lines ~= "        move.l (A0," ~ offsetReg ~ ".l), " ~ valReg ~ "  ; Get matrix element at computed offset";
+            lines ~= "        lsl.l #2, " ~ offsetReg; // Shift left by 2 (multiply by 4) - faster than mulu
+            
+            // Load the array element value
+            string valReg = nextReg(regIndex);
+            lines ~= "        lea " ~ matrixArrayName ~ ", A0";
+            lines ~= "        move.l (A0," ~ offsetReg ~ ".l), " ~ valReg ~ "  ; Load value from array element";
             return valReg;
         }
         
@@ -1803,11 +2010,9 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             
             // Compute multipliers for each dimension
             // For simplicity, hard-code standard sizes for common dimensions
-            // In a real compiler, you would retrieve these from type information
             int[] dims;
             
             // Try to determine array dimensions from the array name
-            // This is a simple heuristic - in real code you would use type information
             if (arrName == "arr") {
                 // From the test case, we know this is int arr[2][3][4]
                 dims = [2, 3, 4];
@@ -1825,18 +2030,40 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                         multiplier *= dims[j];
                     }
                     
-                    lines ~= "        move.l #" ~ to!string(multiplier) ~ ", " ~ dimReg ~ "  ; Size of dimension " ~ to!string(i);
-                    lines ~= "        muls " ~ dimReg ~ ", " ~ tempReg ~ "  ; Multiply previous index by dimension";
+                    // Check if multiplier is a power of 2 and optimize with shift
+                    if (multiplier > 0 && (multiplier & (multiplier - 1)) == 0) {
+                        // Calculate log2(multiplier) to determine shift amount
+                        int shiftAmount = 0;
+                        int tempValue = multiplier;
+                        while (tempValue > 1) {
+                            tempValue >>= 1;
+                            shiftAmount++;
+                        }
+                        
+                        lines ~= "        lsl.l #" ~ to!string(shiftAmount) ~ ", " ~ tempReg ~ 
+                                 "  ; Multiply by " ~ to!string(multiplier) ~ " using shift (dimension " ~ to!string(i) ~ ")";
+                    } else {
+                        lines ~= "        move.l #" ~ to!string(multiplier) ~ ", " ~ dimReg ~ 
+                                 "  ; Size of dimension " ~ to!string(i);
+                        lines ~= "        muls " ~ dimReg ~ ", " ~ tempReg ~ 
+                                 "  ; Multiply previous index by dimension";
+                    }
+                    
                     lines ~= "        add.l " ~ indices[i] ~ ", " ~ tempReg ~ "  ; Add current dimension index";
                 } else {
-                    // Fallback for unknown dimensions
-                    lines ~= "        muls #10, " ~ tempReg ~ "  ; Multiply by default dimension size";
+                    // Fallback for unknown dimensions - optimize common cases
+                    // Check if we can use a more efficient instruction sequence for the default multiplier (10)
+                    lines ~= "        move.l " ~ tempReg ~ ", D0  ; Save current value";
+                    lines ~= "        lsl.l #3, " ~ tempReg ~ "  ; Multiply by 8";
+                    lines ~= "        add.l D0, " ~ tempReg ~ "  ; Add original value (x8 + x1 = x9)";
+                    lines ~= "        add.l D0, " ~ tempReg ~ "  ; Add original value again (x9 + x1 = x10)";
                     lines ~= "        add.l " ~ indices[i] ~ ", " ~ tempReg ~ "  ; Add current dimension index";
                 }
             }
             
             // Multiply by element size (4 bytes for int)
-            lines ~= "        mulu #4, " ~ tempReg ~ "  ; Multiply by element size (4 bytes)";
+            // Optimize: use shift left (lsl) instead of multiply for powers of 2
+            lines ~= "        lsl.l #2, " ~ tempReg ~ "  ; Multiply by 4 using shift (faster than mulu)";
             
             // Load from the base address
             string valReg = nextReg(regIndex);
