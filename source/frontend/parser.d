@@ -208,9 +208,25 @@ ASTNode parsePrimary() {
             // For array access, if the base is a VarExpr, use its name
             if (auto var = cast(VarExpr)expr) {
                 expr = new ArrayAccessExpr(var.name, indexExpr);
+            } else if (auto prevAccess = cast(ArrayAccessExpr)expr) {
+                // Handle multi-dimensional arrays more effectively
+                // Store the full array name and the current dimension access
+                string arrayBaseName = prevAccess.arrayName;
+                if (arrayBaseName != "complex_expr") {
+                    // Create a new accessor for the next dimension
+                    ArrayAccessExpr newAccess = new ArrayAccessExpr(arrayBaseName, indexExpr);
+                    // Mark this as a multi-dim access by saving the previous dimension index
+                    newAccess.baseExpr = prevAccess;
+                    expr = newAccess;
+                } else {
+                    // We're already using complex_expr for a nested access
+                    ArrayAccessExpr newAccess = new ArrayAccessExpr("complex_expr", indexExpr);
+                    newAccess.baseExpr = prevAccess;
+                    expr = newAccess;
+                }
             } else {
-                // For more complex bases, you may want to extend ArrayAccessExpr
-                expr = new ArrayAccessExpr("complex_expr", indexExpr); // fallback
+                // For other complex bases, use the fallback
+                expr = new ArrayAccessExpr("complex_expr", indexExpr);
             }
         } else if (check(TokenType.LParen)) {
             advance();

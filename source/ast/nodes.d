@@ -287,9 +287,19 @@ class ArrayDecl : ASTNode {
 class ArrayAccessExpr : ASTNode {
     string arrayName;
     ASTNode index;
+    ASTNode baseExpr; // For multi-dimensional array access
+    
     this(string name, ASTNode idx) {
         arrayName = name;
         index = idx;
+        baseExpr = null;
+    }
+    
+    // Add a constructor that also sets baseExpr for multi-dimensional arrays
+    this(string name, ASTNode idx, ASTNode base) {
+        arrayName = name;
+        index = idx;
+        baseExpr = base;
     }
 }
 

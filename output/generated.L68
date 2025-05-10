@@ -1,248 +1,191 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/9/2025 8:56:42 PM
+Created On: 5/10/2025 1:10:46 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          JSR __global_init
-00001006  4EF9 000011A4              4          JMP main
+00001006  4EF9 0000100E              4          JMP main
 0000100C                             5  
 0000100C                             6  ; ===== FUNCTION DEFINITIONS =====
 0000100C                             7  __global_init:
 0000100C  4E75                       8          rts
-0000100E                             9  initMatrix:
+0000100E                             9  main:
 0000100E                            10          ; Function prologue
-0000100E  2F0E                      11          move.l A6, -(SP)
-00001010  2C4F                      12          move.l SP, A6
-00001012  7200                      13          move.l #0, D1  ; Initialize constant
-00001014  23C1 0000127C             14          move.l D1, i
-0000101A                            15  .for_start_0:             ; Start of for loop
-0000101A  2439 0000127C             16          move.l i, D2
-00001020  7604                      17          move.l #4, D3  ; Initialize constant
-00001022  B883                      18          cmp.l D3, D4
-00001024  6D00 0008                 19          blt .true_2
-00001028  7800                      20          move.l #0, D4
-0000102A  6000 0004                 21          bra .end_3
-0000102E                            22  .true_2:
-0000102E  7801                      23          move.l #1, D4
-00001030                            24  .end_3:
-00001030  2004                      25          move.l D4, D0  ; Move condition result to D0
-00001032  B8BC 00000000             26          cmp.l #0, D4   ; Check if condition is false
-00001038  6700 00AE                 27          beq .for_end_1        ; Exit loop if condition is false
-0000103C  7200                      28          move.l #0, D1
-0000103E  23C1 000015A0             29          move.l D1, j
-00001044                            30  .for_start_4:             ; Start of for loop
-00001044  2439 000015A0             31          move.l j, D2
-0000104A  7604                      32          move.l #4, D3  ; Initialize constant
-0000104C  B883                      33          cmp.l D3, D4
-0000104E  6D00 0008                 34          blt .true_6
-00001052  7800                      35          move.l #0, D4
-00001054  6000 0004                 36          bra .end_7
-00001058                            37  .true_6:
-00001058  7801                      38          move.l #1, D4
-0000105A                            39  .end_7:
-0000105A  2004                      40          move.l D4, D0  ; Move condition result to D0
-0000105C  B8BC 00000000             41          cmp.l #0, D4   ; Check if condition is false
-00001062  6700 006E                 42          beq .for_end_5        ; Exit loop if condition is false
-00001066  2239 0000127C             43          move.l i, D1
-0000106C  2439 000015A0             44          move.l j, D2
-00001072  B682                      45          cmp.l D2, D3
-00001074  6700 0008                 46          beq .true_10
-00001078  7600                      47          move.l #0, D3
-0000107A  6000 0004                 48          bra .end_11
-0000107E                            49  .true_10:
-0000107E  7601                      50          move.l #1, D3
-00001080                            51  .end_11:
-00001080  2003                      52          move.l D3, D0  ; Move condition result to D0
-00001082  B3C3                      53          cmpa.l D3, A1  ; Check if condition is false
-00001084  6700 001E                 54          beq .else_8       ; Branch to else if condition is false
-00001088  7201                      55          move.l #1, D1
-0000108A  2439 000015A0             56          move.l j, D2
-00001090  2602                      57          move.l D2, D3
-00001092  C6FC 0004                 58          mulu #4, D3  ; Compute array offset
-00001096  41F9 00001410             59          lea matrix_array, A0  ; Load effective address
-0000109C  2181 3800                 60          move.l D1, (A0,D3.l)
-000010A0  6000 001A                 61          bra .endif_9        ; Skip over else section when then section completes
-000010A4                            62  .else_8:             ; Else section starts here
-000010A4  7200                      63          move.l #0, D1
-000010A6  2439 000015A0             64          move.l j, D2
-000010AC  2602                      65          move.l D2, D3
-000010AE  C6FC 0004                 66          mulu #4, D3  ; Compute array offset
-000010B2  41F9 00001410             67          lea matrix_array, A0  ; Load effective address
-000010B8  2181 3800                 68          move.l D1, (A0,D3.l)
-000010BC                            69  .endif_9:             ; End of if-else statement
-000010BC  2239 000015A0             70          move.l j, D1
-000010C2  7401                      71          move.l #1, D2  ; Initialize constant
-000010C4  2601                      72          move.l D1, D3
-000010C6  D682                      73          add.l D2, D3
-000010C8  23C3 000015A0             74          move.l D3, j
-000010CE  6000 FF74                 75          bra .for_start_4      ; Jump back to start of loop
-000010D2                            76  .for_end_5:             ; End of for loop
-000010D2  2239 0000127C             77          move.l i, D1
-000010D8  7401                      78          move.l #1, D2  ; Initialize constant
-000010DA  2601                      79          move.l D1, D3
-000010DC  D682                      80          add.l D2, D3
-000010DE  23C3 0000127C             81          move.l D3, i
-000010E4  6000 FF34                 82          bra .for_start_0      ; Jump back to start of loop
-000010E8                            83  .for_end_1:             ; End of for loop
-000010E8                            84          ; Function epilogue
-000010E8  2C5F                      85          move.l (SP)+, A6
-000010EA  4E75                      86          rts
-000010EC                            87  setupModel:
-000010EC                            88          ; Function prologue
-000010EC  2F0E                      89          move.l A6, -(SP)
-000010EE  2C4F                      90          move.l SP, A6
-000010F0  202E 0008                 91          move.l 8(A6), D0
-000010F4  222E 000C                 92          move.l 12(A6), D1
-000010F8  242E 0010                 93          move.l 16(A6), D2
-000010FC  262E 0014                 94          move.l 20(A6), D3
-00001100  7202                      95          move.l #2, D1  ; Initialize constant
-00001102  720A                      96          move.l #10, D1
-00001104  C1C1                      97          muls D1, D0
-00001106  223C 000000FF             98          move.l #255, D1
-0000110C  7400                      99          move.l #0, D2  ; Initialize constant
-0000110E  2602                     100          move.l D2, D3
-00001110  C6FC 0004                101          mulu #4, D3  ; Compute array offset
-00001114  41F9 00001410            102          lea matrix_array, A0  ; Load effective address
-0000111A  2181 3800                103          move.l D1, (A0,D3.l)
-0000111E  223C 00000080            104          move.l #128, D1  ; Initialize constant
-00001124  7401                     105          move.l #1, D2
-00001126  2602                     106          move.l D2, D3
-00001128  C6FC 0004                107          mulu #4, D3  ; Compute array offset
-0000112C  41F9 00001410            108          lea matrix_array, A0  ; Load effective address
-00001132  2181 3800                109          move.l D1, (A0,D3.l)
-00001136  7200                     110          move.l #0, D1  ; Initialize constant
-00001138  7402                     111          move.l #2, D2
-0000113A  2602                     112          move.l D2, D3
-0000113C  C6FC 0004                113          mulu #4, D3  ; Compute array offset
-00001140  41F9 00001410            114          lea matrix_array, A0  ; Load effective address
-00001146  2181 3800                115          move.l D1, (A0,D3.l)
-0000114A  7200                     116          move.l #0, D1  ; Initialize constant
-0000114C  B481                     117          cmp.l D1, D2
-0000114E  6E00 0008                118          bgt .true_14
-00001152  7400                     119          move.l #0, D2
-00001154  6000 0004                120          bra .end_15
-00001158                           121  .true_14:
-00001158  7401                     122          move.l #1, D2
-0000115A                           123  .end_15:
-0000115A  2002                     124          move.l D2, D0  ; Move condition result to D0
-0000115C  B3C2                     125          cmpa.l D2, A1  ; Check if condition is false
-0000115E  6700 001A                126          beq .else_12       ; Branch to else if condition is false
-00001162  43F9 00001274            127          lea models, A1  ; Load effective address
-00001168  7400                     128          move.l #0, D2
-0000116A  2602                     129          move.l D2, D3
-0000116C  C6FC 0010                130          mulu #16, D3  ; Compute array offset
-00001170  D3C3                     131          add.l D3, A1
-00001172  2229 0000                132          move.l 0(A1), D1
-00001176  6000 0008                133          bra .endif_13        ; Skip over else section when then section completes
-0000117A                           134  .else_12:             ; Else section starts here
-0000117A  7201                     135          move.l #1, D1
-0000117C  7201                     136          move.l #1, D1  ; Initialize constant
-0000117E  7201                     137          move.l #1, D1
-00001180                           138  .endif_13:             ; End of if-else statement
-00001180  7204                     139          move.l #4, D1
-00001182  2400                     140          move.l D0, D2
-00001184  83C1                     141          divs D1, D1
-00001186  C3C1                     142          muls D1, D1
-00001188  9081                     143          sub.l D1, D0
-0000118A  2202                     144          move.l D2, D1
-0000118C  C2FC 0004                145          mulu #4, D1  ; Compute array offset
-00001190  41F9 00001280            146          lea matrix_data, A0  ; Load matrix data base address
-00001196  2430 1800                147          move.l (A0,D1.l), D2  ; Get matrix element at computed offset
-0000119A  7664                     148          move.l #100, D3
-0000119C  2802                     149          move.l D2, D4
-0000119E  D883                     150          add.l D3, D4
-000011A0                           151          ; Function epilogue
-000011A0  2C5F                     152          move.l (SP)+, A6
-000011A2  4E75                     153          rts
-000011A4                           154  main:
-000011A4                           155          ; Function prologue
-000011A4  2F0E                     156          move.l A6, -(SP)
-000011A6  2C4F                     157          move.l SP, A6
-000011A8  6100 FE64                158          bsr initMatrix
-000011AC  7200                     159          move.l #0, D1
-000011AE  23C1 0000127C            160          move.l D1, i
-000011B4                           161  .for_start_16:             ; Start of for loop
-000011B4  2439 0000127C            162          move.l i, D2
-000011BA  7603                     163          move.l #3, D3  ; Initialize constant
-000011BC  B883                     164          cmp.l D3, D4
-000011BE  6D00 0008                165          blt .true_18
-000011C2  7800                     166          move.l #0, D4
-000011C4  6000 0004                167          bra .end_19
-000011C8                           168  .true_18:
-000011C8  7801                     169          move.l #1, D4
-000011CA                           170  .end_19:
-000011CA  2004                     171          move.l D4, D0  ; Move condition result to D0
-000011CC  B8BC 00000000            172          cmp.l #0, D4   ; Check if condition is false
-000011D2  6700 0052                173          beq .for_end_17        ; Exit loop if condition is false
-000011D6  2239 0000127C            174          move.l i, D1
-000011DC  741E                     175          move.l #30, D2  ; Initialize constant
-000011DE  2001                     176          move.l D1, D0
-000011E0  C1C2                     177          muls D2, D0
-000011E2  2F00                     178          move.l D0, -(SP)
-000011E4  2239 0000127C            179          move.l i, D1
-000011EA  7414                     180          move.l #20, D2  ; Initialize constant
-000011EC  2001                     181          move.l D1, D0
-000011EE  C1C2                     182          muls D2, D0
-000011F0  2F00                     183          move.l D0, -(SP)
-000011F2  2239 0000127C            184          move.l i, D1
-000011F8  740A                     185          move.l #10, D2  ; Initialize constant
-000011FA  2001                     186          move.l D1, D0
-000011FC  C1C2                     187          muls D2, D0
-000011FE  2F00                     188          move.l D0, -(SP)
-00001200  2239 0000127C            189          move.l i, D1
-00001206  2F01                     190          move.l D1, -(SP)
-00001208  6100 FEE2                191          bsr setupModel
-0000120C  DFFC 00000010            192          add.l #16, SP
-00001212  2239 0000127C            193          move.l i, D1
-00001218  7401                     194          move.l #1, D2  ; Initialize constant
-0000121A  2601                     195          move.l D1, D3
-0000121C  D682                     196          add.l D2, D3
-0000121E  23C3 0000127C            197          move.l D3, i
-00001224  608E                     198          bra .for_start_16      ; Jump back to start of loop
-00001226                           199  .for_end_17:             ; End of for loop
-00001226  7201                     200          move.l #1, D1
-00001228  7401                     201          move.l #1, D2  ; Initialize constant
-0000122A  2601                     202          move.l D1, D3
-0000122C  D682                     203          add.l D2, D3
-0000122E  23C3 00001278            204          move.l D3, idx
-00001234  2239 00001278            205          move.l idx, D1
-0000123A  45F9 00001274            206          lea models, A2  ; Load effective address
-00001240  2639 00001278            207          move.l idx, D3
-00001246  7801                     208          move.l #1, D4  ; Initialize constant
-00001248  2A03                     209          move.l D3, D5
-0000124A  9A84                     210          sub.l D4, D5
-0000124C  2605                     211          move.l D5, D3
-0000124E  C6FC 0010                212          mulu #16, D3  ; Compute array offset
-00001252  D5C3                     213          add.l D3, A2
-00001254  242A 0000                214          move.l 0(A2), D2
-00001258  47F9 00001274            215          lea models, A3  ; Load effective address
-0000125E  7800                     216          move.l #0, D4
-00001260  2A04                     217          move.l D4, D5
-00001262  CAFC 0010                218          mulu #16, D5  ; Compute array offset
-00001266  D7C5                     219          add.l D5, A3
-00001268  262B 0000                220          move.l 0(A3), D3
-0000126C  2802                     221          move.l D2, D4
-0000126E  D883                     222          add.l D3, D4
-00001270                           223          ; Function epilogue
-00001270  2C5F                     224          move.l (SP)+, A6
-00001272  4E75                     225          rts
-00001274                           226  
-00001274                           227  ; ===== DATA SECTION =====
-00001274                           228  ; String literals
-00001274                           229  ; Scalar and struct variables
-00001274                           230  models:    ds.l 1
-00001278                           231  idx:    ds.l 1
-0000127C                           232  i:    ds.l 1
-00001280                           233  matrix_data:    ds.l 100
-00001410                           234  matrix_array:    ds.l 100
-000015A0                           235  j:    ds.l 1
-000015A4                           236  ; Array labels
-000015A4                           237  ; Loop variables
-000015A4                           238  
-000015A4  FFFF FFFF                239          SIMHALT
-Line 240 WARNING: Address expected
-000015A8                           240          END
+0000100E  4E56 0000                 11          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+00001012  7205                      12          moveq #5, D1  ; Optimized small constant
+00001014  23C1 00001206             13          move.l D1, a
+0000101A  720A                      14          moveq #10, D1  ; Optimized small constant
+0000101C  23C1 00001296             15          move.l D1, b
+00001022  2239 00001206             16          move.l a, D1
+00001028  2439 00001296             17          move.l b, D2
+0000102E  7600                      18          moveq #0, D3  ; Clear result register
+00001030  B282                      19          cmp.l D2, D1  ; Compare values
+00001032  57C3                      20          seq.b D3      ; Set dest to FF if equal, 00 if not equal
+00001034  C6BC 00000001             21          and.l #1, D3  ; Mask to boolean value (1 if equal)
+0000103A  23C3 000011FA             22          move.l D3, eq
+00001040  2239 00001206             23          move.l a, D1
+00001046  2439 00001296             24          move.l b, D2
+0000104C  7600                      25          moveq #0, D3  ; Clear result register
+0000104E  B282                      26          cmp.l D2, D1  ; Compare values
+00001050  56C3                      27          sne.b D3      ; Set dest to FF if not equal, 00 if equal
+00001052  C6BC 00000001             28          and.l #1, D3  ; Mask to boolean value (1 if not equal)
+00001058  23C3 0000128E             29          move.l D3, neq
+0000105E  2239 00001206             30          move.l a, D1
+00001064  2439 00001296             31          move.l b, D2
+0000106A  7600                      32          moveq #0, D3  ; Clear result register
+0000106C  B282                      33          cmp.l D2, D1  ; Compare values
+0000106E  5DC3                      34          slt.b D3      ; Set dest to FF if less than, 00 otherwise
+00001070  C6BC 00000001             35          and.l #1, D3  ; Mask to boolean value (1 if less than)
+00001076  23C3 000011FE             36          move.l D3, lt
+0000107C  2239 00001206             37          move.l a, D1
+00001082  2439 00001296             38          move.l b, D2
+00001088  7600                      39          moveq #0, D3  ; Clear result register
+0000108A  B282                      40          cmp.l D2, D1  ; Compare values
+0000108C  5FC3                      41          sle.b D3      ; Set dest to FF if less or equal, 00 otherwise
+0000108E  C6BC 00000001             42          and.l #1, D3  ; Mask to boolean value (1 if less or equal)
+00001094  23C3 0000121A             43          move.l D3, lte
+0000109A  2239 00001206             44          move.l a, D1
+000010A0  2439 00001296             45          move.l b, D2
+000010A6  7600                      46          moveq #0, D3  ; Clear result register
+000010A8  B282                      47          cmp.l D2, D1  ; Compare values
+000010AA  5EC3                      48          sgt.b D3      ; Set dest to FF if greater than, 00 otherwise
+000010AC  C6BC 00000001             49          and.l #1, D3  ; Mask to boolean value (1 if greater than)
+000010B2  23C3 0000129A             50          move.l D3, gt
+000010B8  2239 00001206             51          move.l a, D1
+000010BE  2439 00001296             52          move.l b, D2
+000010C4  7600                      53          moveq #0, D3  ; Clear result register
+000010C6  B282                      54          cmp.l D2, D1  ; Compare values
+000010C8  5CC3                      55          sge.b D3      ; Set dest to FF if greater or equal, 00 otherwise
+000010CA  C6BC 00000001             56          and.l #1, D3  ; Mask to boolean value (1 if greater or equal)
+000010D0  23C3 00001216             57          move.l D3, gte
+000010D6  722A                      58          moveq #42, D1  ; Optimized small constant
+000010D8  7403                      59          moveq #3, D2  ; Optimized small constant
+000010DA  7602                      60          moveq #2, D3  ; Optimized small constant
+000010DC  7801                      61          moveq #1, D4  ; Optimized small constant
+000010DE                            62          ; Computing multi-dimensional array offset for assignment to arr
+000010DE  2A04                      63          move.l D4, D5
+000010E0  7C0C                      64          move.l #12, D6  ; Size of dimension 1  ; Initialize constant
+000010E2  CBC6                      65          muls D6, D5  ; Multiply previous index by dimension
+000010E4  DA83                      66          add.l D3, D5  ; Add current dimension index
+000010E6  7C04                      67          move.l #4, D6  ; Size of dimension 2
+000010E8  CBC6                      68          muls D6, D5  ; Multiply previous index by dimension
+000010EA  DA82                      69          add.l D2, D5  ; Add current dimension index
+000010EC  CAFC 0004                 70          mulu #4, D5  ; Multiply by element size (4 bytes)
+000010F0  41F9 0000122E             71          lea arr, A0  ; Load array base address
+000010F6  2181 5800                 72          move.l D1, (A0,D5.l)  ; Store value to array element
+000010FA  7203                      73          moveq #3, D1  ; Optimized small constant
+000010FC  7402                      74          moveq #2, D2  ; Optimized small constant
+000010FE  7601                      75          moveq #1, D3  ; Optimized small constant
+00001100                            76          ; Computing multi-dimensional array offset for arr
+00001100  2803                      77          move.l D3, D4
+00001102  7A0C                      78          move.l #12, D5  ; Size of dimension 1  ; Initialize constant
+00001104  C9C5                      79          muls D5, D4  ; Multiply previous index by dimension
+00001106  D882                      80          add.l D2, D4  ; Add current dimension index
+00001108  7A04                      81          move.l #4, D5  ; Size of dimension 2
+0000110A  C9C5                      82          muls D5, D4  ; Multiply previous index by dimension
+0000110C  D881                      83          add.l D1, D4  ; Add current dimension index
+0000110E  C8FC 0004                 84          mulu #4, D4  ; Multiply by element size (4 bytes)
+00001112  41F9 0000122E             85          lea arr, A0  ; Load array base address
+00001118  2C30 4800                 86          move.l (A0,D4.l), D6  ; Load element value
+0000111C  23C6 0000120A             87          move.l D6, x
+00001122  7200                      88          moveq #0, D1  ; Optimized small constant
+00001124  23C1 00001212             89          move.l D1, i
+0000112A                            90  .for_start_0:             ; Start of for loop
+0000112A  2439 00001212             91          move.l i, D2
+00001130  7602                      92          moveq #2, D3  ; Optimized small constant
+00001132  7800                      93          moveq #0, D4  ; Clear result register
+00001134  B483                      94          cmp.l D3, D2  ; Compare values
+00001136  5DC4                      95          slt.b D4      ; Set dest to FF if less than, 00 otherwise
+00001138  C8BC 00000001             96          and.l #1, D4  ; Mask to boolean value (1 if less than)
+0000113E  2004                      97          move.l D4, D0  ; Move condition result to D0
+00001140  4A84                      98          tst.l D4   ; Check if condition is false/zero
+00001142  6700 00B2                 99          beq .for_end_1        ; Exit loop if condition is false
+00001146  7200                     100          moveq #0, D1  ; Optimized small constant
+00001148  23C1 0000120E            101          move.l D1, j
+0000114E                           102  .for_start_2:             ; Start of for loop
+0000114E  2439 0000120E            103          move.l j, D2
+00001154  7603                     104          moveq #3, D3  ; Optimized small constant
+00001156  7800                     105          moveq #0, D4  ; Clear result register
+00001158  B483                     106          cmp.l D3, D2  ; Compare values
+0000115A  5DC4                     107          slt.b D4      ; Set dest to FF if less than, 00 otherwise
+0000115C  C8BC 00000001            108          and.l #1, D4  ; Mask to boolean value (1 if less than)
+00001162  2004                     109          move.l D4, D0  ; Move condition result to D0
+00001164  4A84                     110          tst.l D4   ; Check if condition is false/zero
+00001166  6700 007C                111          beq .for_end_3        ; Exit loop if condition is false
+0000116A  7200                     112          moveq #0, D1  ; Optimized small constant
+0000116C  23C1 0000129E            113          move.l D1, k
+00001172                           114  .for_start_4:             ; Start of for loop
+00001172  2439 0000129E            115          move.l k, D2
+00001178  7604                     116          moveq #4, D3  ; Optimized small constant
+0000117A  7800                     117          moveq #0, D4  ; Clear result register
+0000117C  B483                     118          cmp.l D3, D2  ; Compare values
+0000117E  5DC4                     119          slt.b D4      ; Set dest to FF if less than, 00 otherwise
+00001180  C8BC 00000001            120          and.l #1, D4  ; Mask to boolean value (1 if less than)
+00001186  2004                     121          move.l D4, D0  ; Move condition result to D0
+00001188  4A84                     122          tst.l D4   ; Check if condition is false/zero
+0000118A  6700 0046                123          beq .for_end_5        ; Exit loop if condition is false
+0000118E  2239 0000120E            124          move.l j, D1
+00001194  2439 0000129E            125          move.l k, D2
+0000119A  2639 0000120E            126          move.l j, D3
+000011A0  2839 00001212            127          move.l i, D4
+000011A6                           128          ; Computing multi-dimensional array offset for assignment to arr
+000011A6  2A04                     129          move.l D4, D5
+000011A8  7C0C                     130          move.l #12, D6  ; Size of dimension 1  ; Initialize constant
+000011AA  CBC6                     131          muls D6, D5  ; Multiply previous index by dimension
+000011AC  DA83                     132          add.l D3, D5  ; Add current dimension index
+000011AE  7C04                     133          move.l #4, D6  ; Size of dimension 2
+000011B0  CBC6                     134          muls D6, D5  ; Multiply previous index by dimension
+000011B2  DA82                     135          add.l D2, D5  ; Add current dimension index
+000011B4  CAFC 0004                136          mulu #4, D5  ; Multiply by element size (4 bytes)
+000011B8  41F9 0000122E            137          lea arr, A0  ; Load array base address
+000011BE  2181 5800                138          move.l D1, (A0,D5.l)  ; Store value to array element
+000011C2  2239 0000129E            139          move.l k, D1
+000011C8  5281                     140          addq.l #1, D1  ; Increment loop counter
+000011CA  23C1 0000129E            141          move.l D1, k
+000011D0  60A0                     142          bra .for_start_4      ; Jump back to start of loop
+000011D2                           143  .for_end_5:             ; End of for loop
+000011D2  2239 0000120E            144          move.l j, D1
+000011D8  5281                     145          addq.l #1, D1  ; Increment loop counter
+000011DA  23C1 0000120E            146          move.l D1, j
+000011E0  6000 FF6C                147          bra .for_start_2      ; Jump back to start of loop
+000011E4                           148  .for_end_3:             ; End of for loop
+000011E4  2239 00001212            149          move.l i, D1
+000011EA  5281                     150          addq.l #1, D1  ; Increment loop counter
+000011EC  23C1 00001212            151          move.l D1, i
+000011F2  6000 FF36                152          bra .for_start_0      ; Jump back to start of loop
+000011F6                           153  .for_end_1:             ; End of for loop
+000011F6                           154          ; Function epilogue
+000011F6  4E5E                     155          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+000011F8  4E75                     156          rts           ; Return from subroutine
+000011FA                           157  
+000011FA                           158  ; ===== DATA SECTION =====
+000011FA                           159  ; String literals
+000011FA                           160  ; Scalar and struct variables
+000011FA                           161  eq:    ds.l 1
+000011FE                           162  lt:    ds.l 1
+00001202                           163  arr_0:    ds.l 1
+00001206                           164  a:    ds.l 1
+0000120A                           165  x:    ds.l 1
+0000120E                           166  j:    ds.l 1
+00001212                           167  i:    ds.l 1
+00001216                           168  gte:    ds.l 1
+0000121A                           169  lte:    ds.l 1
+0000121E                           170  arrArr_len:    ds.l 3
+0000122A                           171  arr_1:    ds.l 1
+0000122E                           172  arr:    ds.l 24
+0000128E                           173  neq:    ds.l 1
+00001292                           174  arr_2:    ds.l 1
+00001296                           175  b:    ds.l 1
+0000129A                           176  gt:    ds.l 1
+0000129E                           177  k:    ds.l 1
+000012A2                           178  ; Array labels
+000012A2                           179  arrArr:    ds.l 1
+000012A6                           180  ; Loop variables
+000012A6                           181  
+000012A6  FFFF FFFF                182          SIMHALT
+Line 183 WARNING: Address expected
+000012AA                           183          END
 
 No errors detected
 1 warning generated
@@ -251,33 +194,29 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-I                   127C
-IDX                 1278
-INITMATRIX          100E
-INITMATRIX:ELSE_8   10A4
-INITMATRIX:ENDIF_9  10BC
-INITMATRIX:END_11   1080
-INITMATRIX:END_3    1030
-INITMATRIX:END_7    105A
-INITMATRIX:FOR_END_1  10E8
-INITMATRIX:FOR_END_5  10D2
-INITMATRIX:FOR_START_0  101A
-INITMATRIX:FOR_START_4  1044
-INITMATRIX:TRUE_10  107E
-INITMATRIX:TRUE_2   102E
-INITMATRIX:TRUE_6   1058
-J                   15A0
-MAIN                11A4
-MAIN:END_19         11CA
-MAIN:FOR_END_17     1226
-MAIN:FOR_START_16   11B4
-MAIN:TRUE_18        11C8
-MATRIX_ARRAY        1410
-MATRIX_DATA         1280
-MODELS              1274
-SETUPMODEL          10EC
-SETUPMODEL:ELSE_12  117A
-SETUPMODEL:ENDIF_13  1180
-SETUPMODEL:END_15   115A
-SETUPMODEL:TRUE_14  1158
+A                   1206
+ARR                 122E
+ARRARR              12A2
+ARRARR_LEN          121E
+ARR_0               1202
+ARR_1               122A
+ARR_2               1292
+B                   1296
+EQ                  11FA
+GT                  129A
+GTE                 1216
+I                   1212
+J                   120E
+K                   129E
+LT                  11FE
+LTE                 121A
+MAIN                100E
+MAIN:FOR_END_1      11F6
+MAIN:FOR_END_3      11E4
+MAIN:FOR_END_5      11D2
+MAIN:FOR_START_0    112A
+MAIN:FOR_START_2    114E
+MAIN:FOR_START_4    1172
+NEQ                 128E
+X                   120A
 __GLOBAL_INIT       100C

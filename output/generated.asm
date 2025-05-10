@@ -6,234 +6,177 @@
 ; ===== FUNCTION DEFINITIONS =====
 __global_init:
         rts
-initMatrix:
+main:
         ; Function prologue
-        move.l A6, -(SP)
-        move.l SP, A6
-        move.l #0, D1  ; Initialize constant
+        link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+        moveq #5, D1  ; Optimized small constant
+        move.l D1, a
+        moveq #10, D1  ; Optimized small constant
+        move.l D1, b
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        seq.b D3      ; Set dest to FF if equal, 00 if not equal
+        and.l #1, D3  ; Mask to boolean value (1 if equal)
+        move.l D3, eq
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        sne.b D3      ; Set dest to FF if not equal, 00 if equal
+        and.l #1, D3  ; Mask to boolean value (1 if not equal)
+        move.l D3, neq
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        slt.b D3      ; Set dest to FF if less than, 00 otherwise
+        and.l #1, D3  ; Mask to boolean value (1 if less than)
+        move.l D3, lt
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        sle.b D3      ; Set dest to FF if less or equal, 00 otherwise
+        and.l #1, D3  ; Mask to boolean value (1 if less or equal)
+        move.l D3, lte
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        sgt.b D3      ; Set dest to FF if greater than, 00 otherwise
+        and.l #1, D3  ; Mask to boolean value (1 if greater than)
+        move.l D3, gt
+        move.l a, D1
+        move.l b, D2
+        moveq #0, D3  ; Clear result register
+        cmp.l D2, D1  ; Compare values
+        sge.b D3      ; Set dest to FF if greater or equal, 00 otherwise
+        and.l #1, D3  ; Mask to boolean value (1 if greater or equal)
+        move.l D3, gte
+        moveq #42, D1  ; Optimized small constant
+        moveq #3, D2  ; Optimized small constant
+        moveq #2, D3  ; Optimized small constant
+        moveq #1, D4  ; Optimized small constant
+        ; Computing multi-dimensional array offset for assignment to arr
+        move.l D4, D5
+        move.l #12, D6  ; Size of dimension 1  ; Initialize constant
+        muls D6, D5  ; Multiply previous index by dimension
+        add.l D3, D5  ; Add current dimension index
+        move.l #4, D6  ; Size of dimension 2
+        muls D6, D5  ; Multiply previous index by dimension
+        add.l D2, D5  ; Add current dimension index
+        mulu #4, D5  ; Multiply by element size (4 bytes)
+        lea arr, A0  ; Load array base address
+        move.l D1, (A0,D5.l)  ; Store value to array element
+        moveq #3, D1  ; Optimized small constant
+        moveq #2, D2  ; Optimized small constant
+        moveq #1, D3  ; Optimized small constant
+        ; Computing multi-dimensional array offset for arr
+        move.l D3, D4
+        move.l #12, D5  ; Size of dimension 1  ; Initialize constant
+        muls D5, D4  ; Multiply previous index by dimension
+        add.l D2, D4  ; Add current dimension index
+        move.l #4, D5  ; Size of dimension 2
+        muls D5, D4  ; Multiply previous index by dimension
+        add.l D1, D4  ; Add current dimension index
+        mulu #4, D4  ; Multiply by element size (4 bytes)
+        lea arr, A0  ; Load array base address
+        move.l (A0,D4.l), D6  ; Load element value
+        move.l D6, x
+        moveq #0, D1  ; Optimized small constant
         move.l D1, i
 .for_start_0:             ; Start of for loop
         move.l i, D2
-        move.l #4, D3  ; Initialize constant
-        cmp.l D3, D4
-        blt .true_2
-        move.l #0, D4
-        bra .end_3
-.true_2:
-        move.l #1, D4
-.end_3:
+        moveq #2, D3  ; Optimized small constant
+        moveq #0, D4  ; Clear result register
+        cmp.l D3, D2  ; Compare values
+        slt.b D4      ; Set dest to FF if less than, 00 otherwise
+        and.l #1, D4  ; Mask to boolean value (1 if less than)
         move.l D4, D0  ; Move condition result to D0
-        cmp.l #0, D4   ; Check if condition is false
+        tst.l D4   ; Check if condition is false/zero
         beq .for_end_1        ; Exit loop if condition is false
-        move.l #0, D1
+        moveq #0, D1  ; Optimized small constant
         move.l D1, j
-.for_start_4:             ; Start of for loop
+.for_start_2:             ; Start of for loop
         move.l j, D2
-        move.l #4, D3  ; Initialize constant
-        cmp.l D3, D4
-        blt .true_6
-        move.l #0, D4
-        bra .end_7
-.true_6:
-        move.l #1, D4
-.end_7:
+        moveq #3, D3  ; Optimized small constant
+        moveq #0, D4  ; Clear result register
+        cmp.l D3, D2  ; Compare values
+        slt.b D4      ; Set dest to FF if less than, 00 otherwise
+        and.l #1, D4  ; Mask to boolean value (1 if less than)
         move.l D4, D0  ; Move condition result to D0
-        cmp.l #0, D4   ; Check if condition is false
+        tst.l D4   ; Check if condition is false/zero
+        beq .for_end_3        ; Exit loop if condition is false
+        moveq #0, D1  ; Optimized small constant
+        move.l D1, k
+.for_start_4:             ; Start of for loop
+        move.l k, D2
+        moveq #4, D3  ; Optimized small constant
+        moveq #0, D4  ; Clear result register
+        cmp.l D3, D2  ; Compare values
+        slt.b D4      ; Set dest to FF if less than, 00 otherwise
+        and.l #1, D4  ; Mask to boolean value (1 if less than)
+        move.l D4, D0  ; Move condition result to D0
+        tst.l D4   ; Check if condition is false/zero
         beq .for_end_5        ; Exit loop if condition is false
-        move.l i, D1
-        move.l j, D2
-        cmp.l D2, D3
-        beq .true_10
-        move.l #0, D3
-        bra .end_11
-.true_10:
-        move.l #1, D3
-.end_11:
-        move.l D3, D0  ; Move condition result to D0
-        cmpa.l D3, A1  ; Check if condition is false
-        beq .else_8       ; Branch to else if condition is false
-        move.l #1, D1
-        move.l j, D2
-        move.l D2, D3
-        mulu #4, D3  ; Compute array offset
-        lea matrix_array, A0  ; Load effective address
-        move.l D1, (A0,D3.l)
-        bra .endif_9        ; Skip over else section when then section completes
-.else_8:             ; Else section starts here
-        move.l #0, D1
-        move.l j, D2
-        move.l D2, D3
-        mulu #4, D3  ; Compute array offset
-        lea matrix_array, A0  ; Load effective address
-        move.l D1, (A0,D3.l)
-.endif_9:             ; End of if-else statement
         move.l j, D1
-        move.l #1, D2  ; Initialize constant
-        move.l D1, D3
-        add.l D2, D3
-        move.l D3, j
+        move.l k, D2
+        move.l j, D3
+        move.l i, D4
+        ; Computing multi-dimensional array offset for assignment to arr
+        move.l D4, D5
+        move.l #12, D6  ; Size of dimension 1  ; Initialize constant
+        muls D6, D5  ; Multiply previous index by dimension
+        add.l D3, D5  ; Add current dimension index
+        move.l #4, D6  ; Size of dimension 2
+        muls D6, D5  ; Multiply previous index by dimension
+        add.l D2, D5  ; Add current dimension index
+        mulu #4, D5  ; Multiply by element size (4 bytes)
+        lea arr, A0  ; Load array base address
+        move.l D1, (A0,D5.l)  ; Store value to array element
+        move.l k, D1
+        addq.l #1, D1  ; Increment loop counter
+        move.l D1, k
         bra .for_start_4      ; Jump back to start of loop
 .for_end_5:             ; End of for loop
+        move.l j, D1
+        addq.l #1, D1  ; Increment loop counter
+        move.l D1, j
+        bra .for_start_2      ; Jump back to start of loop
+.for_end_3:             ; End of for loop
         move.l i, D1
-        move.l #1, D2  ; Initialize constant
-        move.l D1, D3
-        add.l D2, D3
-        move.l D3, i
+        addq.l #1, D1  ; Increment loop counter
+        move.l D1, i
         bra .for_start_0      ; Jump back to start of loop
 .for_end_1:             ; End of for loop
         ; Function epilogue
-        move.l (SP)+, A6
-        rts
-setupModel:
-        ; Function prologue
-        move.l A6, -(SP)
-        move.l SP, A6
-        move.l 8(A6), D0
-        move.l 12(A6), D1
-        move.l 16(A6), D2
-        move.l 20(A6), D3
-        move.l #2, D1  ; Initialize constant
-        move.l #10, D1
-        muls D1, D0
-        move.l #255, D1
-        move.l #0, D2  ; Initialize constant
-        move.l D2, D3
-        mulu #4, D3  ; Compute array offset
-        lea matrix_array, A0  ; Load effective address
-        move.l D1, (A0,D3.l)
-        move.l #128, D1  ; Initialize constant
-        move.l #1, D2
-        move.l D2, D3
-        mulu #4, D3  ; Compute array offset
-        lea matrix_array, A0  ; Load effective address
-        move.l D1, (A0,D3.l)
-        move.l #0, D1  ; Initialize constant
-        move.l #2, D2
-        move.l D2, D3
-        mulu #4, D3  ; Compute array offset
-        lea matrix_array, A0  ; Load effective address
-        move.l D1, (A0,D3.l)
-        move.l #0, D1  ; Initialize constant
-        cmp.l D1, D2
-        bgt .true_14
-        move.l #0, D2
-        bra .end_15
-.true_14:
-        move.l #1, D2
-.end_15:
-        move.l D2, D0  ; Move condition result to D0
-        cmpa.l D2, A1  ; Check if condition is false
-        beq .else_12       ; Branch to else if condition is false
-        lea models, A1  ; Load effective address
-        move.l #0, D2
-        move.l D2, D3
-        mulu #16, D3  ; Compute array offset
-        add.l D3, A1
-        move.l 0(A1), D1
-        bra .endif_13        ; Skip over else section when then section completes
-.else_12:             ; Else section starts here
-        move.l #1, D1
-        move.l #1, D1  ; Initialize constant
-        move.l #1, D1
-.endif_13:             ; End of if-else statement
-        move.l #4, D1
-        move.l D0, D2
-        divs D1, D1
-        muls D1, D1
-        sub.l D1, D0
-        move.l D2, D1
-        mulu #4, D1  ; Compute array offset
-        lea matrix_data, A0  ; Load matrix data base address
-        move.l (A0,D1.l), D2  ; Get matrix element at computed offset
-        move.l #100, D3
-        move.l D2, D4
-        add.l D3, D4
-        ; Function epilogue
-        move.l (SP)+, A6
-        rts
-main:
-        ; Function prologue
-        move.l A6, -(SP)
-        move.l SP, A6
-        bsr initMatrix
-        move.l #0, D1
-        move.l D1, i
-.for_start_16:             ; Start of for loop
-        move.l i, D2
-        move.l #3, D3  ; Initialize constant
-        cmp.l D3, D4
-        blt .true_18
-        move.l #0, D4
-        bra .end_19
-.true_18:
-        move.l #1, D4
-.end_19:
-        move.l D4, D0  ; Move condition result to D0
-        cmp.l #0, D4   ; Check if condition is false
-        beq .for_end_17        ; Exit loop if condition is false
-        move.l i, D1
-        move.l #30, D2  ; Initialize constant
-        move.l D1, D0
-        muls D2, D0
-        move.l D0, -(SP)
-        move.l i, D1
-        move.l #20, D2  ; Initialize constant
-        move.l D1, D0
-        muls D2, D0
-        move.l D0, -(SP)
-        move.l i, D1
-        move.l #10, D2  ; Initialize constant
-        move.l D1, D0
-        muls D2, D0
-        move.l D0, -(SP)
-        move.l i, D1
-        move.l D1, -(SP)
-        bsr setupModel
-        add.l #16, SP
-        move.l i, D1
-        move.l #1, D2  ; Initialize constant
-        move.l D1, D3
-        add.l D2, D3
-        move.l D3, i
-        bra .for_start_16      ; Jump back to start of loop
-.for_end_17:             ; End of for loop
-        move.l #1, D1
-        move.l #1, D2  ; Initialize constant
-        move.l D1, D3
-        add.l D2, D3
-        move.l D3, idx
-        move.l idx, D1
-        lea models, A2  ; Load effective address
-        move.l idx, D3
-        move.l #1, D4  ; Initialize constant
-        move.l D3, D5
-        sub.l D4, D5
-        move.l D5, D3
-        mulu #16, D3  ; Compute array offset
-        add.l D3, A2
-        move.l 0(A2), D2
-        lea models, A3  ; Load effective address
-        move.l #0, D4
-        move.l D4, D5
-        mulu #16, D5  ; Compute array offset
-        add.l D5, A3
-        move.l 0(A3), D3
-        move.l D2, D4
-        add.l D3, D4
-        ; Function epilogue
-        move.l (SP)+, A6
-        rts
+        unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+        rts           ; Return from subroutine
 
 ; ===== DATA SECTION =====
 ; String literals
 ; Scalar and struct variables
-models:    ds.l 1
-idx:    ds.l 1
-i:    ds.l 1
-matrix_data:    ds.l 100
-matrix_array:    ds.l 100
+eq:    ds.l 1
+lt:    ds.l 1
+arr_0:    ds.l 1
+a:    ds.l 1
+x:    ds.l 1
 j:    ds.l 1
+i:    ds.l 1
+gte:    ds.l 1
+lte:    ds.l 1
+arrArr_len:    ds.l 3
+arr_1:    ds.l 1
+arr:    ds.l 24
+neq:    ds.l 1
+arr_2:    ds.l 1
+b:    ds.l 1
+gt:    ds.l 1
+k:    ds.l 1
 ; Array labels
+arrArr:    ds.l 1
 ; Loop variables
 
         SIMHALT
