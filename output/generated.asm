@@ -121,24 +121,25 @@ setupModel:
         move.l 16(A6), D2
         move.l 20(A6), D3
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: x.position, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: position.x, Base type: ArrayAccessExpr
+        ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+        ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
+        ; WARNING: Using default size of 16 bytes for unknown struct 
+        ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
+        ; DEBUG: Field path: position.y, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: y.position, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: position.z, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: z.position, Base type: ArrayAccessExpr
-        ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-        ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
-        ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: type.material, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: material.type, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #2, D1
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: shininess.material, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: material.shininess, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
@@ -200,23 +201,24 @@ Lend_15:
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #0, D2
         move.l D2, D3
-        mulu #4, D3
+        mulu #16, D3
         add.l D3, A1
+        ; DEBUG: Field access scale in , offset: 0
         move.l 0(A1), D1
         bra endif_13
 else_12:
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: x.scale, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: scale.x, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #1, D1
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: y.scale, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: scale.y, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #1, D1
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: z.scale, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: scale.z, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #1, D1
@@ -319,7 +321,7 @@ for_end_17:
         add.l D2, D3
         move.l D3, idx
         ; DEBUG: Entered handleAssignStmt. LHS type: ast.nodes.StructFieldAccess
-        ; DEBUG: Field path: x.position, Base type: ArrayAccessExpr
+        ; DEBUG: Field path: position.x, Base type: ArrayAccessExpr
         ; DEBUG: generateExpr called with type: ast.nodes.VarExpr
         move.l idx, D1
         ; DEBUG: generateExpr called with type: ast.nodes.BinaryExpr
@@ -333,16 +335,22 @@ for_end_17:
         move.l D3, D5
         sub.l D4, D5
         move.l D5, D3
-        mulu #4, D3
+        mulu #16, D3
         add.l D3, A2
+        ; DEBUG: Field access position in , offset: 0
+        ; WARNING: Could not determine type of field position in struct 
+        ; DEBUG: Field access x in , offset: 0
         move.l 0(A2), D2
         ; DEBUG: generateExpr called with type: ast.nodes.StructFieldAccess
         lea models, A3
         ; DEBUG: generateExpr called with type: ast.nodes.IntLiteral
         move.l #0, D4
         move.l D4, D5
-        mulu #4, D5
+        mulu #16, D5
         add.l D5, A3
+        ; DEBUG: Field access position in , offset: 0
+        ; WARNING: Could not determine type of field position in struct 
+        ; DEBUG: Field access x in , offset: 0
         move.l 0(A3), D3
         move.l D2, D4
         add.l D3, D4

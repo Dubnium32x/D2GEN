@@ -9,6 +9,7 @@ import std.conv;
 import std.format;
 import std.algorithm : map, joiner;
 import std.container : AssociativeArray;
+import std.regex : matchFirst;
 
 import ast.nodes;
 import globals;
@@ -156,6 +157,8 @@ string generateCode(ASTNode[] nodes) {
     foreach (name, countStr; emittedVars) {
         if (!(name in emittedSymbols)) {
             int count = to!int(countStr);
+            
+            // Handle function pointers
             if (varTypes.get(name, "").startsWith("void function(") && !(name in functionNames)) {
                 string varLabel = "var_" ~ name;
                 if (!(varLabel in emittedSymbols)) {
@@ -164,7 +167,18 @@ string generateCode(ASTNode[] nodes) {
                 }
                 continue;
             }
-            if (count > 0) {
+            
+            // Check if this is a struct array element (like myArray_0_field)
+            auto structArrayRegex = matchFirst(name, `^([A-Za-z_][A-Za-z0-9_]*)_([0-9]+)_([A-Za-z_][A-Za-z0-9_]*)$`);
+            if (!structArrayRegex.empty) {
+                // This is a struct field within an array element - handled separately
+                if (count > 0) {
+                    lines ~= name ~ ":    ds.l " ~ to!string(count);
+                    emittedSymbols[name] = "1";
+                }
+            }
+            // Normal variable or array element
+            else if (count > 0) {
                 lines ~= name ~ ":    ds.l " ~ to!string(count);
                 emittedSymbols[name] = "1";
             }
@@ -275,7 +289,7 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
         // Traverse the chain of nested StructFieldAccess nodes
         while (baseExpr !is null) {
             if (auto sf = cast(StructFieldAccess) baseExpr) {
-                fieldPath ~= sf.field; // Add field name to path
+                fieldPath = [sf.field] ~ fieldPath; // Add field name to path (in reverse order)
                 baseExpr = sf.baseExpr; // Move to next level
             } else if (auto aa = cast(ArrayAccessExpr) baseExpr) {
                 // Found array access at the end of the chain
@@ -320,11 +334,27 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             
             // Define struct sizes if not already defined
             if (!(structType in structSizes)) {
-                // Common struct sizes from examples
-                if (structType == "Sprite") structSizes[structType] = 24;  // Vec2(8) + Color(12) + int(4)
+                // First, try to calculate from structFieldOffsets
+                if (structType in structFieldOffsets) {
+                    int maxOffset = 0;
+                    foreach (_, offset; structFieldOffsets[structType]) {
+                        if (offset > maxOffset) maxOffset = offset;
+                    }
+                    // Size is at least max offset + 4 (assuming each field is int/4 bytes)
+                    structSizes[structType] = maxOffset + 4;
+                }
+                // Common struct sizes from examples as fallback
+                else if (structType == "Sprite") structSizes[structType] = 24;  // Vec2(8) + Color(12) + int(4)
                 else if (structType == "Color") structSizes[structType] = 12;  // r,g,b (4 each)
-                else if (structType == "Point") structSizes[structType] = 8;   // x,y (4 each)
+                else if (structType == "Point" || structType == "Vec2") structSizes[structType] = 8;   // x,y (4 each)
+                else if (structType == "Vec3") structSizes[structType] = 12;   // x,y,z (4 each)
                 else if (structType == "Box") structSizes[structType] = 20;  // Point(8) + Point(8) + int(4)
+                else if (structType == "Material") structSizes[structType] = 20;  // type(4) + shininess(4) + colors[3](12)
+                else {
+                    // Default size if we can't determine
+                    structSizes[structType] = 16;  // Default to 16 bytes if unknown
+                    lines ~= "        ; WARNING: Using default size of 16 bytes for unknown struct " ~ structType;
+                }
             }
             
             // Now we can look up the element size
@@ -334,71 +364,146 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             
             // Calculate field offset based on field path and struct type
             if (structType != "") {
-                // Calculate field offset based on the field path
-                if (structType == "Box") {
-                    if (fieldPath.length == 2) {  // Like boxes[i].min.x
-                        string innerField = fieldPath[0]; // x or y
-                        string outerField = fieldPath[1]; // min or max
+                // Add debug info for fieldPath
+                lines ~= "        ; DEBUG: Calculating offsets for " ~ structType ~ " fields: " ~ fieldPath.join(".");
+                
+                // Calculate field offset based on the field path - now paths are stored in correct order (outermost to innermost)
+                int baseOffset = 0;
+                string currentType = structType;
+                
+                // Handle nested struct fields recursively
+                if (fieldPath.length >= 2) {
+                    for (int i = 0; i < fieldPath.length - 1; i++) {
+                        string fieldName = fieldPath[i];
+                        // Find offset of this field within current struct
+                        int currFieldOffset = 0;
                         
-                        if (outerField == "min") {
-                            // Point fields: x(0), y(4)
-                            if (innerField == "x") fieldOffset = 0;
-                            else if (innerField == "y") fieldOffset = 4;
-                        } 
-                        else if (outerField == "max") {
-                            // Point fields starting at offset 8
-                            if (innerField == "x") fieldOffset = 8;
-                            else if (innerField == "y") fieldOffset = 12;
+                        // Try to get from structFieldOffsets
+                        if (currentType in structFieldOffsets && fieldName in structFieldOffsets[currentType]) {
+                            currFieldOffset = structFieldOffsets[currentType][fieldName];
                         }
-                    } 
-                    else if (fieldPath.length == 1) {  // Like boxes[i].colorIndex
-                        string directField = fieldPath[0];
-                        if (directField == "colorIndex") fieldOffset = 16;  // After min and max Points
-                    }
-                }
-                else if (structType == "Point") {
-                    if (fieldPath.length == 1) {
-                        if (fieldPath[0] == "x") fieldOffset = 0;
-                        else if (fieldPath[0] == "y") fieldOffset = 4;
-                    }
-                }
-                // Keep your existing Sprite and Color handling
-                else if (structType == "Sprite") {
-                    // Sprite structure: pos(Vec2), tint(Color), id(int)
-                    if (fieldPath.length == 2) { // Double-nested fields like sprites[i].pos.x
-                        string innerField = fieldPath[0]; // "x", "y", "r", "g", "b"
-                        string outerField = fieldPath[1]; // "pos", "tint"
+                        // Fallback to hardcoded for common structs
+                        else if (currentType == "Vec2" || currentType == "Point") {
+                            if (fieldName == "x") fieldOffset = 0;
+                            else if (fieldName == "y") fieldOffset = 4;
+                        }
+                        else if (currentType == "Vec3") {
+                            if (fieldName == "x") fieldOffset = 0;
+                            else if (fieldName == "y") fieldOffset = 4; 
+                            else if (fieldName == "z") fieldOffset = 8;
+                        }
+                        else if (currentType == "Model") {
+                            if (fieldName == "position") fieldOffset = 0;
+                            else if (fieldName == "rotation") fieldOffset = 12;
+                            else if (fieldName == "scale") fieldOffset = 24;
+                            else if (fieldName == "material") fieldOffset = 36;
+                            else if (fieldName == "id") fieldOffset = 56;
+                        }
+                        else if (currentType == "Material") {
+                            if (fieldName == "type") fieldOffset = 0;
+                            else if (fieldName == "shininess") fieldOffset = 4;
+                            else if (fieldName == "colors") fieldOffset = 8;
+                        }
+                        else if (currentType == "Sprite") {
+                            if (fieldName == "pos") fieldOffset = 0;
+                            else if (fieldName == "tint") fieldOffset = 8;
+                            else if (fieldName == "id") fieldOffset = 20;
+                        }
+                        else if (currentType == "Box") {
+                            if (fieldName == "min") fieldOffset = 0;
+                            else if (fieldName == "max") fieldOffset = 8;
+                            else if (fieldName == "colorIndex") fieldOffset = 16;
+                        }
                         
-                        // Sprite structure: pos(Vec2), tint(Color), id(int)
-                        if (outerField == "pos") {
-                            // Vec2 structure: x(0), y(4)
-                            if (innerField == "x") fieldOffset = 0;
-                            else if (innerField == "y") fieldOffset = 4;
+                        // Add this field's offset to total
+                        baseOffset += fieldOffset;
+                        
+                        // Determine type of this field for next iteration
+                        if (fieldName == "pos" || fieldName == "position" || 
+                            fieldName == "rotation" || fieldName == "scale" || 
+                            fieldName == "min" || fieldName == "max") 
+                        {
+                            if (currentType == "Sprite") currentType = "Vec2";
+                            else if (currentType == "Model") currentType = "Vec3";
+                            else if (currentType == "Box") currentType = "Point";
                         }
-                        else if (outerField == "tint") {
-                            // Color structure: r(0), g(4), b(8) starting at offset 8 in Sprite
-                            if (innerField == "r") fieldOffset = 8;
-                            else if (innerField == "g") fieldOffset = 12;
-                            else if (innerField == "b") fieldOffset = 16;
-                        }
+                        else if (fieldName == "tint") currentType = "Color";
+                        else if (fieldName == "material") currentType = "Material";
                     }
-                    else if (fieldPath.length == 1) { // Direct fields like sprites[i].id
-                        string directField = fieldPath[0];
-                        if (directField == "id") {
-                            fieldOffset = 20; // id is at offset 20 (after pos and tint)
-                        }
-                    }
-                }
-                else if (structType == "Color") {
-                    // Size: r(4) + g(4) + b(4) = 12 bytes
-                    elementSize = 12;
                     
-                    // Direct field access for Color array
-                    if (fieldPath.length == 1) {
-                        string colorField = fieldPath[0];
-                        if (colorField == "r") fieldOffset = 0;
-                        else if (colorField == "g") fieldOffset = 4;
-                        else if (colorField == "b") fieldOffset = 8;
+                    // Now handle the final field
+                    string finalField = fieldPath[fieldPath.length - 1];
+                    
+                    if (currentType == "Vec2" || currentType == "Point") {
+                        if (finalField == "x") fieldOffset = baseOffset + 0;
+                        else if (finalField == "y") fieldOffset = baseOffset + 4;
+                    }
+                    else if (currentType == "Vec3") {
+                        if (finalField == "x") fieldOffset = baseOffset + 0;
+                        else if (finalField == "y") fieldOffset = baseOffset + 4;
+                        else if (finalField == "z") fieldOffset = baseOffset + 8;
+                    }
+                    else if (currentType == "Color") {
+                        if (finalField == "r") fieldOffset = baseOffset + 0;
+                        else if (finalField == "g") fieldOffset = baseOffset + 4;
+                        else if (finalField == "b") fieldOffset = baseOffset + 8;
+                    }
+                    else if (currentType == "Material") {
+                        if (finalField == "type") fieldOffset = baseOffset + 0;
+                        else if (finalField == "shininess") fieldOffset = baseOffset + 4;
+                        // Handle array access like colors[0], colors[1], etc.
+                        else if (finalField.startsWith("colors_")) {
+                            import std.conv : to;
+                            string idxStr = finalField[7..$]; // Extract index after "colors_"
+                            int idx = to!int(idxStr);
+                            fieldOffset = baseOffset + 8 + (idx * 4); // colors at offset 8, each element 4 bytes
+                        }
+                    }
+                } 
+                // Handle simple fields (only one level deep)
+                else if (fieldPath.length == 1) {
+                    string directField = fieldPath[0];
+                    
+                    // Try to get from structFieldOffsets
+                    if (structType in structFieldOffsets && directField in structFieldOffsets[structType]) {
+                        fieldOffset = structFieldOffsets[structType][directField];
+                    }
+                    // Fallback to hardcoded for common structs
+                    else if (structType == "Vec2" || structType == "Point") {
+                        if (directField == "x") fieldOffset = 0;
+                        else if (directField == "y") fieldOffset = 4;
+                    }
+                    else if (structType == "Vec3") {
+                        if (directField == "x") fieldOffset = 0;
+                        else if (directField == "y") fieldOffset = 4;
+                        else if (directField == "z") fieldOffset = 8;
+                    }
+                    else if (structType == "Color") {
+                        if (directField == "r") fieldOffset = 0;
+                        else if (directField == "g") fieldOffset = 4;
+                        else if (directField == "b") fieldOffset = 8;
+                    }
+                    else if (structType == "Sprite") {
+                        if (directField == "pos") fieldOffset = 0;
+                        else if (directField == "tint") fieldOffset = 8;
+                        else if (directField == "id") fieldOffset = 20;
+                    }
+                    else if (structType == "Model") {
+                        if (directField == "position") fieldOffset = 0;
+                        else if (directField == "rotation") fieldOffset = 12;
+                        else if (directField == "scale") fieldOffset = 24;
+                        else if (directField == "material") fieldOffset = 36;
+                        else if (directField == "id") fieldOffset = 56;
+                    }
+                    else if (structType == "Material") {
+                        if (directField == "type") fieldOffset = 0;
+                        else if (directField == "shininess") fieldOffset = 4;
+                        else if (directField == "colors") fieldOffset = 8;
+                    }
+                    else if (structType == "Box") {
+                        if (directField == "min") fieldOffset = 0;
+                        else if (directField == "max") fieldOffset = 8;
+                        else if (directField == "colorIndex") fieldOffset = 16;
                     }
                 }
                 
@@ -485,13 +590,27 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
             lines ~= "        move.l " ~ valReg ~ ", " ~ to!string(offset) ~ "(" ~ addrReg ~ ")";
         } else {
             // Dynamic index: arr[idx]
-            string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
-            string offsetReg = nextReg(regIndex); // Use a data register for offset calculation
-            lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg; // Copy index value
-            lines ~= "        mulu #" ~ to!string(elementSize) ~ ", " ~ offsetReg; // Calculate byte offset
-            lines ~= "        lea " ~ baseAddrLabel ~ ", " ~ addrReg; // Load base address
-            // Use indexed addressing with offset register: (base_address_reg, offset_data_reg.L)
-            lines ~= "        move.l " ~ valReg ~ ", (" ~ addrReg ~ ", " ~ offsetReg ~ ".l)";
+        string indexReg = generateExpr(access.index, lines, regIndex, varAddrs);
+        string offsetReg = nextReg(regIndex); // Use a data register for offset calculation
+        
+        // Determine element size - default to 4 bytes (long word) unless we know it's a struct
+        int elemSize = 4;
+        
+        // If we know this is an array of structs, use the struct size
+        if (access.arrayName in arrayElementTypes) {
+            string elemType = arrayElementTypes[access.arrayName];
+            if (elemType in structSizes) {
+                elemSize = structSizes[elemType];
+                lines ~= "        ; Using element size " ~ to!string(elemSize) ~ " for " ~ elemType ~ " array";
+            }
+        }
+        
+        lines ~= "        move.l " ~ indexReg ~ ", " ~ offsetReg; // Copy index value
+        lines ~= "        mulu #" ~ to!string(elemSize) ~ ", " ~ offsetReg; // Calculate byte offset
+        lines ~= "        lea " ~ baseAddrLabel ~ ", " ~ addrReg; // Load base address
+        
+        // Use indexed addressing with offset register: (base_address_reg, offset_data_reg.L)
+        lines ~= "        move.l " ~ valReg ~ ", (" ~ addrReg ~ ", " ~ offsetReg ~ ".l)";
         }
         // --- END FIX ---
     } else if (auto var = cast(VarExpr) assign.lhs) {
@@ -627,9 +746,36 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
                     if (!m.empty && m.captures.length == 3) {
                         string structType = m.captures[1];
                         int arrLen = m.captures[2].to!int;
+                        
+                        // Register array element type for future reference
+                        arrayElementTypes[decl.name] = structType;
+                        
                         if (structType in structFieldOffsets) {
+                            // Register struct array in memory allocation tracking
+                            emittedVars[decl.name] = to!string(arrLen);
+                            
+                            // Calculate struct size if not already defined
+                            if (!(structType in structSizes)) {
+                                int maxOffset = 0;
+                                foreach(_, offset; structFieldOffsets[structType]) {
+                                    if (offset > maxOffset) maxOffset = offset;
+                                }
+                                // Size is max offset + 4 (assuming each field is int sized)
+                                structSizes[structType] = maxOffset + 4;
+                            }
+                            
+                            // Allocate memory for each element in the array with their fields
                             for (int i = 0; i < arrLen; i++) {
+                                // Recursively allocate memory for each field of each struct
                                 flattenStructFields(structType, decl.name ~ "_" ~ to!string(i), varAddrs, emittedVars, varTypes);
+                            }
+                            
+                            // Ensure there's a length label for the array
+                            emittedVars[decl.name ~ "_len"] = to!string(arrLen);
+                            
+                            // Register it as an array label for emitting ds.l directive
+                            if (!(decl.name in arrayLabels)) {
+                                arrayLabels[decl.name] = decl.name;
                             }
                         } else {
                             lines ~= format("        ; array of unknown struct type %s (not implemented)", structType);
@@ -935,12 +1081,26 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
 // Recursively flatten struct fields for arrays of structs
 void flattenStructFields(string structType, string prefix, ref string[string] varAddrs, ref string[string] emittedVars, ref string[string] varTypes) {
     if (!(structType in structFieldOffsets)) return;
-    foreach (fieldName, _; structFieldOffsets[structType]) {
+    
+    // Calculate struct size if not already defined
+    if (!(structType in structSizes)) {
+        // Count total fields and max offset
+        int maxOffset = 0;
+        foreach (fieldName, offset; structFieldOffsets[structType]) {
+            if (offset > maxOffset) maxOffset = offset;
+        }
+        // Size is at least max offset + 4 (assuming each field is int/4 bytes)
+        structSizes[structType] = maxOffset + 4;
+    }
+    
+    foreach (fieldName, offset; structFieldOffsets[structType]) {
         // Try to get the type from varTypes if available, fallback to int
         string fieldType = "int";
         if (structType ~ "." ~ fieldName in varTypes) {
             fieldType = varTypes[structType ~ "." ~ fieldName];
         }
+        
+        // If the field is itself a struct, recursively process it
         if (fieldType in structFieldOffsets) {
             flattenStructFields(fieldType, prefix ~ "_" ~ fieldName, varAddrs, emittedVars, varTypes);
         } else {
@@ -995,7 +1155,40 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
             }
             return "";
         } else if (auto field = cast(StructFieldAccess) node) {
-            // No type info available in structFieldOffsets, only offset. Return empty string.
+            // First, determine the type of the base expression
+            string baseType = resolveNodeType(field.baseExpr);
+            
+            // Then determine which type the field has
+            if (baseType == "Vec2" || baseType == "Point") {
+                if (field.field == "x" || field.field == "y") return "int";
+            } 
+            else if (baseType == "Vec3") {
+                if (field.field == "x" || field.field == "y" || field.field == "z") return "int";
+            }
+            else if (baseType == "Color") {
+                if (field.field == "r" || field.field == "g" || field.field == "b") return "int";
+            }
+            else if (baseType == "Sprite") {
+                if (field.field == "pos") return "Vec2";
+                else if (field.field == "tint") return "Color";
+                else if (field.field == "id") return "int";
+            }
+            else if (baseType == "Box") {
+                if (field.field == "min" || field.field == "max") return "Point";
+                else if (field.field == "colorIndex") return "int";
+            }
+            else if (baseType == "Model") {
+                if (field.field == "position" || field.field == "rotation" || field.field == "scale") return "Vec3";
+                else if (field.field == "material") return "Material";
+                else if (field.field == "id") return "int";
+            }
+            else if (baseType == "Material") {
+                if (field.field == "type" || field.field == "shininess") return "int";
+                else if (field.field == "colors") return "int[]";
+            }
+            
+            // If we get here, we couldn't determine the field type
+            lines ~= "        ; WARNING: Could not determine type of field " ~ field.field ~ " in struct " ~ baseType;
             return "";
         }
         return "";
@@ -1057,9 +1250,34 @@ Tuple!(string, int) generateAddressExpr(ASTNode expr, ref string[] lines, ref in
         // Determine struct type
         string structType = resolveNodeType(field.baseExpr);
         int fieldOffset = 0;
+        
+        // First try to get field offset from structFieldOffsets
         if (structType.length && structType in structFieldOffsets && field.field in structFieldOffsets[structType]) {
             fieldOffset = structFieldOffsets[structType][field.field];
+        } 
+        // If we couldn't find it there, check if we know the offset from hardcoded structSizes
+        else if (structType == "Vec2" || structType == "Point") {
+            if (field.field == "x") fieldOffset = 0;
+            else if (field.field == "y") fieldOffset = 4;
         }
+        else if (structType == "Vec3") {
+            if (field.field == "x") fieldOffset = 0;
+            else if (field.field == "y") fieldOffset = 4;
+            else if (field.field == "z") fieldOffset = 8;
+        }
+        else if (structType == "Color") {
+            if (field.field == "r") fieldOffset = 0;
+            else if (field.field == "g") fieldOffset = 4;
+            else if (field.field == "b") fieldOffset = 8;
+        }
+        else if (structType == "Material") {
+            if (field.field == "type") fieldOffset = 0;
+            else if (field.field == "shininess") fieldOffset = 4;
+            // colors array would be at offset 8
+        }
+        
+        lines ~= format("        ; DEBUG: Field access %s in %s, offset: %s", field.field, structType, to!string(fieldOffset));
+        
         regIndex = regIndexStart; // Free temporaries used in this call
         return tuple(baseReg, baseOffset + fieldOffset);
     }
