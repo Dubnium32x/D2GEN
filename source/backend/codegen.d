@@ -98,15 +98,15 @@ string generateCode(ASTNode[] nodes) {
         if (auto decl = cast(VarDecl)node) {
             string label = decl.name;
             if (label in emittedSymbols) continue;
-            // Only emit if public
-            if (label in publicThings) {
-                emittedSymbols[label] = "1";
-                varTypes[label] = decl.type;
-                emittedVars[label] = "1";
-                if (decl.value is null) {
-                    lines ~= format("%s:    ds.l 1", label);
-                }
-            }
+            
+            // Generate code for initializing global constants and variables
+            generateStmt(decl, lines, regIndex, varAddrs);
+        }
+        else if (auto assignStmt = cast(AssignStmt)node) {
+            generateStmt(assignStmt, lines, regIndex, varAddrs);
+        }
+        else if (auto exprStmt = cast(ExprStmt)node) {
+            generateExpr(exprStmt.expr, lines, regIndex, varAddrs);
         }
     }
     lines ~= "        rts";
@@ -127,36 +127,34 @@ string generateCode(ASTNode[] nodes) {
     }
 
     lines ~= "; Scalar and struct variables";
-    // --- PATCH: Emit all public global variables (VarDecl) as ds.l 1 if not already emitted ---
+    // --- PATCH: Emit all global variables (VarDecl) as ds.l 1 if not already emitted ---
     foreach (node; globalAssignments) {
         if (auto decl = cast(VarDecl)node) {
             string label = decl.name;
             if (label in emittedSymbols) continue;
-            if (label in publicThings) {
-                emittedSymbols[label] = "1";
-                varTypes[label] = decl.type;
-                emittedVars[label] = "1";
-                if (decl.value is null) {
-                    lines ~= format("%s:    ds.l 1", label);
-                }
+            
+            // Make sure all constants and variables get declared in the data section
+            emittedSymbols[label] = "1";
+            varTypes[label] = decl.type;
+            emittedVars[label] = "1";
+            
+            // Add a comment for constants
+            if (decl.isConst) {
+                lines ~= format("; Constant: %s", label);
+            }
+            
+            // Define the storage for the variable
+            if (decl.type == "byte") {
+                lines ~= format("%s:    ds.b 1", label);
+            } else {
+                lines ~= format("%s:    ds.l 1", label);
             }
         }
     }
     // --- END PATCH ---
 
-    // --- PATCH: Emit initial values for global assignments and declarations ---
-    foreach (node; globalAssignments) {
-        if (auto decl = cast(VarDecl)node) {
-            if (decl.value !is null) {
-                generateStmt(decl, lines, regIndex, varAddrs);
-            }
-        } else if (auto assign = cast(AssignStmt)node) {
-            generateStmt(assign, lines, regIndex, varAddrs);
-        } else if (auto exprStmt = cast(ExprStmt)node) {
-            generateStmt(exprStmt, lines, regIndex, varAddrs);
-        }
-    }
-    // --- END PATCH ---
+    // --- PATCH: Removed redundant initialization code here, 
+    // since we're now initializing all variables in __global_init ---
 
     // Emit zero-initialized variables/fields not already initialized
     foreach (name, countStr; emittedVars) {
@@ -240,6 +238,34 @@ string generateCode(ASTNode[] nodes) {
 
     lines ~= "";
     lines ~= "        SIMHALT";
+    
+    // Add the print function implementation
+    lines ~= "";
+    lines ~= "; ===== RUNTIME FUNCTIONS =====";
+    lines ~= "print:";
+    lines ~= "        ; Function prologue";
+    lines ~= "        link    A6, #0          ; Setup stack frame";
+    lines ~= "        movem.l D0-D7/A0-A5, -(SP) ; Save all registers";
+    lines ~= "";
+    lines ~= "        ; Print the string part";
+    lines ~= "        move.l  8(A6), A1       ; Get string address from first parameter";
+    lines ~= "        move.l  #13, D0         ; Task 13 - print string without newline";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Print the value (second parameter)";
+    lines ~= "        move.l  12(A6), D1      ; Get the value to print";
+    lines ~= "        move.l  #3, D0          ; Task 3 - display number in D1.L";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Print a newline";
+    lines ~= "        move.l  #11, D0         ; Task 11 - print CR/LF";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Function epilogue";
+    lines ~= "        movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers";
+    lines ~= "        unlk    A6              ; Restore stack frame";
+    lines ~= "        rts                     ; Return from subroutine";
+    
     lines ~= "        END";
     return lines.join("\n");
 }

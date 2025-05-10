@@ -1,43 +1,216 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/10/2025 3:02:36 PM
+Created On: 5/10/2025 3:30:14 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          jsr __global_init
-00001006  4EF9 0000100E              4          jmp main
+00001006  4EF9 0000118A              4          jmp main
 0000100C                             5  
 0000100C                             6  ; ===== FUNCTION DEFINITIONS =====
 0000100C                             7  __global_init:
-0000100C  4E75                       8          rts
-0000100E                             9  main:
-0000100E                            10          ; Function prologue
-0000100E  4E56 0000                 11          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
-00001012  722A                      12          moveq #42, D1  ; Optimized small constant
-00001014  23C1 00001040             13          move.l D1, publicVar
-0000101A  7264                      14          moveq #100, D1  ; Optimized small constant
-0000101C  23C1 00001044             15          move.l D1, privateVar
-00001022  2239 00001040             16          move.l publicVar, D1
-00001028  2439 00001044             17          move.l privateVar, D2
-0000102E  2601                      18          move.l D1, D3
-00001030  D682                      19          add.l D2, D3
-00001032  23C3 0000103C             20          move.l D3, sum
-00001038                            21          ; Function epilogue
-00001038  4E5E                      22          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
-0000103A  4E75                      23          rts           ; Return from subroutine
-0000103C                            24  
-0000103C                            25  ; ===== DATA SECTION =====
-0000103C                            26  ; String literals
-0000103C                            27  ; Scalar and struct variables
-0000103C                            28  sum:    ds.l 1
-00001040                            29  publicVar:    ds.l 1
-00001044                            30  privateVar:    ds.l 1
-00001048                            31  ; Array labels
-00001048                            32  ; Loop variables
-00001048                            33  
-00001048  FFFF FFFF                 34          SIMHALT
-Line 35 WARNING: Address expected
-0000104C                            35          END
+0000100C  7264                       8          moveq #100, D1  ; Optimized small constant
+0000100E  23C1 00001258              9          move.l D1, MAX_SCORE
+00001014  7200                      10          moveq #0, D1  ; Optimized small constant
+00001016  23C1 0000125C             11          move.l D1, MIN_SCORE
+0000101C  7263                      12          moveq #99, D1  ; Optimized small constant
+0000101E  13C1 00001260             13          move.b D1, MAX_LEVEL
+00001024  7201                      14          moveq #1, D1  ; Boolean value
+00001026  23C1 00001262             15          move.l D1, IS_ENABLED
+0000102C  2239 00001258             16          move.l MAX_SCORE, D1
+00001032  7402                      17          moveq #2, D2  ; Optimized small constant
+00001034  2001                      18          move.l D1, D0
+00001036  C1C2                      19          muls D2, D0
+00001038  23C0 00001266             20          move.l D0, DOUBLE_MAX
+0000103E  2239 00001258             21          move.l MAX_SCORE, D1
+00001044  7402                      22          moveq #2, D2  ; Optimized small constant
+00001046  2601                      23          move.l D1, D3  ; Prepare for division by 2
+00001048  E283                      24          asr.l #1, D3  ; Optimized division by power of 2 (2)
+0000104A  23C3 0000126A             25          move.l D3, HALF_MAX
+00001050                            26          ; Constant variable: PUBLIC_CONST
+00001050  722A                      27          moveq #42, D1  ; Optimized small constant
+00001052  23C1 0000126E             28          move.l D1, PUBLIC_CONST
+00001058                            29          ; Constant variable: PRIVATE_CONST
+00001058  7254                      30          moveq #84, D1  ; Optimized small constant
+0000105A  23C1 00001272             31          move.l D1, PRIVATE_CONST
+00001060  4E75                      32          rts
+00001062                            33  testConstModification:
+00001062                            34          ; Function prologue
+00001062  4E56 0000                 35          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+00001066  223C 000000C8             36          move.l #200, D1
+0000106C  23C1 00001258             37          move.l D1, MAX_SCORE
+00001072                            38          ; Function epilogue
+00001072  4E5E                      39          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+00001074  4E75                      40          rts           ; Return from subroutine
+00001076                            41  useConstants:
+00001076                            42          ; Function prologue
+00001076  4E56 0000                 43          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+0000107A  2239 00001258             44          move.l MAX_SCORE, D1
+00001080  23C1 0000127A             45          move.l D1, score
+00001086  2239 00001262             46          move.l IS_ENABLED, D1
+0000108C  23C1 0000127E             47          move.l D1, enabled
+00001092  2239 00001258             48          move.l MAX_SCORE, D1
+00001098  2F01                      49          move.l D1, -(SP)
+0000109A  45F9 0000120D             50          lea strAA, A2  ; Load effective address
+000010A0  2F0A                      51          move.l A2, -(SP)
+000010A2  6100 01EA                 52          bsr print
+000010A6  508F                      53          add.l #8, SP
+000010A8  2239 0000125C             54          move.l MIN_SCORE, D1
+000010AE  2F01                      55          move.l D1, -(SP)
+000010B0  45F9 000011E6             56          lea strAB, A2  ; Load effective address
+000010B6  2F0A                      57          move.l A2, -(SP)
+000010B8  6100 01D4                 58          bsr print
+000010BC  508F                      59          add.l #8, SP
+000010BE  2239 00001260             60          move.l MAX_LEVEL, D1
+000010C4  2F01                      61          move.l D1, -(SP)
+000010C6  45F9 000011B4             62          lea strAC, A2  ; Load effective address
+000010CC  2F0A                      63          move.l A2, -(SP)
+000010CE  6100 01BE                 64          bsr print
+000010D2  508F                      65          add.l #8, SP
+000010D4  2239 00001262             66          move.l IS_ENABLED, D1
+000010DA  2F01                      67          move.l D1, -(SP)
+000010DC  45F9 0000124A             68          lea strAD, A2  ; Load effective address
+000010E2  2F0A                      69          move.l A2, -(SP)
+000010E4  6100 01A8                 70          bsr print
+000010E8  508F                      71          add.l #8, SP
+000010EA  2239 00001266             72          move.l DOUBLE_MAX, D1
+000010F0  2F01                      73          move.l D1, -(SP)
+000010F2  45F9 000011D9             74          lea strAE, A2  ; Load effective address
+000010F8  2F0A                      75          move.l A2, -(SP)
+000010FA  6100 0192                 76          bsr print
+000010FE  508F                      77          add.l #8, SP
+00001100  2239 0000126A             78          move.l HALF_MAX, D1
+00001106  2F01                      79          move.l D1, -(SP)
+00001108  45F9 00001231             80          lea strAF, A2  ; Load effective address
+0000110E  2F0A                      81          move.l A2, -(SP)
+00001110  6100 017C                 82          bsr print
+00001114  508F                      83          add.l #8, SP
+00001116  2239 00001258             84          move.l MAX_SCORE, D1
+0000111C  2439 0000125C             85          move.l MIN_SCORE, D2
+00001122  2601                      86          move.l D1, D3
+00001124  9682                      87          sub.l D2, D3
+00001126  23C3 00001282             88          move.l D3, range
+0000112C  2239 00001282             89          move.l range, D1
+00001132  2F01                      90          move.l D1, -(SP)
+00001134  45F9 0000123C             91          lea strAG, A2  ; Load effective address
+0000113A  2F0A                      92          move.l A2, -(SP)
+0000113C  6100 0150                 93          bsr print
+00001140  508F                      94          add.l #8, SP
+00001142                            95          ; Function epilogue
+00001142  4E5E                      96          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+00001144  4E75                      97          rts           ; Return from subroutine
+00001146                            98  localConstants:
+00001146                            99          ; Function prologue
+00001146  4E56 0000                100          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+0000114A                           101          ; Constant variable: LOCAL_MAX
+0000114A  7232                     102          moveq #50, D1  ; Optimized small constant
+0000114C  23C1 00001276            103          move.l D1, LOCAL_MAX
+00001152                           104          ; Constant variable: LOCAL_FLAG
+00001152  7200                     105          moveq #0, D1  ; Boolean value
+00001154  23C1 00001286            106          move.l D1, LOCAL_FLAG
+0000115A  2239 00001276            107          move.l LOCAL_MAX, D1
+00001160  2F01                     108          move.l D1, -(SP)
+00001162  45F9 000011CD            109          lea strAH, A2  ; Load effective address
+00001168  2F0A                     110          move.l A2, -(SP)
+0000116A  6100 0122                111          bsr print
+0000116E  508F                     112          add.l #8, SP
+00001170  2239 00001286            113          move.l LOCAL_FLAG, D1
+00001176  2F01                     114          move.l D1, -(SP)
+00001178  45F9 000011C0            115          lea strAI, A2  ; Load effective address
+0000117E  2F0A                     116          move.l A2, -(SP)
+00001180  6100 010C                117          bsr print
+00001184  508F                     118          add.l #8, SP
+00001186                           119          ; Function epilogue
+00001186  4E5E                     120          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+00001188  4E75                     121          rts           ; Return from subroutine
+0000118A                           122  main:
+0000118A                           123          ; Function prologue
+0000118A  4E56 0000                124          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+0000118E  43F9 000011F2            125          lea strAJ, A1  ; Load effective address
+00001194  2F09                     126          move.l A1, -(SP)
+00001196  6100 00F6                127          bsr print
+0000119A  588F                     128          add.l #4, SP
+0000119C  6100 FED8                129          bsr useConstants
+000011A0  61A4                     130          bsr localConstants
+000011A2  43F9 00001219            131          lea strAK, A1  ; Load effective address
+000011A8  2F09                     132          move.l A1, -(SP)
+000011AA  6100 00E2                133          bsr print
+000011AE  588F                     134          add.l #4, SP
+000011B0                           135          ; Function epilogue
+000011B0  4E5E                     136          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+000011B2  4E75                     137          rts           ; Return from subroutine
+000011B4                           138  
+000011B4                           139  ; ===== DATA SECTION =====
+000011B4                           140  ; String literals
+000011B4                           141  strAC:
+000011B4= 4D 41 58 5F 4C 45 ...    142          dc.b 'MAX_LEVEL: ', 0
+000011C0                           143  strAI:
+000011C0= 4C 4F 43 41 4C 5F ...    144          dc.b 'LOCAL_FLAG: ', 0
+000011CD                           145  strAH:
+000011CD= 4C 4F 43 41 4C 5F ...    146          dc.b 'LOCAL_MAX: ', 0
+000011D9                           147  strAE:
+000011D9= 44 4F 55 42 4C 45 ...    148          dc.b 'DOUBLE_MAX: ', 0
+000011E6                           149  strAB:
+000011E6= 4D 49 4E 5F 53 43 ...    150          dc.b 'MIN_SCORE: ', 0
+000011F2                           151  strAJ:
+000011F2= 54 65 73 74 69 6E ...    152          dc.b 'Testing constant variables', 0
+0000120D                           153  strAA:
+0000120D= 4D 41 58 5F 53 43 ...    154          dc.b 'MAX_SCORE: ', 0
+00001219                           155  strAK:
+00001219= 43 6F 6E 73 74 61 ...    156          dc.b 'Constant test completed', 0
+00001231                           157  strAF:
+00001231= 48 41 4C 46 5F 4D ...    158          dc.b 'HALF_MAX: ', 0
+0000123C                           159  strAG:
+0000123C= 53 63 6F 72 65 20 ...    160          dc.b 'Score range: ', 0
+0000124A                           161  strAD:
+0000124A= 49 53 5F 45 4E 41 ...    162          dc.b 'IS_ENABLED: ', 0
+00001257                           163  ; Scalar and struct variables
+00001258                           164  MAX_SCORE:    ds.l 1
+0000125C                           165  MIN_SCORE:    ds.l 1
+00001260                           166  MAX_LEVEL:    ds.b 1
+00001262                           167  IS_ENABLED:    ds.l 1
+00001266                           168  DOUBLE_MAX:    ds.l 1
+0000126A                           169  HALF_MAX:    ds.l 1
+0000126E                           170  ; Constant: PUBLIC_CONST
+0000126E                           171  PUBLIC_CONST:    ds.l 1
+00001272                           172  ; Constant: PRIVATE_CONST
+00001272                           173  PRIVATE_CONST:    ds.l 1
+00001276                           174  LOCAL_MAX:    ds.l 1
+0000127A                           175  score:    ds.l 1
+0000127E                           176  enabled:    ds.l 1
+00001282                           177  range:    ds.l 1
+00001286                           178  LOCAL_FLAG:    ds.l 1
+0000128A                           179  ; Array labels
+0000128A                           180  ; Loop variables
+0000128A                           181  
+0000128A  FFFF FFFF                182          SIMHALT
+0000128E                           183  
+0000128E                           184  ; ===== RUNTIME FUNCTIONS =====
+0000128E                           185  print:
+0000128E                           186          ; Function prologue
+0000128E  4E56 0000                187          link    A6, #0          ; Setup stack frame
+00001292  48E7 FFFC                188          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+00001296                           189  
+00001296                           190          ; Print the string part
+00001296  226E 0008                191          move.l  8(A6), A1       ; Get string address from first parameter
+0000129A  700D                     192          move.l  #13, D0         ; Task 13 - print string without newline
+0000129C  4E4F                     193          trap    #15             ; Call OS
+0000129E                           194  
+0000129E                           195          ; Print the value (second parameter)
+0000129E  222E 000C                196          move.l  12(A6), D1      ; Get the value to print
+000012A2  7003                     197          move.l  #3, D0          ; Task 3 - display number in D1.L
+000012A4  4E4F                     198          trap    #15             ; Call OS
+000012A6                           199  
+000012A6                           200          ; Print a newline
+000012A6  700B                     201          move.l  #11, D0         ; Task 11 - print CR/LF
+000012A8  4E4F                     202          trap    #15             ; Call OS
+000012AA                           203  
+000012AA                           204          ; Function epilogue
+000012AA  4CDF 3FFF                205          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
+000012AE  4E5E                     206          unlk    A6              ; Restore stack frame
+000012B0  4E75                     207          rts                     ; Return from subroutine
+Line 208 WARNING: Address expected
+000012B2                           208          END
 
 No errors detected
 1 warning generated
@@ -46,8 +219,33 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-MAIN                100E
-PRIVATEVAR          1044
-PUBLICVAR           1040
-SUM                 103C
+DOUBLE_MAX          1266
+ENABLED             127E
+HALF_MAX            126A
+IS_ENABLED          1262
+LOCALCONSTANTS      1146
+LOCAL_FLAG          1286
+LOCAL_MAX           1276
+MAIN                118A
+MAX_LEVEL           1260
+MAX_SCORE           1258
+MIN_SCORE           125C
+PRINT               128E
+PRIVATE_CONST       1272
+PUBLIC_CONST        126E
+RANGE               1282
+SCORE               127A
+STRAA               120D
+STRAB               11E6
+STRAC               11B4
+STRAD               124A
+STRAE               11D9
+STRAF               1231
+STRAG               123C
+STRAH               11CD
+STRAI               11C0
+STRAJ               11F2
+STRAK               1219
+TESTCONSTMODIFICATION  1062
+USECONSTANTS        1076
 __GLOBAL_INIT       100C

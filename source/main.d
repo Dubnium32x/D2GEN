@@ -16,8 +16,17 @@ bool contains(string haystack, string needle) {
     return haystack.indexOf(needle) >= 0;
 }
 
-void main() {
-    string code = readText("tests/visibility_test.dl");
+void main(string[] args) {
+    string filename = args.length > 1 ? args[1] : "tests/hello.dl";
+    
+    string code;
+    try {
+        code = readText(filename);
+    } catch (Exception e) {
+        writeln("Error: Could not read file '" ~ filename ~ "'");
+        writeln("Usage: d2gen [filename]");
+        return;
+    }
     
     auto tokens = tokenize(code);
     auto ast = parse(tokens);

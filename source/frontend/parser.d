@@ -268,8 +268,9 @@ ASTNode parseStatement() {
     // Handle public/private/const variable declarations at top level and in blocks
     // --- PATCH: allow struct types and arrays after public/private/const ---
     if ((check(TokenType.Public) || check(TokenType.Private) || check(TokenType.Const)) &&
-        (isTypeToken(peek().type) || peek().type == TokenType.Auto ||
-         (peek().type == TokenType.Identifier && structTypes.canFind(peek().lexeme)))) {
+        (isTypeToken(peek().type) || peek().type == TokenType.Auto || 
+         (peek().type == TokenType.Identifier && structTypes.canFind(peek().lexeme)) ||
+         (peek().type == TokenType.Const))) {  // Allow 'public const' or 'private const'
         bool isConst = false;
         string visibility = "public"; // Default visibility
         
@@ -278,6 +279,12 @@ ASTNode parseStatement() {
             advance();
         } else {
             visibility = advance().type == TokenType.Public ? "public" : "private";
+            
+            // Check if we have a const after public/private
+            if (check(TokenType.Const)) {
+                isConst = true;
+                advance();
+            }
         }
         
         Token typeToken = advance();
@@ -336,6 +343,13 @@ ASTNode parseStatement() {
         else if (check(TokenType.Const)) modifier = "const";
         
         advance();
+        
+        // Check if this is a modifier combination like "public const"
+        if (modifier != "const" && check(TokenType.Const)) {
+            modifier = modifier ~ " const";  // Use ~ for string concatenation, not +
+            advance();
+        }
+        
         writeln("ERROR: '" ~ modifier ~ "' must be followed by a type, struct, or 'auto', but got '", current().lexeme, "' (", current().type, ")");
         throw new Exception(errorWithLine("'" ~ modifier ~ "' must be followed by a type, struct, or 'auto', but got '" ~ current().lexeme ~ "' (" ~ current().type.stringof ~ ")"));
     }
