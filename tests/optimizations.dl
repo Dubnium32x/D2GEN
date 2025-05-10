@@ -1,0 +1,30 @@
+// Test file for optimization verification
+void main() {
+    // Test comparison optimizations
+    int a = 5;
+    int b = 10;
+    
+    // Equality tests
+    bool eq = a == b;      // Should use seq.b
+    bool neq = a != b;     // Should use sne.b
+    
+    // Inequality tests
+    bool lt = a < b;       // Should use slt.b
+    bool lte = a <= b;     // Should use sle.b
+    bool gt = a > b;       // Should use sgt.b
+    bool gte = a >= b;     // Should use sge.b
+    
+    // Multi-dimensional array test
+    int arr[2][3][4];
+    arr[1][2][3] = 42;     // Should use moveq
+    int x = arr[1][2][3];
+    
+    // For loop with optimized comparison
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                arr[i][j][k] = j; // Simple assignment for testing
+            }
+        }
+    }
+}

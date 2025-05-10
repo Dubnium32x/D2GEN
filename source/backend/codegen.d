@@ -55,8 +55,8 @@ string generateCode(ASTNode[] nodes) {
     lines ~= "** GENERATED CODE USING DLANG AND D2GEN COMPILER **";
     lines ~= "        ORG $1000";
     // --- PATCH: Call __global_init before main ---
-    lines ~= "        JSR __global_init";
-    lines ~= "        JMP main";
+    lines ~= "        jsr __global_init";
+    lines ~= "        jmp main";
     // --- END PATCH ---
 
     int regIndex = 1;
