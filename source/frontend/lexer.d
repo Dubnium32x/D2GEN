@@ -16,6 +16,8 @@ enum TokenType {
     Plus, Minus, Star, Slash,
     
     Const, // For const keyword
+    Mixin, // For mixin keyword
+    Template, // For template keyword
 
 	Dot,
 	DotDot,
@@ -388,6 +390,10 @@ Token[] tokenize(string input) {
                 tokens ~= Token(TokenType.Static, lexeme);
             else if (lexeme == "const")
                 tokens ~= Token(TokenType.Const, lexeme);
+            else if (lexeme == "mixin")
+                tokens ~= Token(TokenType.Mixin, lexeme);
+            else if (lexeme == "template")
+                tokens ~= Token(TokenType.Template, lexeme);
             else 
                 tokens ~= Token(TokenType.Identifier, lexeme);
             continue;

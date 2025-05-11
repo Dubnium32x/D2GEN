@@ -7,10 +7,13 @@ import main;
 
 import std.stdio;
 import std.algorithm.iteration; // Required for filter
+import std.format : format; // Added for format function
+import std.conv : to; // Added for to!string conversion
 
 private Token[] tokens;
 private size_t index;
 string[] structTypes;
+ASTNode[][string] mixinTemplatesMap; // Global storage for mixin templates
 
 // ---------------------------
 // 🔧 Helper functions
@@ -26,7 +29,7 @@ Token expect(TokenType kind) {
     Token t = current();
     if (t.type != kind) {
         hasErrors = true;
-        throw new Exception(errorWithLine("Expected " ~ kind.stringof ~ ", got " ~ t.type.stringof ~ " at token '" ~ current().lexeme ~ "'"));
+        throw new Exception(errorWithLine("Expected " ~ to!string(kind) ~ ", got " ~ to!string(t.type) ~ " at token '" ~ t.lexeme ~ "'"));
     }
     index++;
     return t;
@@ -113,6 +116,25 @@ ASTNode parseUnary() {
         Token op = advance();
         ASTNode expr = parseUnary();
         return new UnaryExpr(op.lexeme, expr);
+    }
+    // Add support for unary minus operator - handle it specially for int literals for optimization
+    if (check(TokenType.Minus)) {
+        Token op = advance(); // consume '-'
+        ASTNode right = parseUnary();
+        
+        // Special case: if right is an int literal, negate it directly for better code generation
+        if (auto intLit = cast(IntLiteral)right) {
+            intLit.value = -intLit.value;
+            return intLit;
+        }
+        
+        // Otherwise create a unary expression
+        return new UnaryExpr("-", right);
+    }
+    // Add support for unary plus operator (less common but for completeness)
+    if (check(TokenType.Plus)) {
+        advance(); // consume '+' and ignore it since it doesn't change value
+        return parseUnary();
     }
     // --- CAST SUPPORT ---
     if (check(TokenType.Cast)) {
@@ -264,7 +286,125 @@ byte parseByteValue(string lexeme) {
     return to!byte(lexeme);
 }
 
+ASTNode parseConstDecl() {
+    advance(); // Consume 'const'
+    
+    Token typeToken;
+    if (isTypeToken(current().type) || peek().type == TokenType.Auto ||
+        (current().type == TokenType.Identifier && structTypes.canFind(current().lexeme))) {
+        typeToken = advance();
+    } else {
+        throw new Exception(errorWithLine("Expected type after 'const', got " ~ current().lexeme));
+    }
+    
+    ASTNode[] decls;
+    do {
+        if (!check(TokenType.Identifier)) {
+            writeln("ERROR: Expected variable name after const " ~ typeToken.lexeme ~ ", but got ", current().lexeme, " (", current().type, ")");
+            throw new Exception(errorWithLine("Expected variable name, got " ~ current().lexeme));
+        }
+        string varName = expect(TokenType.Identifier).lexeme;
+        ASTNode val;
+        if (match(TokenType.Assign)) {
+            val = parseExpression();
+        } else {
+            throw new Exception(errorWithLine("Const variables must be initialized"));
+        }
+        decls ~= new VarDecl(typeToken.lexeme, varName, val, "public", true); // Constants are public by default
+    } while (match(TokenType.Comma));
+    expect(TokenType.Semicolon);
+    return decls.length == 1 ? decls[0] : new BlockStmt(decls);
+}
+
 ASTNode parseStatement() {
+    // Handle mixin statements in a simplified way
+    if (check(TokenType.Mixin)) {
+        writeln("DEBUG: Found mixin in statement");
+        advance(); // Skip 'mixin'
+        
+        // Case 1: Template usage - mixin Template;
+        if (check(TokenType.Identifier)) {
+            string templateName = advance().lexeme; // Get template name
+            expect(TokenType.Semicolon);
+            return new TemplateMixin(templateName);
+        }
+        // Case 2: String mixin - mixin("code");
+        else if (check(TokenType.LParen)) {
+            advance(); // Skip '('
+            ASTNode stringExpr; 
+            
+            // Just get the string literal if it's present
+            if (check(TokenType.StringLiteral)) {
+                stringExpr = new StringLiteral(advance().lexeme);
+            } else {
+                // Otherwise just create a dummy string expr
+                stringExpr = new StringLiteral("dummy");
+                
+                // Skip until we find the closing parenthesis
+                int parenLevel = 1;
+                while (parenLevel > 0 && !isAtEnd()) {
+                    if (check(TokenType.LParen)) parenLevel++;
+                    if (check(TokenType.RParen)) parenLevel--;
+                    if (parenLevel > 0) advance();
+                }
+            }
+            
+            if (check(TokenType.RParen)) {
+                advance(); // Skip ')'
+            }
+            
+            expect(TokenType.Semicolon);
+            return new StringMixin(stringExpr);
+        }
+        // Case 3: Template declaration - mixin template Name { ... }
+        else if (check(TokenType.Template)) {
+            advance(); // Skip 'template'
+            
+            string templateName = "";
+            if (check(TokenType.Identifier)) {
+                templateName = advance().lexeme;
+            } else {
+                throw new Exception(errorWithLine("Expected identifier after 'mixin template'"));
+            }
+            
+            // Skip optional parameters in parentheses - not fully implemented yet
+            if (check(TokenType.LParen)) {
+                int parenLevel = 1;
+                advance(); // Skip '('
+                
+                // Skip until matching ')'
+                while (parenLevel > 0 && !isAtEnd()) {
+                    if (check(TokenType.LParen)) parenLevel++;
+                    if (check(TokenType.RParen)) parenLevel--;
+                    if (parenLevel > 0) advance();
+                    else advance(); // consume the closing parenthesis
+                }
+            }
+            
+            // Parse the template body between { and }
+            ASTNode[] templateBody = [];
+            if (check(TokenType.LBrace)) {
+                templateBody = parseBlock(); // This will parse until matching '}'
+                // Store the template in the global map for access during code generation
+                mixinTemplatesMap[templateName] = templateBody;
+                writeln("DEBUG: Stored mixin template '", templateName, "' from statement in global map");
+            } else {
+                throw new Exception(errorWithLine("Expected '{' after template name"));
+            }
+            
+            return new MixinTemplate(templateName, templateBody);
+        }
+        else {
+            // Unknown mixin form - create a dummy node and skip to the next semicolon
+            writeln("WARNING: Unknown mixin form, skipping");
+            while (!check(TokenType.Semicolon) && !isAtEnd()) {
+                advance();
+            }
+            if (check(TokenType.Semicolon)) advance();
+            return new CommentStmt("Unknown mixin (skipped)");
+        }
+    }
+    
     // Handle public/private/const variable declarations at top level and in blocks
     // --- PATCH: allow struct types and arrays after public/private/const ---
     if ((check(TokenType.Public) || check(TokenType.Private) || check(TokenType.Const)) &&
@@ -714,8 +854,14 @@ ASTNode[] parseBlock() {
     ASTNode[] parseBody;
     expect(TokenType.LBrace);
     while (!check(TokenType.RBrace) && !check(TokenType.Eof)) {
+        // Handle function declarations specially
+        if (checkAny(TokenType.Void, TokenType.Int, TokenType.String, TokenType.Bool) && 
+            peek().type == TokenType.Identifier && 
+            tokens.length > index+2 && tokens[index+2].type == TokenType.LParen) {
+            parseBody ~= parseFunctionDecl();
+        }
         // Allow public/private at block scope (for top-level and struct blocks)
-        if (check(TokenType.Public) || check(TokenType.Private)) {
+        else if (check(TokenType.Public) || check(TokenType.Private)) {
             parseBody ~= parseStatement();
         } else {
             parseBody ~= parseStatement();
@@ -811,6 +957,56 @@ ASTNode[] parse(Token[] inputTokens) {
         }
         if (check(TokenType.Enum)) {
             nodes ~= parseEnumDecl();
+            continue;
+        }
+        // Handle special mixin template case at the top level
+        if (check(TokenType.Mixin) && peek().type == TokenType.Template) {
+            writeln("DEBUG: Found mixin template at top level");
+            
+            // Consume 'mixin' and 'template'
+            advance(); // Skip 'mixin'
+            advance(); // Skip 'template'
+            
+            // Get the template name
+            string templateName = "";
+            if (check(TokenType.Identifier)) {
+                templateName = advance().lexeme;
+                writeln("DEBUG: Mixin template name: ", templateName);
+            } else {
+                throw new Exception(errorWithLine("Expected identifier after 'mixin template'"));
+            }
+            
+            // Handle optional parameters in parentheses (not fully implemented yet)
+            if (check(TokenType.LParen)) {
+                writeln("DEBUG: Found parameters for mixin template");
+                int parenLevel = 1;
+                advance(); // Skip '('
+                
+                // Skip until matching ')'
+                while (parenLevel > 0 && !isAtEnd()) {
+                    if (check(TokenType.LParen)) parenLevel++;
+                    if (check(TokenType.RParen)) parenLevel--;
+                    if (parenLevel > 0) advance();
+                    else advance(); // consume the closing parenthesis
+                }
+            }
+            
+            // Parse the template body between { and }
+            ASTNode[] templateBody = [];
+            if (check(TokenType.LBrace)) {
+                writeln("DEBUG: Parsing mixin template body");
+                templateBody = parseBlock(); // This will parse until matching '}'
+                writeln("DEBUG: Mixin template body parsed, statements: ", templateBody.length);
+            } else {
+                throw new Exception(errorWithLine("Expected '{' after template name"));
+            }
+            
+            // Add the mixin template to the list of nodes
+            auto mixinTemplateNode = new MixinTemplate(templateName, templateBody);
+            nodes ~= mixinTemplateNode;
+            // Store the template in the global map for access during code generation
+            writeln("DEBUG: Storing mixin template '", templateName, "' in global map");
+            mixinTemplatesMap[templateName] = templateBody;
             continue;
         }
         // Function declaration: type identifier '(' or structType identifier '(' or public/private

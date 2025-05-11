@@ -32,6 +32,15 @@ bool enableDebugOutput = false; // Set to false to disable debug output in assem
 string[string] constVars;       // To track which variables are constants
 string[string] arrayElementTypes; // Maps array names to their element types
 int[string] structSizes;         // Maps struct types to their sizes in bytes
+ASTNode[][string] mixinTemplates; // To store mixin templates for later use
+
+// Function to populate mixin templates from the parser
+void setMixinTemplates(ASTNode[][string] templates) {
+    foreach (name, templateBody; templates) {
+        writeln("DEBUG: Copying mixin template '", name, "' to codegen");
+        mixinTemplates[name] = templateBody;
+    }
+}
 
 string generateCode(ASTNode[] nodes) {
     // --- PATCH: Reset all global state for codegen ---
@@ -50,6 +59,7 @@ string generateCode(ASTNode[] nodes) {
     constVars = null;
     arrayElementTypes = null;
     structSizes = null;
+    mixinTemplates = null;
     // --- END PATCH ---
 
     string[] lines;
@@ -75,6 +85,10 @@ string generateCode(ASTNode[] nodes) {
                    cast(AssignStmt)node !is null ||
                    cast(ExprStmt)node !is null) {
             globalAssignments ~= node;
+        } else if (auto mixinTemplate = cast(MixinTemplate)node) {
+            // Process mixin templates on the first pass
+            writeln("DEBUG: Processing mixin template in generateCode: ", mixinTemplate.name);
+            mixinTemplates[mixinTemplate.name] = mixinTemplate.templateBody;
         }
     }
 
@@ -795,7 +809,193 @@ void handleAssignStmt(AssignStmt assign, ref string[] lines, ref int regIndex, r
 void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string[string] varAddrs, string breakLabel = "", string continueLabel = "") {
     regIndex = 1;
 
-    if (auto decl = cast(VarDecl) node) {
+    if (auto mixinTemplate = cast(MixinTemplate) node) {
+        // Store the template for later use
+        lines ~= format("        ; Mixin template definition: %s", mixinTemplate.name);
+        mixinTemplates[mixinTemplate.name] = mixinTemplate.templateBody;
+        
+        // Debug output for tracking mixin template storage
+        writeln("DEBUG: Stored mixin template '", mixinTemplate.name, "' in codegen");
+        writeln("DEBUG: Template body contains ", mixinTemplate.templateBody.length, " statements");
+    }
+    else if (auto templateMixin = cast(TemplateMixin) node) {
+        // Insert the template body if it exists
+        writeln("DEBUG: Looking for mixin template '", templateMixin.templateName, "' in map with ", mixinTemplates.length, " templates");
+        
+        if (templateMixin.templateName in mixinTemplates) {
+            lines ~= format("        ; Mixin template expansion: %s", templateMixin.templateName);
+            writeln("DEBUG: Found mixin template '", templateMixin.templateName, "', expanding ", mixinTemplates[templateMixin.templateName].length, " statements");
+            
+            // Generate code for each statement in the template body
+            foreach (templateStmt; mixinTemplates[templateMixin.templateName]) {
+                writeln("DEBUG: Processing template statement: ", templateStmt.classinfo.name);
+                
+                // Special handling for function declarations in the template
+                if (auto funcDecl = cast(FunctionDecl)templateStmt) {
+                    // Add inline function implementation
+                    string functionName = funcDecl.name;
+                    lines ~= format("        ; Inlined function from template: %s", functionName);
+                    
+                    // Create a local label for this function
+                    string localLabel = format("__%s_%d", functionName, labelCounter++);
+                    string endLabel = format("__end_%s_%d", functionName, labelCounter++);
+                    
+                    // Skip the function declaration (just jump over it)
+                    lines ~= format("        bra %s", endLabel);
+                    
+                    // Emit the function body as inline code
+                    lines ~= localLabel ~ ":";
+                    
+                    // Create a temporary variable context for function parameters
+                    string[string] localVarAddrs = varAddrs.dup;
+                    
+                    // Handle function parameters
+                    if (funcDecl.params.length > 0) {
+                        // Register parameter names in local scope
+                        foreach (i, param; funcDecl.params) {
+                            string paramName = param.name;
+                            string paramAddr = paramName;
+                            
+                            // Allocate storage for parameters 
+                            if (!(paramName in emittedVars)) {
+                                emittedVars[paramName] = "1";
+                                varTypes[paramName] = param.type;
+                            }
+                            
+                            // Map the parameter name to its address in our local context
+                            localVarAddrs[paramName] = paramAddr;
+                        }
+                    }
+                    
+                    // Process function body statements
+                    foreach (stmt; funcDecl.funcBody) {
+                        generateStmt(stmt, lines, regIndex, localVarAddrs, "", "");
+                    }
+                    
+                    // End of the function
+                    lines ~= "        rts";
+                    lines ~= endLabel ~ ":";
+                } else {
+                    // Regular statement, generate code as normal
+                    generateStmt(templateStmt, lines, regIndex, varAddrs, "", "");
+                }
+            }
+        } else {
+            lines ~= format("        ; ERROR: Mixin template '%s' not found", templateMixin.templateName);
+            // Dump all available templates for debugging
+            writeln("DEBUG: Available templates: ", mixinTemplates.keys);
+        }
+    }
+    else if (auto stringMixin = cast(StringMixin) node) {
+        // Generate code for string mixin
+        lines ~= "        ; String mixin (compile-time code generation)";
+        
+        // Extract the string content if it's a string literal
+        if (auto strLit = cast(StringLiteral) stringMixin.stringExpr) {
+            string mixinContent = strLit.value;
+            lines ~= format("        ; String mixin content: %s", mixinContent);
+            
+            // Simple string mixin implementation - extract variable declarations and simple assignments
+            if (mixinContent.indexOf("=") > 0) {
+                // Extract variable name and value for simple assignments like "int x = 5;"
+                import std.regex;
+                import std.string : strip;
+                
+                // Try to match variable declarations with initialization
+                auto varDeclMatch = matchFirst(mixinContent, r"(int|byte|bool|string)\s+(\w+)\s*=\s*([^;]+);");
+                if (!varDeclMatch.empty) {
+                    string varType = varDeclMatch[1].strip();
+                    string varName = varDeclMatch[2].strip();
+                    string varValue = varDeclMatch[3].strip();
+                    
+                    lines ~= format("        ; Generated code for mixin: %s %s = %s;", varType, varName, varValue);
+                    
+                    // Register the variable for allocation
+                    emittedVars[varName] = "1";
+                    varTypes[varName] = varType;
+                    
+                    // Create a variable in our generated code
+                    string addr = getOrCreateVarAddr(varName, varAddrs);
+                    
+                    // Emit the initialization code
+                    if (varValue.length > 0 && varValue[0] >= '0' && varValue[0] <= '9') {
+                        // For numeric values
+                        try {
+                            int numValue = to!int(varValue);
+                            lines ~= format("        move.l #%d, %s", numValue, addr);
+                        } catch (Exception e) {
+                            lines ~= format("        ; ERROR: Could not convert '%s' to int", varValue);
+                        }
+                    } else {
+                        // For variable references or expressions
+                        lines ~= format("        move.l %s, %s", varValue, addr);
+                    }
+                } 
+                // Try to match simple assignments like "x = 10;"
+                else {
+                    auto assignMatch = matchFirst(mixinContent, r"(\w+)\s*=\s*([^;]+);");
+                    if (!assignMatch.empty) {
+                        string varName = assignMatch[1].strip();
+                        string varValue = assignMatch[2].strip();
+                        
+                        // Check if the variable exists
+                        if (varName in varTypes) {
+                            string addr = getOrCreateVarAddr(varName, varAddrs);
+                            
+                            // Handle different variable types
+                            string varType = varTypes[varName];
+                            if (varType == "int" || varType == "byte" || varType == "bool") {
+                                lines ~= format("        ; Generated code for mixin assignment: %s", mixinContent);
+                                lines ~= format("        move.l #%s, %s", varValue, addr);
+                            }
+                        } else {
+                            lines ~= format("        ; Warning: Variable '%s' not found for assignment in mixin", varName);
+                        }
+                    } else {
+                        lines ~= "        ; Could not parse string mixin content as variable declaration or assignment";
+                    }
+                }
+            } else if (mixinContent.indexOf("(") > 0) {
+                // Try to match function calls like "foo(42);"
+                import std.regex;
+                auto funcCallMatch = matchFirst(mixinContent, r"(\w+)\s*\(([^)]*)\)\s*;");
+                if (!funcCallMatch.empty) {
+                    string funcName = funcCallMatch[1].strip();
+                    string argStr = funcCallMatch[2].strip();
+                    
+                    lines ~= format("        ; Generated code for function call mixin: %s", mixinContent);
+                    
+                    // Handle function parameters
+                    if (argStr.length > 0) {
+                        // For simplicity, only handle numeric arguments
+                        import std.conv : to;
+                        try {
+                            int argValue = to!int(argStr);
+                            lines ~= format("        move.l #%d, -(SP)", argValue);
+                        } catch (Exception e) {
+                            lines ~= format("        ; Complex argument '%s' not supported, using default 0", argStr);
+                            lines ~= "        move.l #0, -(SP)";
+                        }
+                    }
+                    
+                    // Call the function
+                    lines ~= format("        bsr %s", funcName);
+                    
+                    // Clean up stack if we pushed arguments
+                    if (argStr.length > 0) {
+                        lines ~= "        add.l #4, SP";
+                    }
+                }
+            } else {
+                lines ~= "        ; String mixin parsing is limited - only declarations and assignments supported";
+            }
+        } else {
+            // For more complex string expressions, just add a comment for now
+            lines ~= format("        ; String mixin with non-literal expression: %s", stringMixin.stringExpr.classinfo.name);
+            lines ~= "        ; Complex string mixin would generate code here at compile time";
+        }
+    }
+    else if (auto decl = cast(VarDecl) node) {
         varTypes[decl.name] = decl.type;
         string addr = getOrCreateVarAddr(decl.name, varAddrs);
 
@@ -1248,6 +1448,18 @@ void generateStmt(ASTNode node, ref string[] lines, ref int regIndex, ref string
              lines ~= "        ; Result of expression statement ignored: " ~ discardReg;
         }
     }
+    else if (auto returnStmt = cast(ReturnStmt) node) {
+        // Handle return statement with value
+        if (returnStmt.value !is null) {
+            string resultReg = generateExpr(returnStmt.value, lines, regIndex, varAddrs);
+            // Move result to D0 for return value
+            if (resultReg != "D0") {
+                lines ~= "        move.l " ~ resultReg ~ ", D0  ; Set return value";
+            }
+        }
+        // Return from function
+        lines ~= "        rts";
+    }
     else if (auto str = cast(StringLiteral) node) {
         string label = getOrCreateStringLabel(str.value);
         lines ~= format("%s:    dc.b %d, %s", label, str.value.length, str.value);
@@ -1570,12 +1782,38 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     }
 
     if (auto unary = cast(UnaryExpr) expr) {
+        // Handle address-of operator
         if (unary.op == "&") {
             auto var = cast(VarExpr) unary.expr;
             string addr = getOrCreateVarAddr(var.name, varAddrs);
             string reg = "A" ~ to!string(regIndex++);
             lines ~= "        lea " ~ addr ~ ", " ~ reg;
             return reg;
+        }
+        // Handle unary minus
+        else if (unary.op == "-") {
+            string operandReg = generateExpr(unary.expr, lines, regIndex, varAddrs);
+            string resultReg = nextReg(regIndex);
+            lines ~= "        move.l " ~ operandReg ~ ", " ~ resultReg;
+            lines ~= "        neg.l " ~ resultReg;
+            return resultReg;
+        }
+        // Handle other unary operators like ++, --
+        else if (unary.op == "++" || unary.op == "--") {
+            if (auto var = cast(VarExpr) unary.expr) {
+                string addr = getOrCreateVarAddr(var.name, varAddrs);
+                string reg = nextReg(regIndex);
+                lines ~= "        move.l " ~ addr ~ ", " ~ reg;
+                
+                if (unary.op == "++") {
+                    lines ~= "        addq.l #1, " ~ reg;
+                } else {
+                    lines ~= "        subq.l #1, " ~ reg;
+                }
+                
+                lines ~= "        move.l " ~ reg ~ ", " ~ addr;
+                return reg;
+            }
         }
     }
 

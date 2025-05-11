@@ -409,3 +409,32 @@ class FloatLiteral : ASTNode {
     double value;
     this(double v) { value = v; }
 }
+
+// Template for mixin (defining a template that can be mixed in)
+class MixinTemplate : ASTNode {
+    string name;
+    ASTNode[] templateBody;
+    
+    this(string name, ASTNode[] statements) {
+        this.name = name;
+        this.templateBody = statements;
+    }
+}
+
+// String mixin (generates code from a string)
+class StringMixin : ASTNode {
+    ASTNode stringExpr;
+    
+    this(ASTNode stringExpr) {
+        this.stringExpr = stringExpr;
+    }
+}
+
+// Template mixin (uses a previously defined template)
+class TemplateMixin : ASTNode {
+    string templateName;
+    
+    this(string templateName) {
+        this.templateName = templateName;
+    }
+}

@@ -29,10 +29,22 @@ void main(string[] args) {
     }
     
     auto tokens = tokenize(code);
+    
+    // Debug: Print all tokens to see what we're parsing
+    writeln("===== TOKENS =====");
+    foreach(i, token; tokens) {
+        writeln(i, ": ", token.type, " - '", token.lexeme, "'");
+    }
+    writeln("=================");
+    
     auto ast = parse(tokens);
     
     // Disable debug output in assembly
     backend.codegen.enableDebugOutput = false;
+    
+    // Pass mixin templates from parser to codegen
+    import frontend.parser : mixinTemplatesMap;
+    setMixinTemplates(mixinTemplatesMap);
     
     string asmOutput = generateCode(ast);
     

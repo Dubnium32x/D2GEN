@@ -1,7 +1,7 @@
-// Test file for mixin functionality
+// mixin_test.dl - Test file for mixin functionality
 
 // Define a mixin template
-mixin template PrintableInt {
+mixin template PrintableInt() {
     // This template adds printing functionality to an int
     void printMe() {
         print("Value is: ", this);
@@ -9,7 +9,7 @@ mixin template PrintableInt {
 }
 
 // Define a mixin template for common math operations
-mixin template MathOps {
+mixin template MathOps() {
     int square(int x) {
         return x * x;
     }
