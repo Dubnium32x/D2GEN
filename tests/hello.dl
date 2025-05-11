@@ -1,46 +1,30 @@
-// Test file for mixin functionality with parameters and structs
-
-// Define a mixin template with parameters
-mixin template Scalable(int factor) {
-    int scale(int value) {
-        return value * factor;
-    }
-}
-
-// Define a mixin template for struct functionality
-mixin template PrintableStruct(string structName) {
-    void printStruct() {
-        import std.stdio;
-        writeln(structName, " contents: ", this);
-    }
-}
-
-// Define a struct that uses mixins
 struct Point {
     int x, y;
-
-    // Add scaling functionality with a factor of 2
-    mixin Scalable!(2);
-
-    // Add printing functionality
-    mixin PrintableStruct!("Point");
 };
 
-// Main function to test mixins
+// Free function (not a method of Point)
+int distance(Point a, Point b) {
+    // Simplified integer-based distance function
+    // Approximation with integer arithmetic
+    int dx = b.x - a.x;
+    int dy = b.y - a.y;
+    
+    // Use ternary operator to calculate absolute values
+    int absDx = dx < 0 ? -dx : dx;
+    int absDy = dy < 0 ? -dy : dy;
+    
+    return absDx + absDy;
+}
+
 void main() {
-    import std.stdio;
-
-    writeln("Testing mixin functionality with parameters and structs");
-
-    // Create a Point instance
-    Point p = Point(3, 4);
-
-    // Use the scale method from the Scalable mixin
-    writeln("Scaled x:", p.scale(p.x));
-    writeln("Scaled y:", p.scale(p.y));
-
-    // Use the printStruct method from the PrintableStruct mixin
-    p.printStruct();
-
-    writeln("Mixin test completed");
+    Point p1 = Point(1, 2);
+    Point p2 = Point(4, 6);
+    
+    // Traditional function call
+    int dist1 = distance(p1, p2);
+    
+    // Same call using UFCS
+    int dist2 = p1.distance(p2);
+    
+    assert(dist1 == dist2);
 }

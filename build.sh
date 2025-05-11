@@ -6,13 +6,14 @@ set -e
 mkdir -p bin
 
 # Compile D sources into a 32-bit executable named bin/d2gen.exe
-dmd -ofbin/d2gen \
+/usr/bin/dmd -ofbin/d2gen \
     source/main.d \
     source/frontend/lexer.d \
     source/frontend/parser.d \
     source/backend/codegen.d \
     source/ast/nodes.d \
-    source/globals/globals.d
+    source/globals/globals.d \
+    source/ast/conditional_expr.d
 
 # Pause until the user presses any key
 read -n1 -r -p "Press any key to continue..." key

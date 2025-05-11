@@ -5,12 +5,16 @@ import std.array;
 import std.algorithm : map;
 import std.conv : to;
 
+// Class declaration must come before import to break circular dependency
+abstract class ASTNode {}
+
+// Now we can import the ConditionalExpr class
+public import ast.conditional_expr;
+
 struct TemplateParam {
     string name;
     string defaultValue;  // Optional default value (empty if none)
 }
-
-abstract class ASTNode {}
 
 class ReturnStmt : ASTNode {
     ASTNode value;
@@ -461,5 +465,38 @@ class MemberExpr : ASTNode {
     
     override string toString() {
         return object.toString() ~ "." ~ member;
+    }
+}
+
+class MemberCallExpr : ASTNode {
+    ASTNode object;
+    string method;
+    ASTNode[] arguments;
+    
+    this(ASTNode object, string method, ASTNode[] arguments) {
+        this.object = object;
+        this.method = method;
+        this.arguments = arguments;
+    }
+}
+
+// For ternary conditional expressions (condition ? trueExpr : falseExpr)
+class ConditionalExpr : ASTNode {
+    ASTNode condition;
+    ASTNode trueExpr;
+    ASTNode falseExpr;
+    
+    this(ASTNode cond, ASTNode tExpr, ASTNode fExpr) {
+        condition = cond;
+        trueExpr = tExpr;
+        falseExpr = fExpr;
+    }
+}
+
+class AssertStmt : ASTNode {
+    ASTNode condition;
+    
+    this(ASTNode condition) {
+        this.condition = condition;
     }
 }

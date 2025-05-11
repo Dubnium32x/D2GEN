@@ -74,10 +74,36 @@ ASTNode parseExpression(int prec = 0) {
         int nextPrec = getPrecedence();
         if (nextPrec <= prec)
             break;
+        
+        // Special case for ternary operator
+        if (check(TokenType.Question)) {
+            advance(); // consume '?'
+            ASTNode trueExpr = parseExpression(0); // Parse middle expression with low precedence
+            
+            // Check for colon without using expect to avoid throwing an exception
+            if (check(TokenType.Colon)) {
+                advance(); // Consume ':' without throwing an exception
+                ASTNode falseExpr = parseExpression(nextPrec - 1); // Parse right expr with slightly lower precedence
+                left = new ConditionalExpr(left, trueExpr, falseExpr);
+                continue; // Continue the loop without getting the next token
+            } else {
+                hasErrors = true;
+                throw new Exception(errorWithLine("Expected ':' in conditional expression after '?'"));
+            }
+        }
+        
+        // Skip colon tokens that aren't part of a ternary (they should be handled elsewhere)
+        if (check(TokenType.Colon)) {
+            break; // Exit the loop, we've reached a colon that's not part of a ternary
+        }
+        
+        // Handle other binary operators
         Token op = advance();
         ASTNode right = parseExpression(nextPrec);
         left = new BinaryExpr(op.lexeme, left, right);
     }
+
+    // The ternary operator is now handled within the precedence loop
 
     if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) {
         Token op = advance();
@@ -270,7 +296,24 @@ ASTNode parsePrimary() {
         } else if (check(TokenType.Dot)) {
             advance();
             string field = expect(TokenType.Identifier).lexeme;
-            expr = new StructFieldAccess(expr, field);
+            
+            // Check if this is a method call with UFCS
+            if (check(TokenType.LParen)) {
+                advance(); // Consume '('
+                ASTNode[] args;
+                if (!check(TokenType.RParen)) {
+                    do {
+                        args ~= parseExpression();
+                    } while (match(TokenType.Comma));
+                }
+                expect(TokenType.RParen);
+                
+                // Create a member call expression (for UFCS)
+                expr = new MemberCallExpr(expr, field, args);
+            } else {
+                // Regular field access
+                expr = new StructFieldAccess(expr, field);
+            }
         } else {
             break;
         }
@@ -330,6 +373,15 @@ ASTNode parseStatement() {
         return new CommentStmt("import statement");
     }
     
+    // Handle assert statements
+    if (match(TokenType.Assert)) {
+        expect(TokenType.LParen);
+        ASTNode condition = parseExpression();
+        expect(TokenType.RParen);
+        expect(TokenType.Semicolon);
+        return new AssertStmt(condition);
+    }
+
     // Handle mixin statements in a simplified way
     if (check(TokenType.Mixin)) {
         writeln("DEBUG: Found mixin in statement");
@@ -897,6 +949,9 @@ ASTNode parseStatement() {
         advance();
         return new BoolLiteral(false);
     }
+    if (check(TokenType.Assert)) {
+        return parseStatement(); // It will be handled by the assert case above
+    }
     throw new Exception(errorWithLine("Unknown statement at token: " ~ tokens[index].lexeme));
 }
 
@@ -985,6 +1040,8 @@ int getPrecedence() {
     if (check(TokenType.Star) || check(TokenType.Slash)) return 6;
     if (check(TokenType.Mod)) return 7;
     if (check(TokenType.TildeEqual)) return 8;
+    // Give question and colon the same precedence so they're handled in the parseExpression loop
+    if (check(TokenType.Question) || check(TokenType.Colon)) return 9;
     if (check(TokenType.Assign)) return 0;
     return -1;
 }

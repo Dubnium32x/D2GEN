@@ -1,197 +1,215 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.16.01
-Created On: 5/10/2025 10:21:26 PM
+Created On: 5/11/2025 12:22:54 PM
 
 00000000                             1  ** GENERATED CODE USING DLANG AND D2GEN COMPILER **
 00001000                             2          ORG $1000
 00001000  4EB9 0000100C              3          jsr __global_init
-00001006  4EF9 0000100E              4          jmp main
+00001006  4EF9 000010DA              4          jmp main
 0000100C                             5  
 0000100C                             6  ; ===== FUNCTION DEFINITIONS =====
 0000100C                             7  __global_init:
 0000100C  4E75                       8          rts
-0000100E                             9  main:
+0000100E                             9  distance:
 0000100E                            10          ; Function prologue
 0000100E  4E56 0000                 11          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
-00001012  43F9 0000108E             12          lea strAA, A1  ; Load effective address
-00001018  2F09                      13          move.l A1, -(SP)
-0000101A  6100 0104                 14          bsr writeln
-0000101E  588F                      15          add.l #4, SP
-00001020  43F9 000010F0             16          lea p, A1  ; Load effective address
-00001026  2229 0000                 17          move.l 0(A1), D1  ; Optimized field access with direct displacement
-0000102A  45F9 000010F0             18          lea p, A2  ; Load effective address
-00001030  242A 0000                 19          move.l 0(A2), D2  ; Optimized field access with direct displacement
-00001034  2202                      20          move.l D2, D1
-00001036  2F01                      21          move.l D1, -(SP)
-00001038  588F                      22          add.l #4, SP
-0000103A  2600                      23          move.l D0, D3
-0000103C  2F03                      24          move.l D3, -(SP)
-0000103E  47F9 000010D0             25          lea strAB, A3  ; Load effective address
-00001044  2F0B                      26          move.l A3, -(SP)
-00001046  6100 00D8                 27          bsr writeln
-0000104A  508F                      28          add.l #8, SP
-0000104C  43F9 000010F0             29          lea p, A1  ; Load effective address
-00001052  2229 0004                 30          move.l 4(A1), D1  ; Optimized field access with direct displacement
-00001056  45F9 000010F0             31          lea p, A2  ; Load effective address
-0000105C  242A 0004                 32          move.l 4(A2), D2  ; Optimized field access with direct displacement
-00001060  2202                      33          move.l D2, D1
-00001062  2F01                      34          move.l D1, -(SP)
-00001064  588F                      35          add.l #4, SP
-00001066  2600                      36          move.l D0, D3
-00001068  2F03                      37          move.l D3, -(SP)
-0000106A  47F9 000010C6             38          lea strAC, A3  ; Load effective address
-00001070  2F0B                      39          move.l A3, -(SP)
-00001072  6100 00AC                 40          bsr writeln
-00001076  508F                      41          add.l #8, SP
-00001078  6100 0104                 42          bsr complex_expr
-0000107C  43F9 000010DA             43          lea strAD, A1  ; Load effective address
-00001082  2F09                      44          move.l A1, -(SP)
-00001084  6100 009A                 45          bsr writeln
-00001088  588F                      46          add.l #4, SP
-0000108A                            47          ; Function epilogue
-0000108A  4E5E                      48          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
-0000108C  4E75                      49          rts           ; Return from subroutine
-0000108E                            50  
-0000108E                            51  ; ===== DATA SECTION =====
-0000108E                            52  ; String literals
-0000108E                            53  strAA:
-0000108E= 54 65 73 74 69 6E ...     54          dc.b 'Testing mixin functionality with parameters and structs', 0
-000010C6                            55  strAC:
-000010C6= 53 63 61 6C 65 64 ...     56          dc.b 'Scaled y:', 0
-000010D0                            57  strAB:
-000010D0= 53 63 61 6C 65 64 ...     58          dc.b 'Scaled x:', 0
-000010DA                            59  strAD:
-000010DA= 4D 69 78 69 6E 20 ...     60          dc.b 'Mixin test completed', 0
-000010EF                            61  ; Scalar and struct variables
-000010F0                            62  p:    ds.l 2
-000010F8                            63  ; Array labels
-000010F8                            64  ; Loop variables
-000010F8                            65  
-000010F8  FFFF FFFF                 66          SIMHALT
-000010FC                            67  
-000010FC                            68  ; ===== RUNTIME FUNCTIONS =====
-000010FC                            69  print:
-000010FC                            70          ; Function prologue
-000010FC  4E56 0000                 71          link    A6, #0          ; Setup stack frame
-00001100  48E7 FFFC                 72          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
-00001104                            73  
-00001104                            74          ; Print the string part
-00001104  226E 0008                 75          move.l  8(A6), A1       ; Get string address from first parameter
-00001108  700D                      76          move.l  #13, D0         ; Task 13 - print string without newline
-0000110A  4E4F                      77          trap    #15             ; Call OS
-0000110C                            78  
-0000110C                            79          ; Print the value (second parameter)
-0000110C  222E 000C                 80          move.l  12(A6), D1      ; Get the value to print
-00001110  7003                      81          move.l  #3, D0          ; Task 3 - display number in D1.L
-00001112  4E4F                      82          trap    #15             ; Call OS
-00001114                            83  
-00001114                            84          ; Print a newline
-00001114  700B                      85          move.l  #11, D0         ; Task 11 - print CR/LF
-00001116  4E4F                      86          trap    #15             ; Call OS
-00001118                            87  
-00001118                            88          ; Function epilogue
-00001118  4CDF 3FFF                 89          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
-0000111C  4E5E                      90          unlk    A6              ; Restore stack frame
-0000111E  4E75                      91          rts                     ; Return from subroutine
-00001120                            92  writeln:
-00001120                            93          ; Function prologue
-00001120  4E56 0000                 94          link    A6, #0          ; Setup stack frame
-00001124  48E7 FFFC                 95          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
-00001128                            96  
-00001128                            97          ; Get the string address from the parameter
-00001128  226E 0008                 98          move.l  8(A6), A1       ; Get string address from parameter
-0000112C  700D                      99          move.l  #13, D0         ; Task 13 - print string without newline
-0000112E  4E4F                     100          trap    #15             ; Call OS
-00001130                           101  
-00001130                           102          ; Check if there's a second parameter
-00001130  222E 000C                103          move.l  12(A6), D1      ; Get the second parameter (if any)
-00001134  0C81 00000000            104          cmpi.l  #0, D1          ; Check if it's zero (no second parameter)
-0000113A  6700 0034                105          beq     .no_second_param
-0000113E                           106  
-0000113E                           107          ; Print a separator
-0000113E  43F9 0000117C            108          lea     separator, A1  ; Load effective address
-00001144  700D                     109          move.l  #13, D0
-00001146  4E4F                     110          trap    #15
-00001148                           111  
-00001148                           112          ; Print the second value
-00001148  222E 000C                113          move.l  12(A6), D1
-0000114C  7003                     114          move.l  #3, D0          ; Task 3 - display number in D1.L
-0000114E  4E4F                     115          trap    #15
-00001150                           116  
-00001150                           117          ; Check for third parameter (for structs with multiple fields)
-00001150  222E 0010                118          move.l  16(A6), D1
-00001154  0C81 00000000            119          cmpi.l  #0, D1
-0000115A  6700 0014                120          beq     .no_third_param
-0000115E                           121  
-0000115E                           122          ; Print another separator and the third value
-0000115E  43F9 0000117C            123          lea     separator, A1  ; Load effective address
-00001164  700D                     124          move.l  #13, D0
-00001166  4E4F                     125          trap    #15
-00001168                           126  
-00001168                           127          ; Print the third value
-00001168  222E 0010                128          move.l  16(A6), D1
-0000116C  7003                     129          move.l  #3, D0
-0000116E  4E4F                     130          trap    #15
-00001170                           131  
-00001170                           132  .no_third_param:
-00001170                           133  .no_second_param:
-00001170                           134          ; Print a newline
-00001170  700B                     135          move.l  #11, D0         ; Task 11 - print CR/LF
-00001172  4E4F                     136          trap    #15             ; Call OS
-00001174                           137  
-00001174                           138          ; Function epilogue
-00001174  4CDF 3FFF                139          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
-00001178  4E5E                     140          unlk    A6              ; Restore stack frame
-0000117A  4E75                     141          rts                     ; Return from subroutine
-0000117C                           142  separator:
-0000117C= 20 00                    143          dc.b ' ', 0
-0000117E                           144  complex_expr:
-0000117E                           145          ; Function prologue
-0000117E  4E56 0000                146          link    A6, #0          ; Setup stack frame
-00001182  48E7 FFFC                147          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+00001012  7000                      12          moveq #0, D0  ; Clear register before loading parameter
+00001014  202E 0008                 13          move.l 8(A6), D0
+00001018  7200                      14          moveq #0, D1  ; Clear register before loading parameter
+0000101A  222E 000C                 15          move.l 12(A6), D1
+0000101E  2201                      16          move.l D1, D1  ; Copy register parameter to temp
+00001020  2441                      17          movea.l D1, A2  ; Convert register value to address
+00001022  222A 0000                 18          move.l 0(A2), D1  ; Optimized field access with direct displacement
+00001026  2400                      19          move.l D0, D2  ; Copy register parameter to temp
+00001028  2642                      20          movea.l D2, A3  ; Convert register value to address
+0000102A  242B 0000                 21          move.l 0(A3), D2  ; Optimized field access with direct displacement
+0000102E  2601                      22          move.l D1, D3
+00001030  9682                      23          sub.l D2, D3
+00001032  23C3 0000114A             24          move.l D3, dx
+00001038  2201                      25          move.l D1, D1  ; Copy register parameter to temp
+0000103A  2441                      26          movea.l D1, A2  ; Convert register value to address
+0000103C  222A 0004                 27          move.l 4(A2), D1  ; Optimized field access with direct displacement
+00001040  2400                      28          move.l D0, D2  ; Copy register parameter to temp
+00001042  2642                      29          movea.l D2, A3  ; Convert register value to address
+00001044  242B 0004                 30          move.l 4(A3), D2  ; Optimized field access with direct displacement
+00001048  2601                      31          move.l D1, D3
+0000104A  9682                      32          sub.l D2, D3
+0000104C  23C3 0000115A             33          move.l D3, dy
+00001052  2239 0000114A             34          move.l dx, D1
+00001058  7400                      35          moveq #0, D2  ; Optimized small constant
+0000105A  4A82                      36          tst.l D2  ; Check if condition is true/non-zero
+0000105C  6700 0012                 37          beq cond_false_0  ; Branch to false expression if condition is false
+00001060  2439 0000114A             38          move.l dx, D2
+00001066  2602                      39          move.l D2, D3
+00001068  4483                      40          neg.l D3
+0000106A  2203                      41          move.l D3, D1  ; Move true result to result register
+0000106C  6000 000A                 42          bra cond_end_1  ; Skip false expression
+00001070                            43  cond_false_0:
+00001070  2439 0000114A             44          move.l dx, D2
+00001076  2202                      45          move.l D2, D1  ; Move false result to result register
+00001078                            46  cond_end_1:
+00001078  7400                      47          moveq #0, D2  ; Clear result register
+0000107A  B281                      48          cmp.l D1, D1  ; Compare values
+0000107C  5DC2                      49          slt.b D2      ; Set dest to FF if less than, 00 otherwise
+0000107E  C4BC 00000001             50          and.l #1, D2  ; Convert FF to 01, 00 stays 00
+00001084  23C2 00001162             51          move.l D2, absDx
+0000108A  2239 0000115A             52          move.l dy, D1
+00001090  7400                      53          moveq #0, D2  ; Optimized small constant
+00001092  4A82                      54          tst.l D2  ; Check if condition is true/non-zero
+00001094  6700 0012                 55          beq cond_false_2  ; Branch to false expression if condition is false
+00001098  2439 0000115A             56          move.l dy, D2
+0000109E  2602                      57          move.l D2, D3
+000010A0  4483                      58          neg.l D3
+000010A2  2203                      59          move.l D3, D1  ; Move true result to result register
+000010A4  6000 000A                 60          bra cond_end_3  ; Skip false expression
+000010A8                            61  cond_false_2:
+000010A8  2439 0000115A             62          move.l dy, D2
+000010AE  2202                      63          move.l D2, D1  ; Move false result to result register
+000010B0                            64  cond_end_3:
+000010B0  7400                      65          moveq #0, D2  ; Clear result register
+000010B2  B281                      66          cmp.l D1, D1  ; Compare values
+000010B4  5DC2                      67          slt.b D2      ; Set dest to FF if less than, 00 otherwise
+000010B6  C4BC 00000001             68          and.l #1, D2  ; Convert FF to 01, 00 stays 00
+000010BC  23C2 0000114E             69          move.l D2, absDy
+000010C2  2239 00001162             70          move.l absDx, D1
+000010C8  2439 0000114E             71          move.l absDy, D2
+000010CE  2601                      72          move.l D1, D3
+000010D0  D682                      73          add.l D2, D3
+000010D2  2003                      74          move.l D3, D0  ; Set return value
+000010D4  4E75                      75          rts
+000010D6                            76          ; Function epilogue
+000010D6  4E5E                      77          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+000010D8  4E75                      78          rts           ; Return from subroutine
+000010DA                            79  main:
+000010DA                            80          ; Function prologue
+000010DA  4E56 0000                 81          link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
+000010DE  2239 00001142             82          move.l p2, D1
+000010E4  2F01                      83          move.l D1, -(SP)  ; Push argument onto stack
+000010E6  2439 00001152             84          move.l p1, D2
+000010EC  2F02                      85          move.l D2, -(SP)  ; Push argument onto stack
+000010EE  6100 FF1E                 86          bsr distance  ; Call function
+000010F2  508F                      87          add.l #8, SP  ; Clean up stack
+000010F4  2600                      88          move.l D0, D3  ; Get function return value
+000010F6  23C3 0000115E             89          move.l D3, dist1
+000010FC  2239 00001142             90          move.l p2, D1
+00001102  2401                      91          move.l D1, D2  ; Use first arg as result
+00001104  23C2 0000113E             92          move.l D2, dist2
+0000110A  2239 0000115E             93          move.l dist1, D1
+00001110  2439 0000113E             94          move.l dist2, D2
+00001116  7600                      95          moveq #0, D3  ; Clear result register
+00001118  B282                      96          cmp.l D2, D1  ; Compare values
+0000111A  57C3                      97          seq.b D3      ; Set dest to FF if equal, 00 if not equal
+0000111C  C6BC 00000001             98          and.l #1, D3  ; Convert FF to 01, 00 stays 00
+00001122  4A83                      99          tst.l D3  ; Check if assertion condition is true/non-zero
+00001124  6700 0006                100          beq assert_fail_4  ; Branch to fail if assertion is false
+00001128  6000 0010                101          bra assert_pass_5  ; Skip assertion failure code
+0000112C                           102  assert_fail_4:
+0000112C  43F9 000011EC            103          lea assertFailMsg, A1  ; Load address of assert failure message
+00001132  700D                     104          move.l #13, D0         ; Task 13 - print string without newline
+00001134  4E4F                     105          trap #15               ; Call OS
+00001136  7009                     106          move.l #9, D0          ; Task 9 - terminate program
+00001138  4E4F                     107          trap #15               ; Call OS to terminate program
+0000113A                           108  assert_pass_5:
+0000113A                           109          ; Function epilogue
+0000113A  4E5E                     110          unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
+0000113C  4E75                     111          rts           ; Return from subroutine
+0000113E                           112  
+0000113E                           113  ; ===== DATA SECTION =====
+0000113E                           114  ; String literals
+0000113E                           115  ; Scalar and struct variables
+0000113E                           116  dist2:    ds.l 1
+00001142                           117  p2:    ds.l 2
+0000114A                           118  dx:    ds.l 1
+0000114E                           119  absDy:    ds.l 1
+00001152                           120  p1:    ds.l 2
+0000115A                           121  dy:    ds.l 1
+0000115E                           122  dist1:    ds.l 1
+00001162                           123  absDx:    ds.l 1
+00001166                           124  ; Array labels
+00001166                           125  ; Loop variables
+00001166                           126  
+00001166  FFFF FFFF                127          SIMHALT
+0000116A                           128  
+0000116A                           129  ; ===== RUNTIME FUNCTIONS =====
+0000116A                           130  print:
+0000116A                           131          ; Function prologue
+0000116A  4E56 0000                132          link    A6, #0          ; Setup stack frame
+0000116E  48E7 FFFC                133          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+00001172                           134  
+00001172                           135          ; Print the string part
+00001172  226E 0008                136          move.l  8(A6), A1       ; Get string address from first parameter
+00001176  700D                     137          move.l  #13, D0         ; Task 13 - print string without newline
+00001178  4E4F                     138          trap    #15             ; Call OS
+0000117A                           139  
+0000117A                           140          ; Print the value (second parameter)
+0000117A  222E 000C                141          move.l  12(A6), D1      ; Get the value to print
+0000117E  7003                     142          move.l  #3, D0          ; Task 3 - display number in D1.L
+00001180  4E4F                     143          trap    #15             ; Call OS
+00001182                           144  
+00001182                           145          ; Print a newline
+00001182  700B                     146          move.l  #11, D0         ; Task 11 - print CR/LF
+00001184  4E4F                     147          trap    #15             ; Call OS
 00001186                           148  
-00001186                           149          ; Print point struct contents
-00001186  43F9 000011D0            150          lea     strPoint, A1    ; Load struct name
-0000118C  700D                     151          move.l  #13, D0         ; Task 13 - print string without newline
-0000118E  4E4F                     152          trap    #15             ; Call OS
-00001190                           153  
-00001190                           154          ; Print x value
-00001190  700B                     155          move.l  #11, D0         ; Task 11 - print CR/LF
-00001192  4E4F                     156          trap    #15             ; Call OS
-00001194  43F9 000011E0            157          lea     strX, A1        ; Load 'x:' string
-0000119A  700D                     158          move.l  #13, D0         ; Task 13 - print string without newline
-0000119C  4E4F                     159          trap    #15             ; Call OS
-0000119E  41F8 10F0                160          lea     p, A0           ; Load p struct address
-000011A2  2228 0000                161          move.l  0(A0), D1       ; Get p.x value
-000011A6  7003                     162          move.l  #3, D0          ; Task 3 - display number in D1.L
-000011A8  4E4F                     163          trap    #15             ; Call OS
-000011AA                           164  
-000011AA                           165          ; Print y value
-000011AA  700B                     166          move.l  #11, D0         ; Task 11 - print CR/LF
-000011AC  4E4F                     167          trap    #15             ; Call OS
-000011AE  43F9 000011E4            168          lea     strY, A1        ; Load 'y:' string
-000011B4  700D                     169          move.l  #13, D0         ; Task 13 - print string without newline
-000011B6  4E4F                     170          trap    #15             ; Call OS
-000011B8  41F8 10F0                171          lea     p, A0           ; Load p struct address
-000011BC  2228 0004                172          move.l  4(A0), D1       ; Get p.y value
-000011C0  7003                     173          move.l  #3, D0          ; Task 3 - display number in D1.L
-000011C2  4E4F                     174          trap    #15             ; Call OS
-000011C4  700B                     175          move.l  #11, D0         ; Task 11 - print CR/LF
-000011C6  4E4F                     176          trap    #15             ; Call OS
-000011C8                           177  
-000011C8                           178          ; Function epilogue
-000011C8  4CDF 3FFF                179          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
-000011CC  4E5E                     180          unlk    A6              ; Restore stack frame
-000011CE  4E75                     181          rts                     ; Return from subroutine
-000011D0                           182  
-000011D0                           183  strPoint:
-000011D0= 50 6F 69 6E 74 20 ...    184          dc.b 'Point contents:', 0
-000011E0                           185  strX:
-000011E0= 78 3A 20 00              186          dc.b 'x: ', 0
-000011E4                           187  strY:
-000011E4= 79 3A 20 00              188          dc.b 'y: ', 0
-Line 189 WARNING: Address expected
-000011E8                           189          END
+00001186                           149          ; Function epilogue
+00001186  4CDF 3FFF                150          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
+0000118A  4E5E                     151          unlk    A6              ; Restore stack frame
+0000118C  4E75                     152          rts                     ; Return from subroutine
+0000118E                           153  writeln:
+0000118E                           154          ; Function prologue
+0000118E  4E56 0000                155          link    A6, #0          ; Setup stack frame
+00001192  48E7 FFFC                156          movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+00001196                           157  
+00001196                           158          ; Get the string address from the parameter
+00001196  226E 0008                159          move.l  8(A6), A1       ; Get string address from parameter
+0000119A  700D                     160          move.l  #13, D0         ; Task 13 - print string without newline
+0000119C  4E4F                     161          trap    #15             ; Call OS
+0000119E                           162  
+0000119E                           163          ; Check if there's a second parameter
+0000119E  222E 000C                164          move.l  12(A6), D1      ; Get the second parameter (if any)
+000011A2  0C81 00000000            165          cmpi.l  #0, D1          ; Check if it's zero (no second parameter)
+000011A8  6700 0034                166          beq     .no_second_param
+000011AC                           167  
+000011AC                           168          ; Print a separator
+000011AC  43F9 000011EA            169          lea     separator, A1  ; Load effective address
+000011B2  700D                     170          move.l  #13, D0
+000011B4  4E4F                     171          trap    #15
+000011B6                           172  
+000011B6                           173          ; Print the second value
+000011B6  222E 000C                174          move.l  12(A6), D1
+000011BA  7003                     175          move.l  #3, D0          ; Task 3 - display number in D1.L
+000011BC  4E4F                     176          trap    #15
+000011BE                           177  
+000011BE                           178          ; Check for third parameter (for structs with multiple fields)
+000011BE  222E 0010                179          move.l  16(A6), D1
+000011C2  0C81 00000000            180          cmpi.l  #0, D1
+000011C8  6700 0014                181          beq     .no_third_param
+000011CC                           182  
+000011CC                           183          ; Print another separator and the third value
+000011CC  43F9 000011EA            184          lea     separator, A1  ; Load effective address
+000011D2  700D                     185          move.l  #13, D0
+000011D4  4E4F                     186          trap    #15
+000011D6                           187  
+000011D6                           188          ; Print the third value
+000011D6  222E 0010                189          move.l  16(A6), D1
+000011DA  7003                     190          move.l  #3, D0
+000011DC  4E4F                     191          trap    #15
+000011DE                           192  
+000011DE                           193  .no_third_param:
+000011DE                           194  .no_second_param:
+000011DE                           195          ; Print a newline
+000011DE  700B                     196          move.l  #11, D0         ; Task 11 - print CR/LF
+000011E0  4E4F                     197          trap    #15             ; Call OS
+000011E2                           198  
+000011E2                           199          ; Function epilogue
+000011E2  4CDF 3FFF                200          movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
+000011E6  4E5E                     201          unlk    A6              ; Restore stack frame
+000011E8  4E75                     202          rts                     ; Return from subroutine
+000011EA                           203  separator:
+000011EA= 20 00                    204          dc.b ' ', 0
+000011EC                           205  assertFailMsg:
+000011EC= 41 73 73 65 72 74 ...    206          dc.b 'Assertion failed!', 0
+Line 207 WARNING: Address expected
+000011FE                           207          END
 
 No errors detected
 1 warning generated
@@ -200,19 +218,26 @@ No errors detected
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-COMPLEX_EXPR        117E
-MAIN                100E
-P                   10F0
-PRINT               10FC
-SEPARATOR           117C
-STRAA               108E
-STRAB               10D0
-STRAC               10C6
-STRAD               10DA
-STRPOINT            11D0
-STRX                11E0
-STRY                11E4
-WRITELN             1120
-WRITELN:NO_SECOND_PARAM  1170
-WRITELN:NO_THIRD_PARAM  1170
+ABSDX               1162
+ABSDY               114E
+ASSERTFAILMSG       11EC
+ASSERT_FAIL_4       112C
+ASSERT_PASS_5       113A
+COND_END_1          1078
+COND_END_3          10B0
+COND_FALSE_0        1070
+COND_FALSE_2        10A8
+DIST1               115E
+DIST2               113E
+DISTANCE            100E
+DX                  114A
+DY                  115A
+MAIN                10DA
+P1                  1152
+P2                  1142
+PRINT               116A
+SEPARATOR           11EA
+WRITELN             118E
+WRITELN:NO_SECOND_PARAM  11DE
+WRITELN:NO_THIRD_PARAM  11DE
 __GLOBAL_INIT       100C

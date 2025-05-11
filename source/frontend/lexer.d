@@ -84,6 +84,7 @@ enum TokenType {
     Semicolon,
 	Colon,
 	Comma,
+	Question,
     Eof
 }
 
@@ -277,6 +278,7 @@ Token[] tokenize(string input) {
         if (c == '*') { tokens ~= Token(TokenType.Star, "*"); pos++; continue; }
         if (c == '/') { tokens ~= Token(TokenType.Slash, "/"); pos++; continue; }
 		if (c == ',') { tokens ~= Token(TokenType.Comma, ","); pos++; continue; }
+		if (c == '?') { tokens ~= Token(TokenType.Question, "?"); pos++; continue; }
 		if (c == ':') { tokens ~= Token(TokenType.Colon, ":"); pos++; continue; }
 		if (c == '-') { tokens ~= Token(TokenType.Minus, "-"); pos++; continue; }
 		if (c == '<') { tokens ~= Token(TokenType.Less, "<"); pos++; continue; }
