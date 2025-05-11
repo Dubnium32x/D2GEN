@@ -1,46 +1,46 @@
-// Test file for mixin functionality
+// Test file for mixin functionality with parameters and structs
 
-// Define a mixin template
-mixin template PrintableInt {
-    // This template adds printing functionality to an int
-    void printMe() {
-        print("Value is: ", this);
+// Define a mixin template with parameters
+mixin template Scalable(int factor) {
+    int scale(int value) {
+        return value * factor;
     }
 }
 
-// Define a mixin template for common math operations
-mixin template MathOps {
-    int square(int x) {
-        return x * x;
-    }
-    
-    int cube(int x) {
-        return x * x * x;
-    }
-    
-    int abs(int x) {
-        if (x < 0) {
-            return -x;
-        }
-        return x;
+// Define a mixin template for struct functionality
+mixin template PrintableStruct(string structName) {
+    void printStruct() {
+        import std.stdio;
+        writeln(structName, " contents: ", this);
     }
 }
+
+// Define a struct that uses mixins
+struct Point {
+    int x, y;
+
+    // Add scaling functionality with a factor of 2
+    mixin Scalable!(2);
+
+    // Add printing functionality
+    mixin PrintableStruct!("Point");
+};
 
 // Main function to test mixins
 void main() {
-    print("Testing mixin functionality");
-    
-    // Use the MathOps mixin
-    mixin MathOps;
-    
-    int num = 5;
-    print("Square of 5:", square(num));
-    print("Cube of 5:", cube(num));
-    print("Abs of -10:", abs(-10));
-    
-    // Demonstrate string mixin for simple code generation
-    mixin("int generated = 42;");
-    print("Generated value:", generated);
-    
-    print("Mixin test completed");
+    import std.stdio;
+
+    writeln("Testing mixin functionality with parameters and structs");
+
+    // Create a Point instance
+    Point p = Point(3, 4);
+
+    // Use the scale method from the Scalable mixin
+    writeln("Scaled x:", p.scale(p.x));
+    writeln("Scaled y:", p.scale(p.y));
+
+    // Use the printStruct method from the PrintableStruct mixin
+    p.printStruct();
+
+    writeln("Mixin test completed");
 }

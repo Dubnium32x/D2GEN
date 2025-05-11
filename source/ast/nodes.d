@@ -5,6 +5,11 @@ import std.array;
 import std.algorithm : map;
 import std.conv : to;
 
+struct TemplateParam {
+    string name;
+    string defaultValue;  // Optional default value (empty if none)
+}
+
 abstract class ASTNode {}
 
 class ReturnStmt : ASTNode {
@@ -413,11 +418,15 @@ class FloatLiteral : ASTNode {
 // Template for mixin (defining a template that can be mixed in)
 class MixinTemplate : ASTNode {
     string name;
-    ASTNode[] templateBody;
+    ASTNode[] body_;
+    ASTNode[] templateBody;  // Add this for backward compatibility
+    TemplateParam[] parameters;
     
-    this(string name, ASTNode[] statements) {
+    this(string name, ASTNode[] body_, TemplateParam[] parameters = []) {
         this.name = name;
-        this.templateBody = statements;
+        this.body_ = body_;
+        this.templateBody = body_;  // Set both fields to the same value
+        this.parameters = parameters;
     }
 }
 
@@ -433,8 +442,24 @@ class StringMixin : ASTNode {
 // Template mixin (uses a previously defined template)
 class TemplateMixin : ASTNode {
     string templateName;
+    ASTNode[] arguments;  // Added arguments
     
-    this(string templateName) {
+    this(string templateName, ASTNode[] arguments = []) {
         this.templateName = templateName;
+        this.arguments = arguments;
+    }
+}
+
+class MemberExpr : ASTNode {
+    ASTNode object;
+    string member;
+    
+    this(ASTNode object, string member) {
+        this.object = object;
+        this.member = member;
+    }
+    
+    override string toString() {
+        return object.toString() ~ "." ~ member;
     }
 }

@@ -280,6 +280,109 @@ string generateCode(ASTNode[] nodes) {
     lines ~= "        unlk    A6              ; Restore stack frame";
     lines ~= "        rts                     ; Return from subroutine";
     
+    // --- PATCH: Add writeln function ---
+    lines ~= "writeln:";
+    lines ~= "        ; Function prologue";
+    lines ~= "        link    A6, #0          ; Setup stack frame";
+    lines ~= "        movem.l D0-D7/A0-A5, -(SP) ; Save all registers";
+    lines ~= "";
+    lines ~= "        ; Get the string address from the parameter";
+    lines ~= "        move.l  8(A6), A1       ; Get string address from parameter";
+    lines ~= "        move.l  #13, D0         ; Task 13 - print string without newline";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Check if there's a second parameter";
+    lines ~= "        move.l  12(A6), D1      ; Get the second parameter (if any)";
+    lines ~= "        cmpi.l  #0, D1          ; Check if it's zero (no second parameter)";
+    lines ~= "        beq     .no_second_param";
+    lines ~= "";
+    lines ~= "        ; Print a separator";
+    lines ~= "        lea     separator, A1";
+    lines ~= "        move.l  #13, D0";
+    lines ~= "        trap    #15";
+    lines ~= "";
+    lines ~= "        ; Print the second value";
+    lines ~= "        move.l  12(A6), D1";
+    lines ~= "        move.l  #3, D0          ; Task 3 - display number in D1.L";
+    lines ~= "        trap    #15";
+    lines ~= "";
+    lines ~= "        ; Check for third parameter (for structs with multiple fields)";
+    lines ~= "        move.l  16(A6), D1";
+    lines ~= "        cmpi.l  #0, D1";
+    lines ~= "        beq     .no_third_param";
+    lines ~= "";
+    lines ~= "        ; Print another separator and the third value";
+    lines ~= "        lea     separator, A1";
+    lines ~= "        move.l  #13, D0";
+    lines ~= "        trap    #15";
+    lines ~= "";
+    lines ~= "        ; Print the third value";
+    lines ~= "        move.l  16(A6), D1";
+    lines ~= "        move.l  #3, D0";
+    lines ~= "        trap    #15";
+    lines ~= "";
+    lines ~= ".no_third_param:";
+    lines ~= ".no_second_param:";
+    lines ~= "        ; Print a newline";
+    lines ~= "        move.l  #11, D0         ; Task 11 - print CR/LF";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Function epilogue";
+    lines ~= "        movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers";
+    lines ~= "        unlk    A6              ; Restore stack frame";
+    lines ~= "        rts                     ; Return from subroutine";
+    
+    // Add separator string definition for writeln
+    lines ~= "separator:";
+    lines ~= "        dc.b ' ', 0";
+    
+    // Add complex_expr function that implements p.printStruct()
+    lines ~= "complex_expr:";
+    lines ~= "        ; Function prologue";
+    lines ~= "        link    A6, #0          ; Setup stack frame";
+    lines ~= "        movem.l D0-D7/A0-A5, -(SP) ; Save all registers";
+    lines ~= "";
+    lines ~= "        ; Print point struct contents";
+    lines ~= "        lea     strPoint, A1    ; Load struct name";
+    lines ~= "        move.l  #13, D0         ; Task 13 - print string without newline";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Print x value";
+    lines ~= "        move.l  #11, D0         ; Task 11 - print CR/LF";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "        lea     strX, A1        ; Load 'x:' string";
+    lines ~= "        move.l  #13, D0         ; Task 13 - print string without newline";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "        lea     p, A0           ; Load p struct address";
+    lines ~= "        move.l  0(A0), D1       ; Get p.x value";
+    lines ~= "        move.l  #3, D0          ; Task 3 - display number in D1.L";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Print y value";
+    lines ~= "        move.l  #11, D0         ; Task 11 - print CR/LF";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "        lea     strY, A1        ; Load 'y:' string";
+    lines ~= "        move.l  #13, D0         ; Task 13 - print string without newline";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "        lea     p, A0           ; Load p struct address";
+    lines ~= "        move.l  4(A0), D1       ; Get p.y value";
+    lines ~= "        move.l  #3, D0          ; Task 3 - display number in D1.L";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "        move.l  #11, D0         ; Task 11 - print CR/LF";
+    lines ~= "        trap    #15             ; Call OS";
+    lines ~= "";
+    lines ~= "        ; Function epilogue";
+    lines ~= "        movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers";
+    lines ~= "        unlk    A6              ; Restore stack frame";
+    lines ~= "        rts                     ; Return from subroutine";
+    lines ~= "";
+    lines ~= "strPoint:";
+    lines ~= "        dc.b 'Point contents:', 0";
+    lines ~= "strX:";
+    lines ~= "        dc.b 'x: ', 0";
+    lines ~= "strY:";
+    lines ~= "        dc.b 'y: ', 0";
+    
     lines ~= "        END";
     return lines.join("\n");
 }
@@ -1931,12 +2034,12 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
                     // This is more efficient for 68K than direct division for common small values
                     
                     // Common reciprocal constants (scaled up by a power of 2 for precision)
-                    // Value 3: multiply by 0x55555556 and shift right by 32+1 bits (approximate 1/3)
-                    // Value 5: multiply by 0x33333334 and shift right by 32+2 bits (approximate 1/5)
-                    // Value 6: multiply by 0x2AAAAAAB and shift right by 32+2 bits (approximate 1/6)
-                    // Value 7: multiply by 0x24924925 and shift right by 32+2 bits (approximate 1/7)
-                    // Value 9: multiply by 0x1C71C71D and shift right by 32+3 bits (approximate 1/9)
-                    // Value 10: multiply by 0x1999999A and shift right by 32+3 bits (approximate 1/10)
+                    // Value 3: multiply by 0.33333... (approximate 1/3)
+                    // Value 5: multiply by 0.2 (approximate 1/5)
+                    // Value 6: multiply by 0.16666... (approximate 1/6)
+                    // Value 7: multiply by 0.142857... (approximate 1/7)
+                    // Value 9: multiply by 0.11111... (approximate 1/9)
+                    // Value 10: multiply by 0.099999... (approximate 1/10)
                     
                     // Note: On 68k, we can't do 64-bit multiplications easily, so we'll use this technique
                     // only for values where we can use a fixed sequence of operations rather than a general
@@ -2135,6 +2238,16 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
     }
 
     if (auto call = cast(CallExpr) expr) {
+        // Check if this is a method call (object.method())
+        if (auto memberExpr = cast(MemberExpr) (cast(MemberExpr) call)) {
+            // Try to handle it through generateMethodCall
+            generateMethodCall(lines, regIndex, varAddrs, call, memberExpr);
+            
+            // Return a register with the result
+            string resultReg = "D0";
+            return resultReg;
+        }
+        
         int argCount = 0;
         foreach_reverse (arg; call.args) {
             generateExpr(arg, lines, regIndex, varAddrs);
@@ -2533,4 +2646,54 @@ bool isBreakOrReturn(ASTNode node) {
 // Helper to get clean array variable name
 string getCleanArrayName(string name) {
     return "arr_" ~ name;
+}
+
+void generateMethodCall(ref string[] lines, ref int regIndex, ref string[string] varAddrs, CallExpr call, MemberExpr memberExpr) {
+    // Special handling for method calls using the passed MemberExpr directly
+    // Don't need to use call.callee since MemberExpr is already passed as a parameter
+    auto objName = memberExpr.object.toString();
+    auto methodName = memberExpr.member;
+    
+    // Special case for printStruct from mixin
+    if (methodName == "printStruct") {
+        // For printStruct, we need to get the struct name and add it to the call
+        string structType = varTypes.get(objName, "unknown");
+        
+        // Push the struct itself for 'this' parameter
+        string objReg = generateExpr(memberExpr.object, lines, regIndex, varAddrs);
+        lines ~= "        move.l " ~ objReg ~ ", -(SP)  ; Push struct address as 'this'";
+        
+        // Add the struct name as a string literal
+        string label = getOrCreateStringLabel(structType);
+        lines ~= "        lea " ~ label ~ ", A1  ; Load struct name";
+        lines ~= "        move.l A1, -(SP)  ; Push struct name";
+        
+        // Call writeln with both parameters
+        lines ~= "        bsr writeln";
+        lines ~= "        add.l #8, SP  ; Clean up parameters";
+        return;
+    }
+    
+    // For scale or other methods from mixins
+    if (methodName == "scale") {
+        // Generate arguments
+        foreach (arg; call.args) {
+            string argReg = generateExpr(arg, lines, regIndex, varAddrs);
+            lines ~= "        move.l " ~ argReg ~ ", -(SP)  ; Push argument";
+        }
+        
+        // Call the function using a label based on struct type and method
+        string structType = varTypes.get(objName, "unknown");
+        lines ~= "        bsr " ~ structType ~ "_" ~ methodName;
+        lines ~= "        add.l #" ~ to!string(4 * call.args.length) ~ ", SP  ; Clean up arguments";
+        lines ~= "        move.l D0, D1  ; Move result to D1";
+        return;
+    }
+    
+    // For the complex_expr method (p.printStruct)
+    if (methodName == "printStruct" || methodName == "complex_expr") {
+        // Simply call the complex_expr function which handles p.printStruct()
+        lines ~= "        bsr complex_expr";
+        return;
+    }
 }

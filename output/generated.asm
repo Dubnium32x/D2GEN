@@ -11,60 +11,12 @@ main:
         link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
         lea strAA, A1  ; Load effective address
         move.l A1, -(SP)
-        bsr print
+        bsr writeln
         add.l #4, SP
-        ; Mixin template expansion: MathOps
-        ; Inlined function from template: square
-        bra __end_square_1
-__square_0:
-        move.l x, D1
-        move.l x, D2
-        move.l D1, D0
-        muls D2, D0
-        rts
-        rts
-__end_square_1:
-        ; Inlined function from template: cube
-        bra __end_cube_3
-__cube_2:
-        move.l x, D1
-        move.l x, D2
-        move.l D1, D0
-        muls D2, D0
-        move.l x, D1
-        muls D1, D0
-        rts
-        rts
-__end_cube_3:
-        ; Inlined function from template: abs
-        bra __end_abs_5
-__abs_4:
-        move.l x, D1
-        moveq #0, D2  ; Optimized small constant
-        moveq #0, D3  ; Clear result register
-        cmp.l D2, D1  ; Compare values
-        slt.b D3      ; Set dest to FF if less than, 00 otherwise
-        and.l #1, D3  ; Convert FF to 01, 00 stays 00
-        move.l D3, D0  ; Move condition result to D0
-        tst.l D3  ; Check if condition is zero/false
-        beq .else_6       ; Branch to else if condition is false
-        move.l x, D1
-        move.l D1, D2
-        neg.l D2
-        move.l D2, D0  ; Set return value
-        rts
-        bra .endif_7        ; Skip over else section when then section completes
-.else_6:             ; Else section starts here
-.endif_7:             ; End of if-else statement
-        move.l x, D1
-        move.l D1, D0  ; Set return value
-        rts
-        rts
-__end_abs_5:
-        moveq #5, D1  ; Optimized small constant
-        move.l D1, num
-        move.l num, D1
-        move.l num, D2
+        lea p, A1  ; Load effective address
+        move.l 0(A1), D1  ; Optimized field access with direct displacement
+        lea p, A2  ; Load effective address
+        move.l 0(A2), D2  ; Optimized field access with direct displacement
         move.l D2, D1
         move.l D1, -(SP)
         add.l #4, SP
@@ -72,10 +24,12 @@ __end_abs_5:
         move.l D3, -(SP)
         lea strAB, A3  ; Load effective address
         move.l A3, -(SP)
-        bsr print
+        bsr writeln
         add.l #8, SP
-        move.l num, D1
-        move.l num, D2
+        lea p, A1  ; Load effective address
+        move.l 4(A1), D1  ; Optimized field access with direct displacement
+        lea p, A2  ; Load effective address
+        move.l 4(A2), D2  ; Optimized field access with direct displacement
         move.l D2, D1
         move.l D1, -(SP)
         add.l #4, SP
@@ -83,32 +37,12 @@ __end_abs_5:
         move.l D3, -(SP)
         lea strAC, A3  ; Load effective address
         move.l A3, -(SP)
-        bsr print
+        bsr writeln
         add.l #8, SP
-        moveq #-10, D1  ; Optimized small constant
-        moveq #-10, D2  ; Optimized small constant
-        move.l D2, D1
-        move.l D1, -(SP)
-        add.l #4, SP
-        move.l D0, D3
-        move.l D3, -(SP)
-        lea strAD, A3  ; Load effective address
-        move.l A3, -(SP)
-        bsr print
-        add.l #8, SP
-        ; String mixin (compile-time code generation)
-        ; String mixin content: int generated = 42;
-        ; Generated code for mixin: int generated = 42;
-        move.l #42, generated
-        move.l generated, D1
-        move.l D1, -(SP)
-        lea strAE, A2  ; Load effective address
-        move.l A2, -(SP)
-        bsr print
-        add.l #8, SP
-        lea strAF, A1  ; Load effective address
+        bsr complex_expr
+        lea strAD, A1  ; Load effective address
         move.l A1, -(SP)
-        bsr print
+        bsr writeln
         add.l #4, SP
         ; Function epilogue
         unlk A6       ; Restore stack frame (restores A6 and SP in one instruction)
@@ -116,22 +50,16 @@ __end_abs_5:
 
 ; ===== DATA SECTION =====
 ; String literals
-strAC:
-        dc.b 'Cube of 5:', 0
-strAB:
-        dc.b 'Square of 5:', 0
-strAD:
-        dc.b 'Abs of -10:', 0
-strAE:
-        dc.b 'Generated value:', 0
 strAA:
-        dc.b 'Testing mixin functionality', 0
-strAF:
+        dc.b 'Testing mixin functionality with parameters and structs', 0
+strAC:
+        dc.b 'Scaled y:', 0
+strAB:
+        dc.b 'Scaled x:', 0
+strAD:
         dc.b 'Mixin test completed', 0
 ; Scalar and struct variables
-x:    ds.l 1
-num:    ds.l 1
-generated:    ds.l 1
+p:    ds.l 2
 ; Array labels
 ; Loop variables
 
@@ -161,4 +89,101 @@ print:
         movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
         unlk    A6              ; Restore stack frame
         rts                     ; Return from subroutine
+writeln:
+        ; Function prologue
+        link    A6, #0          ; Setup stack frame
+        movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+
+        ; Get the string address from the parameter
+        move.l  8(A6), A1       ; Get string address from parameter
+        move.l  #13, D0         ; Task 13 - print string without newline
+        trap    #15             ; Call OS
+
+        ; Check if there's a second parameter
+        move.l  12(A6), D1      ; Get the second parameter (if any)
+        cmpi.l  #0, D1          ; Check if it's zero (no second parameter)
+        beq     .no_second_param
+
+        ; Print a separator
+        lea     separator, A1  ; Load effective address
+        move.l  #13, D0
+        trap    #15
+
+        ; Print the second value
+        move.l  12(A6), D1
+        move.l  #3, D0          ; Task 3 - display number in D1.L
+        trap    #15
+
+        ; Check for third parameter (for structs with multiple fields)
+        move.l  16(A6), D1
+        cmpi.l  #0, D1
+        beq     .no_third_param
+
+        ; Print another separator and the third value
+        lea     separator, A1  ; Load effective address
+        move.l  #13, D0
+        trap    #15
+
+        ; Print the third value
+        move.l  16(A6), D1
+        move.l  #3, D0
+        trap    #15
+
+.no_third_param:
+.no_second_param:
+        ; Print a newline
+        move.l  #11, D0         ; Task 11 - print CR/LF
+        trap    #15             ; Call OS
+
+        ; Function epilogue
+        movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
+        unlk    A6              ; Restore stack frame
+        rts                     ; Return from subroutine
+separator:
+        dc.b ' ', 0
+complex_expr:
+        ; Function prologue
+        link    A6, #0          ; Setup stack frame
+        movem.l D0-D7/A0-A5, -(SP) ; Save all registers
+
+        ; Print point struct contents
+        lea     strPoint, A1    ; Load struct name
+        move.l  #13, D0         ; Task 13 - print string without newline
+        trap    #15             ; Call OS
+
+        ; Print x value
+        move.l  #11, D0         ; Task 11 - print CR/LF
+        trap    #15             ; Call OS
+        lea     strX, A1        ; Load 'x:' string
+        move.l  #13, D0         ; Task 13 - print string without newline
+        trap    #15             ; Call OS
+        lea     p, A0           ; Load p struct address
+        move.l  0(A0), D1       ; Get p.x value
+        move.l  #3, D0          ; Task 3 - display number in D1.L
+        trap    #15             ; Call OS
+
+        ; Print y value
+        move.l  #11, D0         ; Task 11 - print CR/LF
+        trap    #15             ; Call OS
+        lea     strY, A1        ; Load 'y:' string
+        move.l  #13, D0         ; Task 13 - print string without newline
+        trap    #15             ; Call OS
+        lea     p, A0           ; Load p struct address
+        move.l  4(A0), D1       ; Get p.y value
+        move.l  #3, D0          ; Task 3 - display number in D1.L
+        trap    #15             ; Call OS
+        move.l  #11, D0         ; Task 11 - print CR/LF
+        trap    #15             ; Call OS
+
+        ; Function epilogue
+        movem.l (SP)+, D0-D7/A0-A5 ; Restore all registers
+        unlk    A6              ; Restore stack frame
+        rts                     ; Return from subroutine
+
+strPoint:
+        dc.b 'Point contents:', 0
+strX:
+        dc.b 'x: ', 0
+strY:
+        dc.b 'y: ', 0
         END
