@@ -48,83 +48,76 @@ bool isTypeToken(TokenType t) {
 ASTNode parseExpression(int prec = 0) {
     ASTNode left = parseUnary();
 
-    // Handle assignment if applicable
-    if (check(TokenType.Assign)) {
-        advance(); // consume '='
-        ASTNode right = parseExpression();
-        if (cast(VarExpr) left || cast(ArrayAccessExpr) left || cast(StructFieldAccess) left) {
-            return new AssignStmt(left, right);
-        } else {
-            throw new Exception(errorWithLine("Left-hand side of assignment must be a variable, array element, or struct field"));
-        }
-    }
-    if (check(TokenType.Number) && peek().type == TokenType.DotDot) {
-        int start = toInt(advance().lexeme);
-        expect(TokenType.DotDot);
-        int end = toInt(expect(TokenType.Number).lexeme);
-        return new RangeLiteral(start, end);
-    }
-    if (check(TokenType.DotDot)) {
-        Token op = advance(); // consume '..'
-        ASTNode right = parseExpression();
-        return new RangeExpr(left, right);
-    }
-
     while (true) {
-        int nextPrec = getPrecedence();
-        if (nextPrec <= prec)
+        // Handle end of expression
+        if (check(TokenType.Eof) || check(TokenType.RParen) || 
+            check(TokenType.RBracket) || check(TokenType.Semicolon) ||
+            check(TokenType.Comma)) {
             break;
-        
-        // Special case for ternary operator
+        }
+
+        int current_op_precedence = getPrecedence(); // Precedence of the current token
+
+        if (current_op_precedence == -1) { // Not an operator we handle in the loop or lower than any defined
+             // If prec is 0 (e.g. start of expression), and current_op_precedence is -1, it means it's not an operator.
+             // If prec > 0, it means we are looking for an operator with higher precedence.
+             // If current_op_precedence is -1, it's definitely not higher.
+            break;
+        }
+
         if (check(TokenType.Question)) {
-            advance(); // consume '?'
-            ASTNode trueExpr = parseExpression(0); // Parse middle expression with low precedence
+            // current_op_precedence is for '?' (9)
+            // Standard Pratt: if current_op_precedence <= prec, break (for left-assoc)
+            // Ternary is right-associative, but this check is for binding to 'left'
+            if (current_op_precedence <= prec) break; 
             
-            // Check for colon without using expect to avoid throwing an exception
-            if (check(TokenType.Colon)) {
-                advance(); // Consume ':' without throwing an exception
-                ASTNode falseExpr = parseExpression(nextPrec - 1); // Parse right expr with slightly lower precedence
-                left = new ConditionalExpr(left, trueExpr, falseExpr);
-                continue; // Continue the loop without getting the next token
-            } else {
+            advance(); // consume '?'
+            
+            // Parse trueExpr: should parse operators with precedence > 8, stopping at ':' (prec 8)
+            ASTNode trueExpr = parseExpression(8); // Pass precedence of Colon
+            
+            if (current().type != TokenType.Colon) {
                 hasErrors = true;
-                throw new Exception(errorWithLine("Expected ':' in conditional expression after '?'"));
+                throw new Exception(errorWithLine("Expected ':', got " ~ to!string(current().type) ~ " at token '" ~ current().lexeme ~ "'"));
             }
+            expect(TokenType.Colon); // consume ':'
+            
+            // Parse falseExpr: '?' is right-associative. Pass its own precedence (9) for the recursive call.
+            // This means falseExpr can contain operators with precedence > 9 (none), or it will parse literals/unary.
+            // Or, if falseExpr itself is a ternary, e.g. c ? d : e, the '?' (prec 9) will be handled by the recursive call.
+            ASTNode falseExpr = parseExpression(9); // Pass precedence of Question mark
+            left = new ConditionalExpr(left, trueExpr, falseExpr);
+            continue; 
+        }
+
+        bool is_current_op_right_assoc = (current_op_precedence == 0 && 
+                                         (isCompoundAssignment(current().type) || check(TokenType.Assign)));
+
+        if (is_current_op_right_assoc) {
+            // For right-associative: loop if current_op_precedence >= prec. Break if current_op_precedence < prec.
+            if (current_op_precedence < prec) break;
+        } else { 
+            // For left-associative: loop if current_op_precedence > prec. Break if current_op_precedence <= prec.
+            if (current_op_precedence <= prec) break;
         }
         
-        // Skip colon tokens that aren't part of a ternary (they should be handled elsewhere)
-        if (check(TokenType.Colon)) {
-            break; // Exit the loop, we've reached a colon that's not part of a ternary
+        Token opToken = advance(); // Consume operator
+        ASTNode right;
+        if (is_current_op_right_assoc) {
+            // For right-associative, RHS is parsed with the operator's own precedence
+            right = parseExpression(current_op_precedence); 
+        } else {
+            // For left-associative, RHS is parsed with precedence one higher than the operator
+            // (or same precedence if loop handles equality correctly, which mine does by breaking on <=)
+            // So, parseExpression(current_op_precedence) is correct here.
+            right = parseExpression(current_op_precedence);
         }
-        
-        // Handle other binary operators
-        Token op = advance();
-        ASTNode right = parseExpression(nextPrec);
-        left = new BinaryExpr(op.lexeme, left, right);
+        left = new BinaryExpr(opToken.lexeme, left, right);
     }
 
-    // The ternary operator is now handled within the precedence loop
+    // Postfix operators (if any, not shown in current snippet but might exist)
+    // if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) { ... }
 
-    if (check(TokenType.PlusPlus) || check(TokenType.MinusMinus)) {
-        Token op = advance();
-        return new PostfixExpr(op.lexeme, left);
-    }
-    if (check(TokenType.TildeEqual) && peek().type == TokenType.Assign) {
-        Token op = advance();
-        ASTNode right = parseExpression();
-        left = new BinaryExpr(op.lexeme, left, right);
-    }
-
-    if (check(TokenType.LParen)) {
-        advance();
-        ASTNode[] args;
-        if (!check(TokenType.RParen)) {
-            do {
-                args ~= parseExpression();
-            } while (match(TokenType.Comma));
-        }
-        expect(TokenType.RParen);
-    }
     return left;
 }
 
@@ -1031,19 +1024,47 @@ bool checkAny(TokenType[] types...) {
     return false;
 }
 
+bool isRightAssociative(TokenType type) {
+    // Only assignments are right-associative
+    switch (type) {
+        case TokenType.Assign:
+        case TokenType.PlusEqual:
+        case TokenType.MinusEqual:
+        case TokenType.StarEqual:
+        case TokenType.SlashEqual:
+        case TokenType.ModEqual:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isCompoundAssignment(TokenType type) {
+    return type == TokenType.PlusEqual ||
+           type == TokenType.MinusEqual ||
+           type == TokenType.StarEqual ||
+           type == TokenType.SlashEqual ||
+           type == TokenType.ModEqual;
+}
+
 int getPrecedence() {
-    if (check(TokenType.OrOr)) return 1;
-    if (check(TokenType.AndAnd)) return 2;
-    if (check(TokenType.EqualEqual) || check(TokenType.NotEqual)) return 3;
-    if (check(TokenType.Less) || check(TokenType.LessEqual) || check(TokenType.Greater) || check(TokenType.GreaterEqual)) return 4;
-    if (check(TokenType.Plus) || check(TokenType.Minus)) return 5;
-    if (check(TokenType.Star) || check(TokenType.Slash)) return 6;
-    if (check(TokenType.Mod)) return 7;
-    if (check(TokenType.TildeEqual)) return 8;
-    // Give question and colon the same precedence so they're handled in the parseExpression loop
-    if (check(TokenType.Question) || check(TokenType.Colon)) return 9;
-    if (check(TokenType.Assign)) return 0;
-    return -1;
+    TokenType type = current().type;
+    if (type == TokenType.OrOr) return 1;
+    if (type == TokenType.AndAnd) return 2;
+    if (type == TokenType.EqualEqual || type == TokenType.NotEqual) return 3;
+    if (type == TokenType.Less || type == TokenType.LessEqual || 
+        type == TokenType.Greater || type == TokenType.GreaterEqual) return 4;
+    if (type == TokenType.Plus || type == TokenType.Minus) return 5;
+    if (type == TokenType.Star || type == TokenType.Slash) return 6;
+    if (type == TokenType.Mod) return 7;
+    // Ternary operator parts: Colon has lower precedence than Question
+    if (type == TokenType.Colon) return 8;      // Precedence for ':'
+    if (type == TokenType.Question) return 9;   // Precedence for '?'
+    
+    // Assignments are lowest precedence and right-associative
+    if (type == TokenType.Assign || isCompoundAssignment(type)) return 0;
+    
+    return -1; // Not a recognized operator or end of this part of expression.
 }
 
 Token peek() {

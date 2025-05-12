@@ -1989,111 +1989,92 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         return reg;
     }
 
-    if (auto unary = cast(UnaryExpr) expr) {
-        // Handle address-of operator
-        if (unary.op == "&") {
-            auto var = cast(VarExpr) unary.expr;
-            string addr = getOrCreateVarAddr(var.name, varAddrs);
-            string reg = "A" ~ to!string(regIndex++);
-            lines ~= "        lea " ~ addr ~ ", " ~ reg;
-            return reg;
-        }
-        // Handle unary minus
-        else if (unary.op == "-") {
-            string operandReg = generateExpr(unary.expr, lines, regIndex, varAddrs);
+    if (auto bin = cast(BinaryExpr) expr) {
+        // Special handling for compound assignments
+        if (bin.op == "+=" || bin.op == "-=" || bin.op == "*=" || bin.op == "/=" || bin.op == "%=") {
+            // Get the memory address of the LHS
+            auto addrResult = generateAddressExpr(bin.left, lines, regIndex, varAddrs);
+            string addrReg = addrResult[0];
+            int offset = addrResult[1];
+            
+            // Use a general-purpose data register for the operation
             string resultReg = nextReg(regIndex);
-            lines ~= "        move.l " ~ operandReg ~ ", " ~ resultReg;
-            lines ~= "        neg.l " ~ resultReg;
+            
+            // Get the register containing the RHS value
+            string rightReg = generateExpr(bin.right, lines, regIndex, varAddrs);
+            
+            // Load current value from memory
+            if (offset == 0) {
+                lines ~= "        move.l (" ~ addrReg ~ "), " ~ resultReg ~ "  ; Load current value";
+            } else {
+                lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ resultReg ~ "  ; Load current value";
+            }
+            
+            // Perform the operation based on operator
+            switch (bin.op) {
+                case "+=":
+                    lines ~= "        add.l " ~ rightReg ~ ", " ~ resultReg;
+                    break;
+                case "-=":
+                    lines ~= "        sub.l " ~ rightReg ~ ", " ~ resultReg;
+                    break;
+                case "*=":
+                    lines ~= "        muls " ~ rightReg ~ ", " ~ resultReg;
+                    break;
+                case "/=":
+                    // Division needs dividend in D0, divisor in D1
+                    if (resultReg != "D0" && rightReg != "D0") {
+                        lines ~= "        move.l " ~ resultReg ~ ", D0";
+                        lines ~= "        divs " ~ rightReg ~ ", D0";
+                        lines ~= "        move.l D0, " ~ resultReg;
+                    } else if (resultReg == "D0") {
+                        lines ~= "        divs " ~ rightReg ~ ", D0";
+                    } else {
+                        // rightReg is D0, need a temporary
+                        int tempRegIndex = regIndex;
+                        string tempReg = nextReg(tempRegIndex);
+                        lines ~= "        move.l " ~ rightReg ~ ", " ~ tempReg ~ "  ; Save divisor";
+                        lines ~= "        move.l " ~ resultReg ~ ", D0  ; Prepare for division";
+                        lines ~= "        divs " ~ tempReg ~ ", D0";
+                        lines ~= "        move.l D0, " ~ resultReg;
+                    }
+                    break;
+                case "%=":
+                    // For modulo: a %= b is equivalent to a = a - (a/b)*b
+                    if (resultReg != "D0") {
+                        lines ~= "        move.l " ~ resultReg ~ ", D0  ; Save original value";
+                        lines ~= "        divs " ~ rightReg ~ ", D0  ; D0 = a/b";
+                        lines ~= "        muls " ~ rightReg ~ ", D0  ; D0 = (a/b)*b";
+                        lines ~= "        move.l " ~ resultReg ~ ", " ~ resultReg ~ "  ; Restore original value";
+                        lines ~= "        sub.l D0, " ~ resultReg ~ "  ; result = a - (a/b)*b";
+                    } else {
+                        // resultReg is already D0, need a temporary
+                        int tempRegIndex = regIndex;
+                        string tempReg = nextReg(tempRegIndex);
+                        lines ~= "        move.l D0, " ~ tempReg ~ "  ; Save original value";
+                        lines ~= "        divs " ~ rightReg ~ ", D0  ; D0 = a/b";
+                        lines ~= "        muls " ~ rightReg ~ ", D0  ; D0 = (a/b)*b";
+                        lines ~= "        move.l " ~ tempReg ~ ", " ~ tempReg ~ "  ; Original value in temp";
+                        lines ~= "        sub.l D0, " ~ tempReg ~ "  ; temp = a - (a/b)*b";
+                        lines ~= "        move.l " ~ tempReg ~ ", D0  ; Store back to D0";
+                    }
+                    break;
+                default:
+                    assert(0, "Unhandled compound assignment operator: " ~ bin.op);
+            }
+
+            // Store result back to memory
+            if (offset == 0) {
+                lines ~= "        move.l " ~ resultReg ~ ", (" ~ addrReg ~ ")  ; Store result back";
+            } else {
+                lines ~= "        move.l " ~ resultReg ~ ", " ~ to!string(offset) ~ "(" ~ addrReg ~ ")  ; Store result back";
+            }
+            
+            // Return the result register for use in larger expressions
             return resultReg;
         }
-        // Handle other unary operators like ++, --
-        else if (unary.op == "++" || unary.op == "--") {
-            if (auto var = cast(VarExpr) unary.expr) {
-                string addr = getOrCreateVarAddr(var.name, varAddrs);
-                string reg = nextReg(regIndex);
-                lines ~= "        move.l " ~ addr ~ ", " ~ reg;
-                
-                if (unary.op == "++") {
-                    lines ~= "        addq.l #1, " ~ reg;
-                } else {
-                    lines ~= "        subq.l #1, " ~ reg;
-                }
-                
-                lines ~= "        move.l " ~ reg ~ ", " ~ addr;
-                return reg;
-            }
-        }
-    }
-
-    // Handle CastExpr
-    if (auto castExpr = cast(CastExpr) expr) {
-        // For now, assume casts between numeric types are no-ops in assembly.
-        return generateExpr(castExpr.expr, lines, regIndex, varAddrs);
-    }
-
-    if (auto field = cast(StructFieldAccess) expr) {
-        // Use new recursive address generator
-        auto addrResult = generateAddressExpr(expr, lines, regIndex, varAddrs);
-        string addrReg = addrResult[0];
-        int offset = addrResult[1];
-        string valReg = nextReg(regIndex);
         
-        // Check if addrReg is a data register (parameter case)
-        if (addrReg.startsWith("D")) {
-            // If addrReg is a data register, this indicates a struct passed by value
-            // The offset is already relative to the start of the struct
-            
-            if (offset == 0) {
-                // This is the first field, which is already in the data register
-                lines ~= "        move.l " ~ addrReg ~ ", " ~ valReg ~ "  ; Direct field access from register";
-            } else {
-                // For other fields, we need to use a different approach
-                // In this case, we need to first copy the struct to the stack, then access the field
-                
-                // Create a temporary space on the stack
-                lines ~= "        sub.l #16, SP  ; Allocate space for struct on stack";
-                lines ~= "        move.l " ~ addrReg ~ ", 0(SP)  ; Copy struct to stack (field 1)";
-                
-                // Assuming fields are 4 bytes apart, this should work for a small struct
-                // For a real implementation, we would need more complete field information
-                // Get the field from the stack
-                lines ~= "        move.l " ~ to!string(offset) ~ "(SP), " ~ valReg ~ "  ; Get field from stack";
-                
-                // Clean up the stack
-                lines ~= "        add.l #16, SP  ; Clean stack";
-            }
-            
-            return valReg;
-        }
-        
-        // Optimize: Check if the offset fits in a 16-bit signed value (-32768 to 32767)
-        // This allows us to use the more efficient (d16,An) addressing mode directly
-        if (offset >= -32768 && offset <= 32767) {
-            lines ~= "        move.l " ~ to!string(offset) ~ "(" ~ addrReg ~ "), " ~ valReg ~ 
-                     "  ; Optimized field access with direct displacement";
-        } else {
-            // For larger offsets, need to use a two-step process
-            string tempReg = nextReg(regIndex);
-            lines ~= "        move.l #" ~ to!string(offset) ~ ", " ~ tempReg ~ "  ; Large field offset";
-            lines ~= "        move.l (" ~ addrReg ~ ", " ~ tempReg ~ ".l), " ~ valReg ~ "  ; Access with calculated offset";
-            regIndex--; // Free temp reg
-        }
-        
-        return valReg;
-    }
-
-    if (auto var = cast(VarExpr) expr) {
-        // If the variable is mapped to a register (e.g., function parameter), use it directly
-        if (var.name in varAddrs && varAddrs[var.name].startsWith("D")) {
-            return varAddrs[var.name];
-        }
-        string reg = nextReg(regIndex);
-        string addr = getOrCreateVarAddr(var.name, varAddrs);
-        lines ~= "        move.l " ~ addr ~ ", " ~ reg;
-        return reg;
-    }
-
-    if (auto bin = cast(BinaryExpr) expr) {
+        // Regular binary expression handling...
         int leftStart = regIndex;
         string leftReg = generateExpr(bin.left, lines, regIndex, varAddrs);
         int leftEnd = regIndex;
@@ -2271,26 +2252,42 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             lines ~= format("        muls %s, D1", rightReg);
             lines ~= format("        sub.l D1, %s", leftReg);
             break;
-            case "==":
+            case ">":
             {
-            // Ultra-optimized branchless equality check using seq.b + and.l
+            // Ultra-optimized branchless greater-than check using sgt.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        seq.b %s      ; Set dest to FF if equal, 00 if not equal", dest); 
+            lines ~= format("        sgt.b %s      ; Set dest to FF if greater than, 00 otherwise", dest);
             lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
-            case "!=":
+            case ">=":
             {
-            // Ultra-optimized branchless inequality check using sne.b + and.l
+            // Ultra-optimized branchless greater-or-equal check using sge.b + and.l
             lines ~= format("        moveq #0, %s  ; Clear result register", dest);
             lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        sne.b %s      ; Set dest to FF if not equal, 00 if equal", dest);
+            lines ~= format("        sge.b %s      ; Set dest to FF if greater or equal, 00 otherwise", dest);
             lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
             return dest;
             }
-            case "~=":
-            // Array append: arr ~= val
+            case "<":
+            {
+            // Ultra-optimized branchless less-than check using slt.b + and.l
+            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
+            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
+            lines ~= format("        slt.b %s      ; Set dest to FF if less than, 00 otherwise", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
+            return dest;
+            }
+            case "<=":
+            {
+            // Ultra-optimized branchless less-or-equal check using sle.b + and.l
+            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
+            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
+            lines ~= format("        sle.b %s      ; Set dest to FF if less or equal, 00 otherwise", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
+            return dest;
+            }
             auto leftVarExpr = cast(VarExpr)bin.left;
             string arrBase = getCleanArrayName(leftVarExpr.name);
             string lenLabel = arrBase ~ "_len";
@@ -2303,42 +2300,6 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             // increment length
             lines ~= format("        addq.l #1, %s", lenLabel);
             break;
-            case "<":
-            {
-            // Ultra-optimized branchless less-than check using slt.b + and.l
-            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
-            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        slt.b %s      ; Set dest to FF if less than, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
-            return dest;
-            }
-            case "<=":
-            {
-            // Ultra-optimized branchless less-than-or-equal check using sle.b + and.l
-            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
-            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        sle.b %s      ; Set dest to FF if less or equal, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
-            return dest;
-            }
-            case ">":
-            {
-            // Ultra-optimized branchless greater-than check using sgt.b + and.l
-            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
-            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        sgt.b %s      ; Set dest to FF if greater than, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
-            return dest;
-            }
-            case ">=":
-            {
-            // Ultra-optimized branchless greater-than-or-equal check using sge.b + and.l
-            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
-            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
-            lines ~= format("        sge.b %s      ; Set dest to FF if greater or equal, 00 otherwise", dest);
-            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
-            return dest;
-            }
             case "&&":
             lines ~= format("        move.l %s, %s", leftReg, dest);
             lines ~= format("        and.l %s, %s", rightReg, dest);
@@ -2367,6 +2328,24 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
             lines ~= format("        move.l %s, %s", leftReg, dest);
             lines ~= format("        eor.l %s, %s", rightReg, dest);
             return dest;
+            case "==":
+            {
+            // Equality comparison with branchless implementation
+            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
+            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
+            lines ~= format("        seq.b %s      ; Set dest to FF if equal, 00 otherwise", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
+            return dest;
+            }
+            case "!=":
+            {
+            // Inequality comparison with branchless implementation
+            lines ~= format("        moveq #0, %s  ; Clear result register", dest);
+            lines ~= format("        cmp.l %s, %s  ; Compare values", rightReg, leftReg);
+            lines ~= format("        sne.b %s      ; Set dest to FF if not equal, 00 otherwise", dest);
+            lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", dest);
+            return dest;
+            }
         }
     }
 
@@ -2380,16 +2359,16 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         // Push all other arguments
         foreach_reverse (arg; memberCall.arguments) {
             string argReg = generateExpr(arg, lines, regIndex, varAddrs);
-            lines ~= "        move.l " ~ argReg ~ ", -(SP)";
+            lines ~= "        move.l " ~ argReg ~ ", -(SP)  ; Push argument";
         }
         
         // Call the function (method name is the function name in UFCS)
         lines ~= "        bsr " ~ memberCall.method;
         
-        // Clean up stack (object + other arguments)
+        // Clean up the stack (object + other arguments)
         lines ~= "        add.l #" ~ to!string(4 * (1 + memberCall.arguments.length)) ~ ", SP";
         
-        // Get the return value
+        // Store the result
         string resultReg = nextReg(regIndex);
         lines ~= "        move.l D0, " ~ resultReg ~ "  ; Store UFCS result";
         
@@ -2405,35 +2384,80 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         // Save current register index to reset it after each branch
         int savedRegIndex = regIndex;
         
-        // Generate condition code
-        string condReg = generateExpr(condExpr.condition, lines, regIndex, varAddrs);
-        
-        // Test the condition
-        lines ~= "        tst.l " ~ condReg ~ "  ; Check if condition is true/non-zero";
-        lines ~= "        beq " ~ falseLabel ~ "  ; Branch to false expression if condition is false";
+        // Generate condition code - handle BinaryExpr conditions specially
+        string condReg;
+        if (auto binCond = cast(BinaryExpr)condExpr.condition) {
+            if (binCond.op == ">" || binCond.op == "<" || binCond.op == ">=" || binCond.op == "<=" || 
+                binCond.op == "==" || binCond.op == "!=") {
+                // Generate specialized compare-and-branch for relational operators
+                string leftReg = generateExpr(binCond.left, lines, regIndex, varAddrs);
+                string rightReg = generateExpr(binCond.right, lines, regIndex, varAddrs);
+                
+                // Compare left and right operands
+                lines ~= "        cmp.l " ~ rightReg ~ ", " ~ leftReg ~ "  ; Compare condition operands";
+                
+                // Branch based on condition
+                if (binCond.op == ">") {
+                    lines ~= "        ble " ~ falseLabel ~ "  ; Branch to false if left <= right";
+                } else if (binCond.op == "<") {
+                    lines ~= "        bge " ~ falseLabel ~ "  ; Branch to false if left >= right";
+                } else if (binCond.op == ">=") {
+                    lines ~= "        blt " ~ falseLabel ~ "  ; Branch to false if left < right";
+                } else if (binCond.op == "<=") {
+                    lines ~= "        bgt " ~ falseLabel ~ "  ; Branch to false if left > right";
+                } else if (binCond.op == "==") {
+                    lines ~= "        bne " ~ falseLabel ~ "  ; Branch to false if left != right";
+                } else if (binCond.op == "!=") {
+                    lines ~= "        beq " ~ falseLabel ~ "  ; Branch to false if left == right";
+                }
+            } else {
+                // For other binary operations, evaluate as normal
+                condReg = generateExpr(condExpr.condition, lines, regIndex, varAddrs);
+                lines ~= "        tst.l " ~ condReg ~ "  ; Check if condition is true/non-zero";
+                lines ~= "        beq " ~ falseLabel ~ "  ; Branch to false expression if condition is false";
+            }
+        } else {
+            // For non-binary expressions, evaluate and test the result
+            condReg = generateExpr(condExpr.condition, lines, regIndex, varAddrs);
+            lines ~= "        tst.l " ~ condReg ~ "  ; Check if condition is true/non-zero";
+            lines ~= "        beq " ~ falseLabel ~ "  ; Branch to false expression if condition is false";
+        }
         
         // Reset register index for true branch
         regIndex = savedRegIndex;
         
         // Generate code for true expression
+        string resultReg = nextReg(regIndex); // Use a new register for result
         string trueReg = generateExpr(condExpr.trueExpr, lines, regIndex, varAddrs);
-        string resultReg = "D1"; // Always use D1 for the result
-        lines ~= "        move.l " ~ trueReg ~ ", " ~ resultReg ~ "  ; Move true result to result register";
+        
+        // Move true branch result to the result register
+        if (trueReg != resultReg) {
+            lines ~= "        move.l " ~ trueReg ~ ", " ~ resultReg ~ "  ; Move true result to result register";
+        }
         lines ~= "        bra " ~ endLabel ~ "  ; Skip false expression";
         
-        // Reset register index for false branch
-        regIndex = savedRegIndex;
+        // Reset register index for false branch but keep the result register
+        int falseRegIndex = savedRegIndex; 
+        if (resultReg[0] == 'D') {
+            // If result is in a data register, increment the reg index to reserve it
+            falseRegIndex = resultReg[1] - '0' + 1;
+        }
+        regIndex = falseRegIndex;
         
         // Generate code for false expression
         lines ~= falseLabel ~ ":";
         string falseReg = generateExpr(condExpr.falseExpr, lines, regIndex, varAddrs);
-        lines ~= "        move.l " ~ falseReg ~ ", " ~ resultReg ~ "  ; Move false result to result register";
+        
+        // Move false branch result to the result register
+        if (falseReg != resultReg) {
+            lines ~= "        move.l " ~ falseReg ~ ", " ~ resultReg ~ "  ; Move false result to result register";
+        }
         
         // End of conditional expression
         lines ~= endLabel ~ ":";
         
-        // Ensure regIndex points to next available register
-        regIndex = 2; // After D1
+        // Reset register index, but keep our result register
+        regIndex = savedRegIndex;
         
         return resultReg;
     }
@@ -2457,6 +2481,72 @@ string generateExpr(ASTNode expr, ref string[] lines, ref int regIndex, string[s
         lines ~= "        move.l #" ~ (boolLit.value ? "1" : "0") ~ ", " ~ reg ~ "  ; Load boolean value";
         
         return reg;
+    }
+
+    // Handle VarExpr (variable access)
+    if (auto varExpr = cast(VarExpr) expr) {
+        string varName = varExpr.name;
+        string varAddr = getOrCreateVarAddr(varName, varAddrs); // Get label or stack offset
+        string reg = nextReg(regIndex);
+
+        // Check if it's a global variable (has a label) or local (stack offset)
+        if (varAddr.startsWith("var_") || !(varAddr.startsWith("-") || varAddr.endsWith("(A5)"))) { // Assuming global vars have labels like "var_name" or just "name"
+            lines ~= format("        move.l %s, %s  ; Load global variable \'%s\'", varAddr, reg, varName);
+        } else { // Local variable on the stack (e.g., -4(A5))
+            lines ~= format("        move.l %s, %s  ; Load local variable \'%s\' from stack", varAddr, reg, varName);
+        }
+        return reg;
+    }
+    
+    // Handle struct field access
+    if (auto field = cast(StructFieldAccess) expr) {
+        // First, use generateAddressExpr to get a pointer to the field
+        auto addrResult = generateAddressExpr(field, lines, regIndex, varAddrs);
+        string addrReg = addrResult[0];
+        int offset = addrResult[1];
+        
+        // Load the field value into a register
+        string resultReg = nextReg(regIndex);
+        
+        if (offset == 0) {
+            lines ~= format("        move.l (%s), %s  ; Load struct field '%s'", addrReg, resultReg, field.field);
+        } else {
+            lines ~= format("        move.l %d(%s), %s  ; Load struct field '%s'", offset, addrReg, resultReg, field.field);
+        }
+        
+        return resultReg;
+    }
+    
+    // Handle unary expressions (-, !, ~, etc.)
+    if (auto unary = cast(UnaryExpr) expr) {
+        // Generate code for the operand
+        string operandReg = generateExpr(unary.expr, lines, regIndex, varAddrs);
+        string resultReg = nextReg(regIndex);
+        
+        // Handle different unary operators
+        switch (unary.op) {
+            case "-":
+                // Negation
+                lines ~= format("        move.l %s, %s", operandReg, resultReg);
+                lines ~= format("        neg.l %s  ; Unary minus", resultReg);
+                break;
+            case "!":
+                // Logical NOT
+                lines ~= format("        move.l %s, %s", operandReg, resultReg);
+                lines ~= format("        tst.l %s", resultReg);
+                lines ~= format("        seq %s  ; Set to FF if zero, 00 otherwise", resultReg);
+                lines ~= format("        and.l #1, %s  ; Convert FF to 01, 00 stays 00", resultReg);
+                break;
+            case "~":
+                // Bitwise NOT
+                lines ~= format("        move.l %s, %s", operandReg, resultReg);
+                lines ~= format("        not.l %s  ; Bitwise NOT", resultReg);
+                break;
+            default:
+                assert(0, "Unhandled unary operator: " ~ unary.op);
+        }
+        
+        return resultReg;
     }
     
     // Handle function calls in expressions

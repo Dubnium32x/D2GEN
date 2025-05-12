@@ -15,60 +15,60 @@ distance:
         move.l 12(A6), D1
         move.l D1, D1  ; Copy register parameter to temp
         movea.l D1, A2  ; Convert register value to address
-        move.l 0(A2), D1  ; Optimized field access with direct displacement
+        move.l (A2), D1  ; Load struct field 'x'
         move.l D0, D2  ; Copy register parameter to temp
         movea.l D2, A3  ; Convert register value to address
-        move.l 0(A3), D2  ; Optimized field access with direct displacement
+        move.l (A3), D2  ; Load struct field 'x'
         move.l D1, D3
         sub.l D2, D3
         move.l D3, dx
         move.l D1, D1  ; Copy register parameter to temp
         movea.l D1, A2  ; Convert register value to address
-        move.l 4(A2), D1  ; Optimized field access with direct displacement
+        move.l 4(A2), D1  ; Load struct field 'y'
         move.l D0, D2  ; Copy register parameter to temp
         movea.l D2, A3  ; Convert register value to address
-        move.l 4(A3), D2  ; Optimized field access with direct displacement
+        move.l 4(A3), D2  ; Load struct field 'y'
         move.l D1, D3
         sub.l D2, D3
         move.l D3, dy
-        move.l dx, D1
+        move.l dx, D1  ; Load global variable 'dx'
         moveq #0, D2  ; Optimized small constant
         tst.l D2  ; Check if condition is true/non-zero
         beq cond_false_0  ; Branch to false expression if condition is false
-        move.l dx, D2
-        move.l D2, D3
-        neg.l D3
-        move.l D3, D1  ; Move true result to result register
+        move.l dx, D3  ; Load global variable 'dx'
+        move.l D3, D4
+        neg.l D4  ; Unary minus
+        move.l D4, D2  ; Move true result to result register
         bra cond_end_1  ; Skip false expression
 cond_false_0:
-        move.l dx, D2
-        move.l D2, D1  ; Move false result to result register
+        move.l dx, D3  ; Load global variable 'dx'
+        move.l D3, D2  ; Move false result to result register
 cond_end_1:
         moveq #0, D2  ; Clear result register
-        cmp.l D1, D1  ; Compare values
+        cmp.l D2, D1  ; Compare values
         slt.b D2      ; Set dest to FF if less than, 00 otherwise
         and.l #1, D2  ; Convert FF to 01, 00 stays 00
         move.l D2, absDx
-        move.l dy, D1
+        move.l dy, D1  ; Load global variable 'dy'
         moveq #0, D2  ; Optimized small constant
         tst.l D2  ; Check if condition is true/non-zero
         beq cond_false_2  ; Branch to false expression if condition is false
-        move.l dy, D2
-        move.l D2, D3
-        neg.l D3
-        move.l D3, D1  ; Move true result to result register
+        move.l dy, D3  ; Load global variable 'dy'
+        move.l D3, D4
+        neg.l D4  ; Unary minus
+        move.l D4, D2  ; Move true result to result register
         bra cond_end_3  ; Skip false expression
 cond_false_2:
-        move.l dy, D2
-        move.l D2, D1  ; Move false result to result register
+        move.l dy, D3  ; Load global variable 'dy'
+        move.l D3, D2  ; Move false result to result register
 cond_end_3:
         moveq #0, D2  ; Clear result register
-        cmp.l D1, D1  ; Compare values
+        cmp.l D2, D1  ; Compare values
         slt.b D2      ; Set dest to FF if less than, 00 otherwise
         and.l #1, D2  ; Convert FF to 01, 00 stays 00
         move.l D2, absDy
-        move.l absDx, D1
-        move.l absDy, D2
+        move.l absDx, D1  ; Load global variable 'absDx'
+        move.l absDy, D2  ; Load global variable 'absDy'
         move.l D1, D3
         add.l D2, D3
         move.l D3, D0  ; Set return value
@@ -79,22 +79,22 @@ cond_end_3:
 main:
         ; Function prologue
         link A6, #0  ; Setup stack frame (saves A6 and sets up new frame in one instruction)
-        move.l p2, D1
+        move.l p2, D1  ; Load global variable 'p2'
         move.l D1, -(SP)  ; Push argument onto stack
-        move.l p1, D2
+        move.l p1, D2  ; Load global variable 'p1'
         move.l D2, -(SP)  ; Push argument onto stack
         bsr distance  ; Call function
         add.l #8, SP  ; Clean up stack
         move.l D0, D3  ; Get function return value
         move.l D3, dist1
-        move.l p2, D1
+        move.l p2, D1  ; Load global variable 'p2'
         move.l D1, D2  ; Use first arg as result
         move.l D2, dist2
-        move.l dist1, D1
-        move.l dist2, D2
+        move.l dist1, D1  ; Load global variable 'dist1'
+        move.l dist2, D2  ; Load global variable 'dist2'
         moveq #0, D3  ; Clear result register
         cmp.l D2, D1  ; Compare values
-        seq.b D3      ; Set dest to FF if equal, 00 if not equal
+        seq.b D3      ; Set dest to FF if equal, 00 otherwise
         and.l #1, D3  ; Convert FF to 01, 00 stays 00
         tst.l D3  ; Check if assertion condition is true/non-zero
         beq assert_fail_4  ; Branch to fail if assertion is false
